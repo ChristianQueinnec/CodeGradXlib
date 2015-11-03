@@ -1,154 +1,237 @@
+/**
+  Javascript Library to interact with the CodeGradX infrastructure
+*/
 
-if ( ! CodeGradX ) {
-    var CodeGradX = function () {};
-}
+(function () {
+  var root = this;
+  // Preserve previous CodeGradX for noConflict():
+  var previous_CodeGradX = root.CodeGradX;
 
-CodeGradX.classes = {};
+  function CodeGradX () {}
+
+  CodeGradX.noConflict = function () {
+    root.CodeGradX = previous_CodeGradX;
+    return CodeGradX;
+  };
+  module.exports = CodeGradX;
+
+var _    = require('lodash');
+var http = require('http');
+var when = require('when');
+var rest = require('rest');
+var mime = require('rest/interceptor/mime');
+
+var useragent = rest.wrap(mime);
 
 // **************** Global state
 
-CodeGradX.classes.State = function () {
+CodeGradX.State = function () {
     // State of servers:
-    this.servers = {};
-    this.servers.a = { next: 2,
+    this.servers = {
+      domain: '.paracamplus.com',
+      names: ['a', 'e', 'x', 's']
+    };
+    this.servers.a = { next: 1,
+                       suffix: '/alive',
                        0: { host: 'a0.paracamplus.com',
-                            enabled: true },
-                       1: { host: 'a1.paracamplus.com',
-                            enabled: true } };
-    this.servers.e = { next: 2,
-                       0: { host: 'e0.paracamplus.com',
-                            enabled: true },
-                       1: { host: 'e1.paracamplus.com',
-                            enabled: true } };
-    this.servers.x = { next: 2,
-                       0: { host: 'x0.paracamplus.com',
-                            enabled: true },
-                       1: { host: 'x1.paracamplus.com',
-                            enabled: true } };
-    this.servers.s = { next: 2,
-                       0: { host: 's0.paracamplus.com',
-                            enabled: true },
-                       1: { host: 's1.paracamplus.com',
-                            enabled: true } };
+                            enabled: false } };
+    this.servers.e = { next: 1,
+                       suffix: '/alive',
+                       0: { enabled: false } };
+    this.servers.x = { next: 1,
+                       suffix: '/dbalive',
+                       0: { host: 'x.paracamplus.com',
+                            enabled: false } };
+    this.servers.s = { next: 1,
+                       suffix: '/',
+                       0: { enabled: false } };
     // Caches for Exercises, Jobs, Batches
     this.caches = {};
     // Current values
     this.currentUser = null;
 };
 
-CodeGradX.classes.State.prototype.checkServers = function (cb) {
-    // check existing servers, remove non working servers
+/** Update the description of a server in order to determine if that
+    server is available. The description may contain an optional `host`
+    key with the name of the host to be checked. If the name is missing,
+    the hostname is automatically inferred from the `kind`, `index` and
+    `domain` information. After the check, the `enabled` key is set to
+    a boolean telling wether the host is available or not.
+
+    Description are gathered in `descriptions` with two additional
+    keys: `suffix` is the path to add to the URL used to check the
+    availability of the server. `next` is the index of a potentially
+    available server of the same kind.
+
+    @param {string} kind - the kind of server (a, e, x or s)
+    @param {number} index - the number of the server.
+    @returns {Promise}
+
+    The check is driven by a description: a record
+*/
+
+CodeGradX.State.prototype.checkServer = function (kind, index) {
+  if ( ! this.servers[kind] ||
+    ! this.servers[kind][index] ) {
+      this.servers[kind][index] = { enabled: false };
+    }
+  var descriptions = this.servers[kind];
+  var description = descriptions[index];
+  var host = description.host || (kind + index + this.servers.domain);
+  description.host = host;
+  // Don't use that host while being checked:
+  description.enabled = false;
+  description.lastError = undefined;
+  function updateDescription (response) {
+    description.enabled = (response.status.code === 200);
+    return response;
+  }
+  function invalidateDescription (reason) {
+    description.lastError = reason;
+    throw reason;
+  }
+  return useragent("http://" + host + descriptions.suffix)
+    .then(updateDescription, invalidateDescription);
+  };
+
+CodeGradX.State.prototype.checkServers = function (kind) {
+  var promise, promises = [];
+  var descriptions = this.servers[kind];
+  function incrementNext () {
+    descriptions.next++;
+  }
+  for ( var key in descriptions ) {
+    if ( /^\d+$/.exec(key) ) {
+        promise = this.checkServer(kind, key);
+        promises.push(promise);
+    }
+  }
+  promise = this.checkServer(kind, descriptions.next).then(incrementNext);
+  promises.push(promise);
+  return when.all(promises);
 };
 
-CodeGradX.classes.State.prototype.discoverServers = function (cb) {
-    // try next possible one
+CodeGradX.State.prototype.checkAllServers = function () {
+  var promises = [];
+  this.servers.names.forEach(function (kind) {
+    promises.push(this.checkServers(kind));
+  }, this);
+  return when.all(promises);
 };
 
 // **************** User
 
-CodeGradX.classes.User = function (login, password) {
+CodeGradX.User = function (login, password) {
   this.login = login;
   this.password = password;
 };
 
-CodeGradX.classes.User.prototype.connect = function (cb) {
+CodeGradX.User.prototype.connection = function () {
   // check cookie then send credentials and get additional information
   // set current user
 };
 
-CodeGradX.classes.User.prototype.modify = function (fields, cb) {
+CodeGradX.User.prototype.modify = function (fields, cb) {
   // send modifications then update local User
 };
 
-CodeGradX.classes.User.prototype.campaigns = function (now, cb) {
-  // get active campaigns if now otherwise all campaigns
+CodeGradX.User.prototype.campaigns = function (now, cb) {
+  // get active campaigns if now otherwise get all campaigns
 };
 
-CodeGradX.classes.User.prototype.campaign = function (name, cb) {
+CodeGradX.User.prototype.campaign = function (name, cb) {
   // get information on a Campaign
 };
 
 // **************** Campaign
 
-CodeGradX.classes.Campaign = function (name) {
+CodeGradX.Campaign = function (name) {
   this.name = name;
 };
 
-CodeGradX.classes.Campaign.prototype.skills = function (cb) {
+CodeGradX.Campaign.prototype.skills = function (cb) {
   // get skills of the students of this campaign
 };
 
-CodeGradX.classes.Campaign.prototype.jobs = function (cb) {
+CodeGradX.Campaign.prototype.jobs = function (cb) {
   // get the jobs of the user within the campaign
 };
 
-CodeGradX.classes.Campaign.prototype.exercises = function (cb) {
+CodeGradX.Campaign.prototype.exercises = function (cb) {
   // get the exercises of this campaign
 };
 
 
 // **************** Exercise
 
-CodeGradX.classes.Exercise = function (uuid) {
+CodeGradX.Exercise = function (uuid) {
   this.uuid = uuid;
 };
 
-CodeGradX.classes.Exercise.prototype.description = function (cb) {
+CodeGradX.Exercise.prototype.description = function (cb) {
   // get metadata
 };
 
-CodeGradX.classes.Exercise.prototype.stem = function (cb) {
+CodeGradX.Exercise.prototype.stem = function (cb) {
   // get stem
 };
 
-CodeGradX.classes.Exercise.prototype.newStringAnswer = function (cb) {
+CodeGradX.Exercise.prototype.newStringAnswer = function (cb) {
   // create an answer
 };
 
-CodeGradX.classes.Exercise.prototype.newFileAnswer = function (cb) {
+CodeGradX.Exercise.prototype.newFileAnswer = function (cb) {
   // create an answer
 };
 
+// **************** ExercisesSet
 
-// **************** Answer
+CodeGradX.ExercisesSet = function (prologue, content, epilogue) {
+  this.prologue = prologue;
+  this.content = content;
+  this.epilogue = epilogue;
+};
 
-CodeGradX.classes.Answer = function (exercise) {
+// **************** abstract Answer
+
+CodeGradX.Answer = function (exercise) {
   this.exercise = exercise;
 };
 
-CodeGradX.classes.Answer.prototype.submit = function (cb) {
+CodeGradX.Answer.prototype.submit = function (cb) {
   // submit an answer (string or file) towards an exercise, returns a Job
 };
 
 // subclasses
 
-CodeGradX.classes.FileAnswer = function (exercise) {
+CodeGradX.FileAnswer = function (exercise) {
   this.exercise = exercise;
 };
-CodeGradX.classes.FileAnswer.prototype =
-   Object.create(CodeGradX.classes.Answer.prototype);
-CodeGradX.classes.FileAnswer.prototype.constructor =
-   CodeGradX.classes.FileAnswer;
+CodeGradX.FileAnswer.prototype =
+   Object.create(CodeGradX.Answer.prototype);
+CodeGradX.FileAnswer.prototype.constructor =
+   CodeGradX.FileAnswer;
 
-CodeGradX.classes.StringAnswer = function (exercise) {
+CodeGradX.StringAnswer = function (exercise) {
   this.exercise = exercise;
 };
-CodeGradX.classes.StringAnswer.prototype =
-   Object.create(CodeGradX.classes.Answer.prototype);
-CodeGradX.classes.StringAnswer.prototype.constructor =
-   CodeGradX.classes.StringAnswer;
+CodeGradX.StringAnswer.prototype =
+   Object.create(CodeGradX.Answer.prototype);
+CodeGradX.StringAnswer.prototype.constructor =
+   CodeGradX.StringAnswer;
 
 // **************** Job
 
-CodeGradX.classes.Job = function (uuid) {
+CodeGradX.Job = function (uuid) {
   this.uuid = uuid;
 };
 
-CodeGradX.classes.Job.prototype.report = function (cb) {
+CodeGradX.Job.prototype.report = function (cb) {
   // get the grading report
 };
 
 
 
+}).call(this);
 
 // end of codegradxlib.js
