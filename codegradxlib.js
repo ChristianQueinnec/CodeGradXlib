@@ -21,6 +21,8 @@ var when = require('when');
 var rest = require('rest');
 var mime = require('rest/interceptor/mime');
 var cookie = require('cookie');
+var sleep = require('sleep');
+var xml2js = require('xml2js').parseString;
 //var formurlencoded = require('form-urlencoded');
 
 
@@ -37,10 +39,11 @@ CodeGradX.State = function () {
     this.servers = {
       domain: '.paracamplus.com',
       names: ['a', 'e', 'x', 's'],
-      a: { next: 1,
+      a: { next: 2,
            suffix: '/alive',
            0: { host: 'a0.paracamplus.com',
-                enabled: false } },
+                enabled: false },
+           1: { enabled: false }  },
       e: { next: 1,
            suffix: '/alive',
            0: { enabled: false } },
@@ -109,8 +112,10 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
 CodeGradX.State.prototype.checkServers = function (kind) {
   var promise, promises = [];
   var descriptions = this.servers[kind];
-  function incrementNext () {
-    descriptions.next++;
+  function incrementNext (response) {
+    if ( response.status.code === 200 ) {
+      descriptions.next++;
+    }
   }
   for ( var key in descriptions ) {
     if ( /^\d+$/.exec(key) ) {
@@ -185,10 +190,36 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
 
 /** Ask repeatedly an E or S server.
   Send request to all available servers and repeat in case of problems.
+  parameters = {
+      step: n // seconds between each attempt
+      attempts: n // at most n attempts
+      progress: function (i) {} // invoked before each step
+  }
+
+  Nota: what become the other promises not selected by when.any ? Do they
+  continue to run ? This might be a problem for sendMultiplyESServer ???
 */
 
-CodeGradX.State.prototype.sendMultiplyESServer = function (kind, options) {
-  var self = this;
+CodeGradX.State.prototype.sendMultiplyESServer =
+         function (kind, parameters, options) {
+  parameters = _.assign({},
+    CodeGradX.State.prototype.sendMultiplyESServer.default,
+    parameters);
+  function retry (reason) {
+    if ( parameters.attempts-- > 0 ) {
+      sleep.sleep(parameters.step);
+      return this.sendESServer(kind, options).then(null, retry);
+    } else {
+      throw reason;
+    }
+  }
+  var promise = this.sendESServer(kind, options).then(null, retry);
+  return promise;
+};
+CodeGradX.State.prototype.sendMultiplyESServer.default = {
+    step: 3, // seconds
+    attempts: 30,
+    progress: function (i) {}
 };
 
 // **************** User

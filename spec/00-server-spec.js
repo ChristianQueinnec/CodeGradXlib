@@ -61,10 +61,27 @@ describe('CodeGradX', function () {
     promise.then(function (responses) {
       //console.log(responses);
       //console.log(state.servers.a);
-      expect(responses.length).toBe(2);
+      expect(responses.length).toBe(3);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeTruthy();
       expect(state.servers.a.next).toBe(2);
+      done();
+    });
+  });
+
+  it('should check twice all server A', function (done) {
+    var state = new CodeGradX.State();
+    // Check a0, a1 and try unavailable a2:
+    var promise1 = state.checkServers('a');
+    promise1.then(function (responses1) {
+      //console.log(state.servers.a);
+      // Check a0, a1 and try unavailable a2 but don't try a3:
+      var promise2 = state.checkServers('a');
+      promise2.then(function (responses2) {
+        //console.log(state.servers.a);
+        expect(state.servers.a.length).toBe(state.servers.a.length);
+        expect(state.servers.a.next).toBe(state.servers.a.next);
+      });
       done();
     });
   });
