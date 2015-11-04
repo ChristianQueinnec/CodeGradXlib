@@ -20,35 +20,47 @@ var http = require('http');
 var when = require('when');
 var rest = require('rest');
 var mime = require('rest/interceptor/mime');
+var cookie = require('cookie');
+//var formurlencoded = require('form-urlencoded');
 
-var useragent = rest.wrap(mime);
+
+/* improvements
+ * keep a round robin log
+ */
+
 
 // **************** Global state
 
 CodeGradX.State = function () {
+    this.userAgent = rest.wrap(mime);
     // State of servers:
     this.servers = {
       domain: '.paracamplus.com',
-      names: ['a', 'e', 'x', 's']
-    };
-    this.servers.a = { next: 1,
-                       suffix: '/alive',
-                       0: { host: 'a0.paracamplus.com',
-                            enabled: false } };
-    this.servers.e = { next: 1,
-                       suffix: '/alive',
-                       0: { enabled: false } };
-    this.servers.x = { next: 1,
-                       suffix: '/dbalive',
-                       0: { host: 'x.paracamplus.com',
-                            enabled: false } };
-    this.servers.s = { next: 1,
-                       suffix: '/',
-                       0: { enabled: false } };
+      names: ['a', 'e', 'x', 's'],
+      a: { next: 1,
+           suffix: '/alive',
+           0: { host: 'a0.paracamplus.com',
+                enabled: false } },
+      e: { next: 1,
+           suffix: '/alive',
+           0: { enabled: false } },
+      x: { next: 1,
+           suffix: '/dbalive',
+           0: { host: 'x.paracamplus.com',
+                enabled: false } },
+      s: { next: 1,
+           suffix: '/',
+           0: { enabled: false } } };
     // Caches for Exercises, Jobs, Batches
     this.caches = {};
     // Current values
     this.currentUser = null;
+    this.currentCookie = null;
+    // Make the state global
+    var state = this;
+    root.getCurrentState = function () {
+      return state;
+    };
 };
 
 /** Update the description of a server in order to determine if that
@@ -90,7 +102,7 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
     description.lastError = reason;
     throw reason;
   }
-  return useragent("http://" + host + descriptions.suffix)
+  return this.userAgent("http://" + host + descriptions.suffix)
     .then(updateDescription, invalidateDescription);
   };
 
@@ -112,11 +124,71 @@ CodeGradX.State.prototype.checkServers = function (kind) {
 };
 
 CodeGradX.State.prototype.checkAllServers = function () {
-  var promises = [];
-  this.servers.names.forEach(function (kind) {
-    promises.push(this.checkServers(kind));
-  }, this);
+  var promises = _.map(this.servers.names, this.checkServers, this);
   return when.all(promises);
+};
+
+/** Ask an A or X server.
+  Send request to the first available server. In case of problems, try
+  the next available server asap.
+*/
+
+CodeGradX.State.prototype.sendAXServer = function (kind, options) {
+  var self = this;
+  var newoptions = _.assign({}, options);
+  if ( this.currentCookie ) {
+    newoptions.headers.Cookie = cookie.serialize('u', this.currentCookie);
+  }
+  function updateCurrentCookie (response) {
+    //console.log(response.headers);
+    if ( response.headers['Set-Cookie'] ) {
+      self.currentCookie = response.headers['Set-Cookie'];
+    }
+    return response;
+  }
+  var descriptions = _.filter(this.servers[kind], {enabled: true});
+  function tryNext (reason) {
+    if ( descriptions.length > 0 ) {
+      var description = _.first(descriptions);
+      descriptions = _.rest(descriptions);
+      newoptions.path = 'http://' + description.host + options.path;
+      //console.log('sending to ' + newoptions.path);
+      return self.userAgent(newoptions).then(updateCurrentCookie, tryNext);
+    } else {
+      throw reason;
+    }
+  }
+  return tryNext();
+};
+
+/** Ask once an E or S server.
+  Send request concurrently to all available servers.
+*/
+
+CodeGradX.State.prototype.sendESServer = function (kind, options) {
+  var self = this;
+  var newoptions = _.assign({}, options);
+  newoptions.headers = _.assign({}, options.headers);
+  if ( this.currentCookie ) {
+    newoptions.headers.Cookie = cookie.serialize('u', this.currentCookie);
+  }
+  var descriptions = _.filter(this.servers[kind], {enabled: true});
+  function trySending (description) {
+    var tryoptions = _.assign({}, newoptions);
+    tryoptions.path = 'http://' + description.host + options.path;
+    //console.log('sending to ' + newoptions.path);
+    return self.userAgent(tryoptions);
+  }
+  var promises = _.map(descriptions, trySending);
+  return when.any(promises);
+};
+
+/** Ask repeatedly an E or S server.
+  Send request to all available servers and repeat in case of problems.
+*/
+
+CodeGradX.State.prototype.sendMultiplyESServer = function (kind, options) {
+  var self = this;
 };
 
 // **************** User
@@ -128,7 +200,15 @@ CodeGradX.User = function (login, password) {
 
 CodeGradX.User.prototype.connection = function () {
   // check cookie then send credentials and get additional information
-  // set current user
+  // Also set current user
+  var state = CodeGradX.getCurrentState();
+  if ( state.currentUser ) {
+    return state.currentUser;
+  }
+  function setCurrentUser (response) {
+
+  }
+  return state.checkServer('x').then(setCurrentUser);
 };
 
 CodeGradX.User.prototype.modify = function (fields, cb) {
@@ -164,8 +244,9 @@ CodeGradX.Campaign.prototype.exercises = function (cb) {
 
 // **************** Exercise
 
-CodeGradX.Exercise = function (uuid) {
-  this.uuid = uuid;
+CodeGradX.Exercise = function (json) {
+  // initialize name, nickname, url, summary, tags:
+  _.assign(this, json);
 };
 
 CodeGradX.Exercise.prototype.description = function (cb) {
@@ -186,10 +267,40 @@ CodeGradX.Exercise.prototype.newFileAnswer = function (cb) {
 
 // **************** ExercisesSet
 
-CodeGradX.ExercisesSet = function (prologue, content, epilogue) {
-  this.prologue = prologue;
-  this.content = content;
-  this.epilogue = epilogue;
+/** Initialize a set (in fact a tree) of Exercises with some json such as:
+
+  { "notice": ?,
+    "content": [
+      { "title": "",
+        "exercises": [
+          { "name": "", ...}, ...
+        ]
+      },
+      ...
+  ]}
+*/
+
+CodeGradX.ExercisesSet = function (json) {
+  if ( json.content ) {
+    // skip 'notice', get array of sets of exercises:
+    json = json.content;
+  }
+  // Here: json is an array of exercises or sets of exercises:
+  function processItem (json) {
+    if ( json.exercises ) {
+      return new CodeGradX.ExercisesSet(json);
+    } else {
+      return new CodeGradX.Exercise(json);
+    }
+  }
+  if ( _.isArray(json) ) {
+    // no title, prologue nor epilogue.
+    this.exercises = _.map(json, processItem);
+  } else {
+    // initialize optional title, prologue, epilogue:
+    _.assign(this, json);
+    this.exercises = _.map(json.exercises, processItem);
+  }
 };
 
 // **************** abstract Answer
