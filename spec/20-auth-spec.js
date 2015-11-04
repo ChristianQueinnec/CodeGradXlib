@@ -17,6 +17,7 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
+    var authData = require('./auth-data.json');
     var promise1 = state.checkServers('x');
     promise1.then(function (responses) {
       //console.log(state.servers.x);
@@ -26,17 +27,20 @@ describe('CodeGradX', function () {
         path: '/direct/check',
         method: 'POST',
         headers: {
-          'Accept': 'application/json, text/xml',
+          'Accept': 'application/json',
           'Content-Type': 'application/x-www-form-urlencoded'
         },
-        entity: {
-          login: 'foo',
-          password: 'xyzzy'
-        }
+        entity: authData
       }).then(function (response) {
         //console.log(response);
-        expect(response.status.code).toBe(400);
-        // set currentUser...
+        expect(response.status.code).toBe(200);
+        expect(response.headers['Set-Cookie']).toBeDefined();
+        expect(response.entity.kind).toBe('authenticationAnswer');
+        //console.log(state.currentCookie);
+        expect(state.currentCookie).toBeDefined();
+        expect(state.currentCookie.length).toBeGreaterThan(0);
+        state.currentUser = new CodeGradX.User(response.entity);
+        expect(state.currentUser.lastname).toBe('Nemo');
         done();
       }, faildone);
     }, faildone);

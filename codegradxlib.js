@@ -142,12 +142,19 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   var self = this;
   var newoptions = _.assign({}, options);
   if ( this.currentCookie ) {
-    newoptions.headers.Cookie = cookie.serialize('u', this.currentCookie);
+    newoptions.headers.Cookie = this.currentCookie;
   }
   function updateCurrentCookie (response) {
     //console.log(response.headers);
     if ( response.headers['Set-Cookie'] ) {
-      self.currentCookie = response.headers['Set-Cookie'];
+      var cookies = response.headers['Set-Cookie'];
+      cookies = _.map(cookies, function (s) {
+        return s.replace(/;.*$/, '');
+      });
+      cookies = _.filter(cookies, function (s) {
+        return /^u=U/.exec(s);
+      });
+      self.currentCookie = cookies;
     }
     return response;
   }
@@ -219,14 +226,13 @@ CodeGradX.State.prototype.sendMultiplyESServer =
 CodeGradX.State.prototype.sendMultiplyESServer.default = {
     step: 3, // seconds
     attempts: 30,
-    progress: function (i) {}
+    progress: function (i) {}          // future ???
 };
 
 // **************** User
 
-CodeGradX.User = function (login, password) {
-  this.login = login;
-  this.password = password;
+CodeGradX.User = function (json) {
+  _.assign(this, json);
 };
 
 CodeGradX.User.prototype.connection = function () {
