@@ -1,5 +1,9 @@
 /**
   Javascript Library to interact with the CodeGradX infrastructure
+
+  @module codegradxlib
+  @author Christian Queinnec
+
 */
 
 (function () {
@@ -55,15 +59,23 @@ CodeGradX.State = function () {
            suffix: '/',
            0: { enabled: false } } };
     // Caches for Exercises, Jobs, Batches
-    this.caches = {};
+    this.caches = {
+      exercises: {},
+      jobs: {},
+      batches: {}
+    };
     // Current values
     this.currentUser = null;
     this.currentCookie = null;
     // Make the state global
     var state = this;
-    root.getCurrentState = function () {
+    CodeGradX.getCurrentState = function () {
       return state;
     };
+};
+
+CodeGradX.getCurrentState = function () {
+  throw "noState";
 };
 
 /** Update the description of a server in order to determine if that
@@ -82,7 +94,7 @@ CodeGradX.State = function () {
     @param {number} index - the number of the server.
     @returns {Promise}
 
-    The check is driven by a description: a record
+    Descriptions are kept in the global state.
 */
 
 CodeGradX.State.prototype.checkServer = function (kind, index) {
@@ -109,6 +121,15 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
     .then(updateDescription, invalidateDescription);
   };
 
+/** Check all possible servers of some kind (a, e, x or s) that is,
+  update the state for those servers. If correctly programmed
+  these checks are concurrently run.
+
+    @param {string} kind - the kind of server (a, e, x or s)
+    @returns {Promise}
+
+*/
+
 CodeGradX.State.prototype.checkServers = function (kind) {
   var promise, promises = [];
   var descriptions = this.servers[kind];
@@ -128,19 +149,38 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   return when.all(promises);
 };
 
+/** Check all possible servers of all kinds (a, e, x or s) that is,
+  update the state for all of those servers. If correctly programmed
+  these checks are concurrently run.
+
+    @returns {Promise}
+
+*/
+
 CodeGradX.State.prototype.checkAllServers = function () {
   var promises = _.map(this.servers.names, this.checkServers, this);
   return when.all(promises);
 };
 
 /** Ask an A or X server.
-  Send request to the first available server. In case of problems, try
-  the next available server asap.
+  Send request to the first available server of the right kind.
+  In case of problems, try sequentially the next available server of
+  the same kind.
+
+    @param {string} kind - the kind of server (a or x)
+    @param {object} options - description of the HTTP request to send
+    @property {string} options.path
+    @property {string} options.method
+    @property {object} options.headers - for instance Accept, Content-Type
+    @property {object} options.entity - string or object depending on Content-Type
+    @returns {Promise}
+
 */
 
 CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   var self = this;
   var newoptions = _.assign({}, options);
+  newoptions.headers = newoptions.headers || {};
   if ( this.currentCookie ) {
     newoptions.headers.Cookie = this.currentCookie;
   }
@@ -174,7 +214,16 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
 };
 
 /** Ask once an E or S server.
-  Send request concurrently to all available servers.
+  Send request concurrently to all available servers. The fastest wins.
+
+    @param {string} kind - the kind of server (e or s)
+    @param {object} options - description of the HTTP request to send
+    @property {string} options.path
+    @property {string} options.method
+    @property {object} options.headers - for instance Accept, Content-Type
+    @property {object} options.entity - string or object depending on Content-Type
+    @returns {Promise}
+
 */
 
 CodeGradX.State.prototype.sendESServer = function (kind, options) {
@@ -198,9 +247,9 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
 /** Ask repeatedly an E or S server.
   Send request to all available servers and repeat in case of problems.
   parameters = {
-      step: n // seconds between each attempt
+      step: n      // seconds between each attempt
       attempts: n // at most n attempts
-      progress: function (i) {} // invoked before each step
+      progress: function (parameters) {} // invoked before each step
   }
 
   Nota: what become the other promises not selected by when.any ? Do they
@@ -209,12 +258,13 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
 
 CodeGradX.State.prototype.sendMultiplyESServer =
          function (kind, parameters, options) {
-  parameters = _.assign({},
+  parameters = _.assign({ i: 0 },
     CodeGradX.State.prototype.sendMultiplyESServer.default,
     parameters);
   function retry (reason) {
-    if ( parameters.attempts-- > 0 ) {
+    if ( i++ < parameters.attempts ) {
       sleep.sleep(parameters.step);
+      parameters.progress(parameters);
       return this.sendESServer(kind, options).then(null, retry);
     } else {
       throw reason;
@@ -226,7 +276,7 @@ CodeGradX.State.prototype.sendMultiplyESServer =
 CodeGradX.State.prototype.sendMultiplyESServer.default = {
     step: 3, // seconds
     attempts: 30,
-    progress: function (i) {}          // future ???
+    progress: function (parameters) {}
 };
 
 // **************** User

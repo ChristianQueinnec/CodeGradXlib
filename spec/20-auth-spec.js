@@ -1,4 +1,5 @@
 // Jasmine test for user authentication
+// requires file ./auth-data.json with login and password (not under git!)
 
 if ( typeof CodeGradX === 'undefined' ) {
   var CodeGradX = require('../codegradxlib.js');
@@ -41,7 +42,17 @@ describe('CodeGradX', function () {
         expect(state.currentCookie.length).toBeGreaterThan(0);
         state.currentUser = new CodeGradX.User(response.entity);
         expect(state.currentUser.lastname).toBe('Nemo');
-        done();
+        expect(CodeGradX.getCurrentState()).toBe(state);
+        var promise3 = state.sendAXServer('x', {
+          path: '/',
+          method: 'GET'
+        }).then(function (response) {
+          //console.log(response.raw.request._header);
+          // Check that the received cookie is sent
+          expect(response.raw.request._header).toMatch(/\r\nCookie: u=U/);
+          expect(response.entity.kind).toBe('authenticationAnswer');
+          done();
+        });
       }, faildone);
     }, faildone);
   });
