@@ -17,6 +17,10 @@ describe('CodeGradX', function () {
   });
 
   it('should check running server A0', function (done) {
+    function faildone (reason) {
+      fail(reason);
+      done();
+    }
     var state = new CodeGradX.State();
     var promise = state.checkServer('a', 0);
     promise.then(function (response) {
@@ -25,10 +29,14 @@ describe('CodeGradX', function () {
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(response.entity.kind).toBe('alive');
       done();
-    });
+    }, faildone);
   });
 
   it('should check new running server A1', function (done) {
+    function faildone (reason) {
+      fail(reason);
+      done();
+    }
     var state = new CodeGradX.State();
     var promise = state.checkServer('a', 1);
     promise.then(function (response) {
@@ -37,10 +45,14 @@ describe('CodeGradX', function () {
       expect(state.servers.a[1].enabled).toBeTruthy();
       expect(response.entity.kind).toBe('alive');
       done();
-    });
+    }, faildone);
   });
 
   it('should check new non running server A17', function (done) {
+    function faildone (reason) {
+      fail(reason);
+      done();
+    }
     var state = new CodeGradX.State();
     var promise = state.checkServer('a', 17);
     promise.then(function (response) {
@@ -55,7 +67,11 @@ describe('CodeGradX', function () {
     });
   });
 
-  it('should check all server A', function (done) {
+  it('should check all servers A', function (done) {
+    function faildone (reason) {
+      fail(reason);
+      done();
+    }
     var state = new CodeGradX.State();
     var promise = state.checkServers('a');
     promise.then(function (responses) {
@@ -66,10 +82,14 @@ describe('CodeGradX', function () {
       expect(state.servers.a[1].enabled).toBeTruthy();
       expect(state.servers.a.next).toBe(2);
       done();
-    });
+    }, faildone);
   });
 
   it('should check twice all server A', function (done) {
+    function faildone (reason) {
+      fail(reason);
+      done();
+    }
     var state = new CodeGradX.State();
     // Check a0, a1 and try unavailable a2:
     var promise1 = state.checkServers('a');
@@ -81,12 +101,16 @@ describe('CodeGradX', function () {
         //console.log(state.servers.a);
         expect(state.servers.a.length).toBe(state.servers.a.length);
         expect(state.servers.a.next).toBe(state.servers.a.next);
-      });
-      done();
-    });
+        done();
+      }, faildone);
+    }, faildone);
   });
 
   it('should check all servers A, E, X and S', function (done) {
+    function faildone (reason) {
+      fail(reason);
+      done();
+    }
     var state = new CodeGradX.State();
     var promise = state.checkAllServers();
     promise.then(function (responses) {
@@ -105,7 +129,7 @@ describe('CodeGradX', function () {
       expect(state.servers.s[1].enabled).toBeTruthy();
       expect(state.servers.s.next).toBe(2);
       done();
-    });
+    }, faildone);
   });
 
 });
