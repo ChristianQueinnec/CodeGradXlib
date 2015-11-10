@@ -8,7 +8,8 @@
     "XXbrowser": "phantomjs test/run-jasmine.js test/jasmine.html",
     "XXbuild": "uglifyjs codegradx.js -c \"evaluate=false\" -m --source-map codegradx.min.map -o codegradx.min.js",
     "build": "browserify codegradxlib.js -o codegradxlib-bundle.js",
-    "docs": "docco codegradxlib.js & node_modules/.bin/jsdoc codegradxlib.js"
+    "XXdocs": "docco codegradxlib.js",
+    "docs": "node_modules/.bin/jsdoc codegradxlib.js"
   },
   "repository": {
     "type": "git",
