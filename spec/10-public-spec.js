@@ -155,7 +155,7 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    state.sendMultiplyESServer('s', {
+    state.sendRepeatedlyESServer('s', {
       step: 1,
       attempts: 5
     }, {

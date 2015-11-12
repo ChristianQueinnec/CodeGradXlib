@@ -103,8 +103,29 @@ describe('CodeGradX', function () {
     exercise1 = campaign.exercises[0].exercises[0];
     expect(exercise1 instanceof CodeGradX.Exercise).toBeTruthy();
     expect(exercise1.nickname).toBe('croissante');
-    done();
+    //console.log(exercise1);
+    exercise1.getDescription().then(function (description) {
+      //console.log(e);
+      expect(exercise1.XMLdescription).toBeDefined();
+      expect(exercise1.description).toBe(description);
+      expect(exercise1.description.fw4ex).toBeDefined();
+      //console.log(exercise1);
+      done();
+    }, faildone);
   });
 
+
+  it("get one stem", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    exercise1.getStem().then(function (stem) {
+      expect(stem).toBe(exercise1.stem);
+      done();
+    }, faildone);
+  });
 
 });

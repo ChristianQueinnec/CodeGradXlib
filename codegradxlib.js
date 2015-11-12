@@ -26,7 +26,7 @@ Javascript Library to interact with the CodeGradX infrastructure
   var mime = require('rest/interceptor/mime');
   var cookie = require('cookie');
   //var sleep = require('sleep');
-  var xml2js = require('xml2js').parseString;
+  var xml2js = require('xml2js');
   //var formurlencoded = require('form-urlencoded');
 
 
@@ -35,6 +35,11 @@ Javascript Library to interact with the CodeGradX infrastructure
   */
 
   // **************** log
+  /* Constructor of log.
+     This log only keeps the last 20 facts.
+     See helper method on State to log facts.
+  */
+
   CodeGradX.Log = function () {
     this.items = [];
     this.size = 20;
@@ -334,8 +339,8 @@ Javascript Library to interact with the CodeGradX infrastructure
       state.debug('sendESServer1', kind, options);
       var newoptions = _.assign({}, options);
       newoptions.headers = _.assign({}, options.headers);
-      if ( this.currentCookie ) {
-        newoptions.headers.Cookie = cookie.serialize('u', this.currentCookie);
+      if ( state.currentCookie ) {
+        newoptions.headers.Cookie = state.currentCookie;
       }
       function getActiveServers () {
         return _.filter(state.servers[kind], {enabled: true});
@@ -389,27 +394,28 @@ Javascript Library to interact with the CodeGradX infrastructure
   continue to run ? This might be a problem for sendMultiplyESServer ???
   */
 
-  CodeGradX.State.prototype.sendMultiplyESServer =
+  CodeGradX.State.prototype.sendRepeatedlyESServer =
   function (kind, parameters, options) {
     var state = this;
-    state.debug('sendMultiplyESServer', kind, parameters, options);
+    state.debug('sendRepeatedlyESServer', kind, parameters, options);
     parameters = _.assign({ i: 0 },
-      CodeGradX.State.prototype.sendMultiplyESServer.default,
+      CodeGradX.State.prototype.sendRepeatedlyESServer.default,
       parameters);
-    function retry (reason) {
-      state.debug('retry', reason);
-      if ( i++ < parameters.attempts ) {
-          sleep.sleep(parameters.step);   // Not in browser!!!
-          parameters.progress(parameters);
-          return this.sendESServer(kind, options).then(null, retry);
+    var dt = parameters.step * 1000;
+    function retryNext () {
+      state.debug("retryNext", parameters);
+      if ( parameters.i++ < parameters.attempts ) {
+      var promise = state.sendESServer(kind, options);
+      var delayedPromise = when(null).delay(dt).then(retryNext);
+      var promises = [promise, delayedPromise];
+      return when.any(promises);
       } else {
-          throw reason;
+        return when.reject("waitedTooMuch");
       }
     }
-    var promise = this.sendESServer(kind, options).then(null, retry);
-    return promise;
+    return retryNext();
   };
-  CodeGradX.State.prototype.sendMultiplyESServer.default = {
+  CodeGradX.State.prototype.sendRepeatedlyESServer.default = {
       step: 3, // seconds
       attempts: 30,
       progress: function (parameters) {}
@@ -503,6 +509,14 @@ Javascript Library to interact with the CodeGradX infrastructure
       }
     };
 
+    /** Return a specific Campaign.
+        It looks for a named campaign among the campaigns the user is part of.
+
+        @param {String} name - name of the Campaign to find
+        @returns {Promise{Campaign}}
+
+    */
+
     CodeGradX.User.prototype.getCampaign = function (name) {
       // get information on a Campaign
       var state = CodeGradX.getCurrentState();
@@ -560,7 +574,9 @@ Javascript Library to interact with the CodeGradX infrastructure
       return state.sendESServer('e', {
         path: ('/path/' + (campaign.exercisesname || campaign.name)),
         method: 'GET',
-        Accept: "application/json"
+        headers: {
+          Accept: "application/json"
+        }
       }).then(function (response) {
         state.debug('getExercises2', response);
         campaign.exercises = new CodeGradX.ExercisesSet(
@@ -571,55 +587,161 @@ Javascript Library to interact with the CodeGradX infrastructure
 
 
     // **************** Exercise
+    /** Constructor of an Exercise.
+      When extracted from a Campaign, an Exercise looks like:
+
+    { name: 'org.fw4ex.li101.croissante.0',
+      nickname: 'croissante',
+      safecookie: 'UhSn..3nyUSQWNtqwm_c6w@@',
+      summary: 'Déterminer si une liste est croissante',
+      tags: [ 'li101', 'scheme', 'fonction' ] }
+
+    This information is sufficient to list the exercises with a short
+    description of their stem.
+
+    */
 
     CodeGradX.Exercise = function (json) {
-      // initialize name, nickname, url, summary, tags:
+      // initialize name, nickname, safecookie, summary, tags:
       _.assign(this, json);
     };
+
+    /** Get the XML descriptor of the Exercise.
+        This XML descriptor will enrich the Exercise instance.
+        The raw XML string is stored under property 'XMLdescription', the
+        decoded XML string is stored under property 'description'.
+
+        Caution: this description is converted from XML to a Javascript
+        object with xml2js idiosyncrasies.
+
+       @returns {Promise{ExerciseDescription}}
+
+       */
 
     CodeGradX.Exercise.prototype.getDescription = function () {
       // get metadata
       var exercise = this;
       var state = CodeGradX.getCurrentState();
-      state.debug('getDescription');
-      state.sendESServer('e', {
-        path: ('/exercise/' + exercise.url + '/content'),
+      state.debug('getDescription1', exercise);
+      if ( exercise.description ) {
+        return when(exercise.description);
+      }
+      return state.sendESServer('e', {
+        path: ('/exercisecontent/' + exercise.safecookie + '/content'),
         method: 'GET',
-        Accept: "text/xml"
-      }).then(function (xml) {
-        //console.log(xml);
-        state.debug('sendESServer', xml);
-        exercise.xml = xml;
-        return exercise;
+        headers: {
+          Accept: "text/xml"
+        }
+      }).then(function (response) {
+        state.debug('getDescription2', response);
+        //console.log(response);
+        exercise.XMLdescription = response.entity;
+        return CodeGradX.parsexml(exercise.XMLdescription).then(function (description) {
+          state.debug('getDescription3', description);
+          exercise.description = description;
+          return description;
+        });
       });
     };
+
+    /** Promisify an XML to Javascript converter.
+
+        @param {string} xml - string to parse
+        @returns {Promise}
+
+      */
+
+    CodeGradX.parsexml = function (xml) {
+        var parser = new xml2js.Parser({
+          explicitArray: false,
+          trim: true
+        });
+        var xerr, xresult;
+        parser.parseString(xml, function (err, result) {
+            xerr = err;
+            xresult = result;
+        });
+        if ( xerr ) {
+          return when.reject(xerr);
+        } else {
+          return when(xresult);
+        }
+    };
+
+    /** Get the HTML stem of the Exercise.
+
+        @returns {Promise{string}}
+
+        Parse the XML and enrich the Exercise with an 'authorship'
+        property: an array with authors.
+
+        [ { firstname: "", lastname: "", email: ""}, ...]
+
+        and another 'stem' property: an array of questions.
+
+        [ { kind: 'question',
+            name: "Q1",
+            totalMark: 0.5,
+            expectations: [
+               file: {
+                  basename: "croissante.scm",
+                  initial: {
+                     width: 74,
+                     height: 8,
+                     content: "..."
+                  } },
+                ... ],
+            stem: "<p>...</p>"
+          },
+          ...
+        ]
+
+      */
 
     CodeGradX.Exercise.prototype.getStem = function () {
       // get stem
       var exercise = this;
       var state = CodeGradX.getCurrentState();
-      state.debug('getStem');
+      state.debug('getStem1');
       if ( exercise.stem ) {
         return when(exercise.stem);
-      } else {
-        state.sendESServer('e', {
-          path: ('/exercise/' + exercise.url + '/stem'),
-          method: 'GET',
-          Accept: "text/xml"
-        }).then(function (xml) {
-          //console.log(xml);
-          state.debug('sendESServer', xml);
-          exercise.xml = xml;
-          return exercise;
-        });
       }
+      return state.sendESServer('e', {
+        path: ('/exercisecontent/' + exercise.safecookie + '/stem'),
+        method: 'GET',
+        headers: {
+          Accept: "text/xml"
+        }
+      }).then(function (response) {
+        state.debug('getStem2', response);
+        //console.log(response);
+        // Extract authors
+        var authorshipRegExp = new RegExp("^(.|\n)*(<authorship>(.|\n)*</authorship>)(.|\n)*$");
+        var authorship = response.entity.replace(authorshipRegExp, "$2");
+        return CodeGradX.parsexml(authorship).then(function (result) {
+          state.debug("getStem3", result);
+          var authors = result.authorship;
+          if ( _.isArray(authors) ) {
+            exercise.authorship = authors;
+          } else {
+            exercise.authorship = [ authors ];
+          }
+          //console.log(exercise.authorship);
+          // Extract stem
+          var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*</content>)(.|\n)*$");
+          var content = response.entity.replace(contentRegExp, "$2");
+          exercise.XMLstem = content;
+          exercise.stem = CodeGradX.xml2html(content);
+          return when(exercise.stem);
+        });
+      });
     };
 
-    CodeGradX.Exercise.prototype.newStringAnswer = function (cb) {
+    CodeGradX.Exercise.prototype.newStringAnswer = function () {
       // create an answer
     };
 
-    CodeGradX.Exercise.prototype.newFileAnswer = function (cb) {
+    CodeGradX.Exercise.prototype.newFileAnswer = function () {
       // create an answer
     };
 
@@ -700,7 +822,13 @@ CodeGradX.Job.prototype.report = function (cb) {
   // get the grading report
 };
 
+/** Conversion of texts (stems, reports) from XML to HTML.
+ This function may be modified.
+*/
 
+CodeGradX.xml2html = function (s) {
+  return s;
+};
 
 }).call(this);
 
