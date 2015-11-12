@@ -722,9 +722,9 @@ Javascript Library to interact with the CodeGradX infrastructure
           state.debug("getStem3", result);
           var authors = result.authorship;
           if ( _.isArray(authors) ) {
-            exercise.authorship = authors;
+            exercise.authorship = _.map(authors, 'author');
           } else {
-            exercise.authorship = [ authors ];
+            exercise.authorship = [ authors.author ];
           }
           //console.log(exercise.authorship);
           // Extract stem
@@ -737,11 +737,36 @@ Javascript Library to interact with the CodeGradX infrastructure
       });
     };
 
-    CodeGradX.Exercise.prototype.newStringAnswer = function () {
+    CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
       // create an answer
+      var exercise = this;
+      var state = CodeGradX.getCurrentState();
+      state.debug('sendStringAnswer1', answer);
+      return state.sendAXServer('a', {
+        path: ('/exercise/' + exercise.safecookie + '/job'),
+        method: "POST",
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "Accept": 'text/xml'
+        },
+        entity: answer
+      }).then(function (response) {
+        console.log(response);
+        state.debug('sendStringAnswer2', response);
+        return CodeGradX.parsexml(response.entity).then(function (js) {
+          console.log(js);
+          state.debug('sendStringAnswer3', js);
+          return new StringAnswer({
+            exercise: exercise,
+            content: answer,
+            responseXML: response.entity,
+            response: js
+          });
+        });
+      });
     };
 
-    CodeGradX.Exercise.prototype.newFileAnswer = function () {
+    CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
       // create an answer
     };
 

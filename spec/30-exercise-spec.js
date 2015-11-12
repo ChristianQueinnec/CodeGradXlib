@@ -114,7 +114,6 @@ describe('CodeGradX', function () {
     }, faildone);
   });
 
-
   it("get one stem", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
@@ -123,6 +122,7 @@ describe('CodeGradX', function () {
       done();
     }
     exercise1.getStem().then(function (stem) {
+      expect(exercise1.XMLstem).toBeDefined();
       expect(stem).toBe(exercise1.stem);
       done();
     }, faildone);
