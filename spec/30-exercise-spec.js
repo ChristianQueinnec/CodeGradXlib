@@ -87,9 +87,26 @@ describe('CodeGradX', function () {
     }, faildone);
   });
 
+  // Javascript test
+  it("checks replace globally", function () {
+    var re = new RegExp("^(.)*(<a>(.)*</a>)(.)*$", "g");
+    var s1 = "1234<a>X</a>567";
+    expect(s1.replace(re, "$2")).toBe("<a>X</a>");
+
+    var reg = new RegExp("<a>.*?</a>", "g");
+    expect(s1.match(reg).length).toBe(1);
+    expect(s1.match(reg)[0]).toBe("<a>X</a>");
+
+    var s2 = "1234<a>X</a>567<a>YZ</a>89";
+    //expect(s1.replace(re, "$2")).toBe("<a>X</a><a>YZ</a>");
+    expect(s2.match(reg).length).toBe(2);
+    expect(s2.match(reg)[0]).toBe("<a>X</a>");
+    expect(s2.match(reg)[1]).toBe("<a>YZ</a>");
+  });
+
   var exercise1;
 
-  it("get one exercise", function (done) {
+  it("get one exercise description", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
       state.debug(reason).show();
@@ -98,7 +115,7 @@ describe('CodeGradX', function () {
     }
     var campaign = state.currentCampaign;
     expect(campaign).toBeDefined();
-    //console.log(campaign.exercises);
+    //console.log(campaign.exercises[0].exercises);
     expect(campaign.exercises).toBeDefined();
     exercise1 = campaign.exercises[0].exercises[0];
     expect(exercise1 instanceof CodeGradX.Exercise).toBeTruthy();
@@ -109,23 +126,73 @@ describe('CodeGradX', function () {
       expect(exercise1.XMLdescription).toBeDefined();
       expect(exercise1.description).toBe(description);
       expect(exercise1.description.fw4ex).toBeDefined();
+      expect(exercise1.description.fw4ex.exerciseContent).toBeDefined();
+      // Check authorship:
+      expect(exercise1.authorship.length).toBe(1);
+      expect(exercise1.authorship[0].firstname).toBe('Christian');
+      // check stem:
+      expect(exercise1.XMLstem).toBeDefined();
+      // check inlineFileName
+      expect(exercise1.inlineFileName).toBe("croissante.scm");
       //console.log(exercise1);
       done();
     }, faildone);
   });
 
-  it("get one stem", function (done) {
+  it("get a precise exercise", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
       state.debug(reason).show();
       fail(reason);
       done();
     }
-    exercise1.getStem().then(function (stem) {
-      expect(exercise1.XMLstem).toBeDefined();
-      expect(stem).toBe(exercise1.stem);
+    var campaign = state.currentCampaign;
+    var exerciseName = "com.paracamplus.li205.function.1";
+    campaign.getExercise(exerciseName).then(function (exercise) {
+      expect(exercise).toBeDefined();
+      expect(exercise.name).toBe(exerciseName);
       done();
     }, faildone);
   });
+
+  it("get an absent exercise", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    var campaign = state.currentCampaign;
+    var exerciseName = "com.paracamplus.li205.function.1,.XXX";
+    campaign.getExercise(exerciseName).then(faildone, function (reason) {
+      done();
+    });
+  });
+
+  var code1 = "" +
+  "(define (croissante? L) " +
+  "  L )";
+
+  it("may send an answer", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      console.log(reason);
+      fail(reason);
+      done();
+    }
+    exercise1.sendStringAnswer(code1).then(function (answer) {
+      expect(answer).toBeDefined();
+      //console.log(answer);
+      expect(answer instanceof CodeGradX.Answer).toBeTruthy();
+      expect(answer.jobid).toBeDefined();
+      answer.getReport().then(function (report) {
+        //console.log(report);
+        answer.report = report;
+        expect(report).toBeDefined();
+        done();
+      });
+    }, faildone);
+  }, 50*1000); // 50 seconds
 
 });

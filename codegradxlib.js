@@ -24,11 +24,21 @@ Javascript Library to interact with the CodeGradX infrastructure
   var when = require('when');
   var rest = require('rest');
   var mime = require('rest/interceptor/mime');
+  var registry = require('rest/mime/registry');
   var cookie = require('cookie');
   //var sleep = require('sleep');
   var xml2js = require('xml2js');
   //var formurlencoded = require('form-urlencoded');
 
+  // Define that MIME type:
+  registry.register('application/octet-stream', {
+    read: function(str) {
+        return str;
+    },
+    write: function(str) {
+        return str;
+    }
+  });
 
   /* improvements
   * - name differently methods returning a Promise from others
@@ -130,7 +140,7 @@ Javascript Library to interact with the CodeGradX infrastructure
   };
 
   CodeGradX.getCurrentState = function () {
-    throw "noState";
+    throw new Error("noState");
   };
 
   CodeGradX.State.prototype.debug = function () {
@@ -310,7 +320,7 @@ Javascript Library to interact with the CodeGradX infrastructure
           state.debug('sendAXServer2', responses);
           var descriptions2 = getActiveServers();
           if ( descriptions2.length === 0 ) {
-            throw 'no available server ' + kind;
+            throw new Error('no available server ' + kind);
           } else {
             descriptions = descriptions2;
             return tryNext('go');
@@ -369,7 +379,7 @@ Javascript Library to interact with the CodeGradX infrastructure
         return state.checkServers(kind).then(function (responses) {
           var descriptions2 = getActiveServers();
           if ( descriptions2.length === 0 ) {
-            throw "no available server " + kind;
+            throw new Error("no available server " + kind);
           } else {
             state.debug('sendESServer2',  descriptions2);
             var promises = _.map(descriptions2, trySending);
@@ -405,12 +415,18 @@ Javascript Library to interact with the CodeGradX infrastructure
     function retryNext () {
       state.debug("retryNext", parameters);
       if ( parameters.i++ < parameters.attempts ) {
-      var promise = state.sendESServer(kind, options);
+      var promise = state.sendESServer(kind, options).then(function (response) {
+        if ( response.status.code !== 200 ) {
+          return when.reject(new Error(response.status.code));
+        } else {
+          return when(response);
+        }
+      });
       var delayedPromise = when(null).delay(dt).then(retryNext);
       var promises = [promise, delayedPromise];
       return when.any(promises);
       } else {
-        return when.reject("waitedTooMuch");
+        return when.reject(new Error("waitedTooMuch"));
       }
     }
     return retryNext();
@@ -526,7 +542,7 @@ Javascript Library to interact with the CodeGradX infrastructure
         state.currentCampaign = campaign;
         return when(campaign);
       } else {
-        return when.reject("No such campaign " + name);
+        return when.reject(new Error("No such campaign " + name));
       }
     };
 
@@ -586,6 +602,44 @@ Javascript Library to interact with the CodeGradX infrastructure
     };
 
 
+    CodeGradX.Campaign.prototype.getExercise = function (name) {
+      // get information on an Exercise
+      var state = CodeGradX.getCurrentState();
+      state.debug('getExercise', name);
+      if ( state.caches.exercises[name] ) {
+        return when(state.caches.exercises[name]);
+      }
+      var campaign = this;
+      return campaign.getExercises().then(function (exercises) {
+        function find (exercises) {
+          if ( _.isArray(exercises) ) {
+            for ( var i=0 ; i<exercises.length ; i++ ) {
+              //console.log("explore " + i);
+              var result = find(exercises[i]);
+              if ( result ) {
+                return result;
+              }
+            }
+          } else if ( exercises instanceof CodeGradX.ExercisesSet ) {
+            return find(exercises.exercises);
+          } else if ( exercises instanceof CodeGradX.Exercise ) {
+            //console.log("compare " + exercises.name);
+            if ( exercises.name === name ) {
+              return exercises;
+            } else {
+              return false;
+            }
+          }
+        }
+        var exercise = find(exercises);
+        if ( exercise ) {
+          return when(exercise);
+        } else {
+          return when.reject(new Error("No such exercise " + name));
+        }
+      });
+    };
+
     // **************** Exercise
     /** Constructor of an Exercise.
       When extracted from a Campaign, an Exercise looks like:
@@ -626,21 +680,72 @@ Javascript Library to interact with the CodeGradX infrastructure
       if ( exercise.description ) {
         return when(exercise.description);
       }
-      return state.sendESServer('e', {
+      var promise = state.sendESServer('e', {
         path: ('/exercisecontent/' + exercise.safecookie + '/content'),
         method: 'GET',
         headers: {
           Accept: "text/xml"
         }
-      }).then(function (response) {
+      });
+      var promise1 = promise.then(function (response) {
         state.debug('getDescription2', response);
         //console.log(response);
         exercise.XMLdescription = response.entity;
-        return CodeGradX.parsexml(exercise.XMLdescription).then(function (description) {
-          state.debug('getDescription3', description);
+        function parseXML (description) {
+          state.debug('getDescription2b', description);
           exercise.description = description;
-          return description;
+          state.caches.exercises[exercise.name] = exercise;
+          return when(description);
+        }
+        return CodeGradX.parsexml(exercise.XMLdescription).then(parseXML);
+      });
+      var promise2 = promise.then(function (response) {
+        // Extract authors
+        state.debug("getDescription3", response);
+        var authorshipRegExp = new RegExp("^(.|\n)*(<authorship>(.|\n)*</authorship>)(.|\n)*$");
+        var authorship = response.entity.replace(authorshipRegExp, "$2");
+        return CodeGradX.parsexml(authorship).then(function (result) {
+          state.debug("getDescription3a", result);
+          var authors = result.authorship;
+          if ( _.isArray(authors) ) {
+            exercise.authorship = _.map(authors, 'author');
+          } else {
+            exercise.authorship = [ authors.author ];
+          }
+          return when(response);
         });
+      });
+      var promise3 = promise.then(function (response) {
+        // Extract stem
+        state.debug("getDescription4", response);
+        var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*</content>)(.|\n)*$");
+        var content = response.entity.replace(contentRegExp, "$2");
+        exercise.XMLstem = content;
+        exercise.stem = CodeGradX.xml2html(content);
+        return when(response);
+      });
+      var promise4 = promise.then(function (response) {
+        // If only one question expecting one file, retrieve its name:
+        state.debug('getDescription5');
+        var expectationsRegExp = new RegExp("<expectations>(.|\n)*</expectations>", "g");
+        function concat (s1, s2) {
+          return s1 + s2;
+        }
+        var expectations =
+          '<div>' +
+          _.reduce(response.entity.match(expectationsRegExp), concat) +
+          '</div>';
+        return CodeGradX.parsexml(expectations).then(function (result) {
+          state.debug('getDescription5a');
+          if (result.div.expectations ) {
+            //console.log(result.div.expectations);
+            exercise.inlineFileName = result.div.expectations.file.$.basename;
+          }
+          return when(response);
+        });
+      });
+      return when.join(promise2, promise3, promise4).then(function (values) {
+        return promise1;
       });
     };
 
@@ -668,99 +773,40 @@ Javascript Library to interact with the CodeGradX infrastructure
         }
     };
 
-    /** Get the HTML stem of the Exercise.
-
-        @returns {Promise{string}}
-
-        Parse the XML and enrich the Exercise with an 'authorship'
-        property: an array with authors.
-
-        [ { firstname: "", lastname: "", email: ""}, ...]
-
-        and another 'stem' property: an array of questions.
-
-        [ { kind: 'question',
-            name: "Q1",
-            totalMark: 0.5,
-            expectations: [
-               file: {
-                  basename: "croissante.scm",
-                  initial: {
-                     width: 74,
-                     height: 8,
-                     content: "..."
-                  } },
-                ... ],
-            stem: "<p>...</p>"
-          },
-          ...
-        ]
-
-      */
-
-    CodeGradX.Exercise.prototype.getStem = function () {
-      // get stem
-      var exercise = this;
-      var state = CodeGradX.getCurrentState();
-      state.debug('getStem1');
-      if ( exercise.stem ) {
-        return when(exercise.stem);
-      }
-      return state.sendESServer('e', {
-        path: ('/exercisecontent/' + exercise.safecookie + '/stem'),
-        method: 'GET',
-        headers: {
-          Accept: "text/xml"
-        }
-      }).then(function (response) {
-        state.debug('getStem2', response);
-        //console.log(response);
-        // Extract authors
-        var authorshipRegExp = new RegExp("^(.|\n)*(<authorship>(.|\n)*</authorship>)(.|\n)*$");
-        var authorship = response.entity.replace(authorshipRegExp, "$2");
-        return CodeGradX.parsexml(authorship).then(function (result) {
-          state.debug("getStem3", result);
-          var authors = result.authorship;
-          if ( _.isArray(authors) ) {
-            exercise.authorship = _.map(authors, 'author');
-          } else {
-            exercise.authorship = [ authors.author ];
-          }
-          //console.log(exercise.authorship);
-          // Extract stem
-          var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*</content>)(.|\n)*$");
-          var content = response.entity.replace(contentRegExp, "$2");
-          exercise.XMLstem = content;
-          exercise.stem = CodeGradX.xml2html(content);
-          return when(exercise.stem);
-        });
-      });
-    };
-
     CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
-      // create an answer
+      // send an answer
       var exercise = this;
       var state = CodeGradX.getCurrentState();
       state.debug('sendStringAnswer1', answer);
+      if ( typeof exercise.inlineFileName === 'undefined') {
+        return when.reject(new Error("Non suitable exercise"));
+      }
       return state.sendAXServer('a', {
         path: ('/exercise/' + exercise.safecookie + '/job'),
         method: "POST",
         headers: {
           "Content-Type": "application/octet-stream",
+          "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
           "Accept": 'text/xml'
         },
         entity: answer
       }).then(function (response) {
-        console.log(response);
+        //console.log(response);
         state.debug('sendStringAnswer2', response);
         return CodeGradX.parsexml(response.entity).then(function (js) {
-          console.log(js);
+          //console.log(js);
           state.debug('sendStringAnswer3', js);
-          return new StringAnswer({
+          js = js.fw4ex.jobSubmittedReport;
+          exercise.uuid = js.exercise.$.exerciseid;
+          return new CodeGradX.StringAnswer({
             exercise: exercise,
             content: answer,
             responseXML: response.entity,
-            response: js
+            response: js,
+            personid: js.person.$.personid,
+            archived: js.job.$.archived,
+            jobid: js.job.$.jobid,
+            pathdir: js.$.location
           });
         });
       });
@@ -811,31 +857,51 @@ CodeGradX.ExercisesSet = function (json) {
 
 // **************** abstract Answer
 
-CodeGradX.Answer = function (exercise) {
-  this.exercise = exercise;
+CodeGradX.Answer = function () {
+  throw new Error("abstract class");
 };
 
-CodeGradX.Answer.prototype.submit = function (cb) {
-  // submit an answer (string or file) towards an exercise, returns a Job
+CodeGradX.Answer.prototype.getReport = function () {
+  // get the marking report
+  var answer = this;
+  var state = CodeGradX.getCurrentState();
+  state.debug('getReport1', answer);
+  if ( answer.report ) {
+    return when(answer.report);
+  }
+  var path = answer.pathdir + '/' + answer.jobid + '.xml';
+  return state.sendRepeatedlyESServer('s', {
+    // repetition parameters
+  }, {
+    path: path,
+    method: 'GET',
+    headers: {
+      "Accept": "text/xml"
+    }
+  }).then(function (response) {
+    //state.log.show();
+    console.log(response);
+    return when(response);
+  });
 };
 
 // subclasses
 
-CodeGradX.FileAnswer = function (exercise) {
-  this.exercise = exercise;
+CodeGradX.FileAnswer = function (options) {
+  _.assign(this, options);
 };
 CodeGradX.FileAnswer.prototype =
-Object.create(CodeGradX.Answer.prototype);
+  Object.create(CodeGradX.Answer.prototype);
 CodeGradX.FileAnswer.prototype.constructor =
-CodeGradX.FileAnswer;
+  CodeGradX.FileAnswer;
 
-CodeGradX.StringAnswer = function (exercise) {
-  this.exercise = exercise;
+CodeGradX.StringAnswer = function (options) {
+  _.assign(this, options);
 };
 CodeGradX.StringAnswer.prototype =
-Object.create(CodeGradX.Answer.prototype);
+  Object.create(CodeGradX.Answer.prototype);
 CodeGradX.StringAnswer.prototype.constructor =
-CodeGradX.StringAnswer;
+  CodeGradX.StringAnswer;
 
 // **************** Job
 
