@@ -6,6 +6,7 @@ if ( typeof CodeGradX === 'undefined' ) {
 }
 
 var xml2js = require('xml2js').parseString;
+var _ = require('lodash');
 
 describe('CodeGradX', function () {
 
@@ -55,8 +56,27 @@ describe('CodeGradX', function () {
     }
     expect(state.currentCampaign instanceof CodeGradX.Campaign).toBeTruthy();
     state.currentCampaign.getJobs().then(function (jobs) {
-      console.log(jobs);
+      //console.log(jobs);
       expect(jobs.length).toBeGreaterThan(2);
+      done();
+    }, faildone);
+  }, 10*1000); // 10 seconds
+
+  it("should get skills", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    expect(state.currentCampaign instanceof CodeGradX.Campaign).toBeTruthy();
+    state.currentCampaign.getSkills().then(function (js) {
+      //console.log(js);
+      expect(js).toBeDefined();
+      expect(js.you).toBeDefined();
+      expect(js.you.skill).toBeDefined();
+      expect(_.isArray(js.all)).toBeTruthy();
+      expect(js.all.length).toBeDefined();
       done();
     }, faildone);
   }, 10*1000); // 10 seconds

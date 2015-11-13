@@ -358,6 +358,9 @@ Javascript Library to interact with the CodeGradX infrastructure
       var descriptions = getActiveServers();
       function reportThen (response) {
         state.debug('reportThen', response);
+        if ( response.status.code !== 200 ) {
+          return when.reject(new Error("Bad HTTP code " + response.status.code));
+        }
         return response;
       }
       function reportElse (reason) {
@@ -568,11 +571,34 @@ Javascript Library to interact with the CodeGradX infrastructure
       _.assign(this, json);
     };
 
+    /** Get the skills of the students enrolled in the current campaign.
+
+    @return {Promise{Object}}
+    @property {Object} skills.you
+    @property {number} skills.you.personId - your numeric identifier
+    @property {number} skills.you.skill - your own skill
+    @property {Array[Object]} skills.all
+    @property {Object} skills.all[].skill - some student's skill
+
+    */
+
     CodeGradX.Campaign.prototype.getSkills = function () {
       // get skills of the anonymous students of this campaign
       var state = CodeGradX.getCurrentState();
       var campaign = this;
       state.debug('getSkills1', campaign);
+      return state.sendAXServer('x', {
+        path: ('/skill/' + campaign.name),
+        method: 'GET',
+        headers: {
+          Accept: "application/json"
+        }
+      }).then(function (response) {
+        state.debug('getSkills2');
+        //console.log(response);
+        state.skills = response.entity;
+        return when(state.skills);
+      });
     };
 
     /** list the jobs submitted by the current user in the current campaign.
@@ -594,7 +620,7 @@ Javascript Library to interact with the CodeGradX infrastructure
         }
       }).then(function (response) {
         state.debug('getJobs2');
-        console.log(response);
+        //console.log(response);
         state.jobs = response.entity.jobs;
         return when(state.jobs);
       });
