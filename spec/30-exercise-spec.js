@@ -78,10 +78,9 @@ describe('CodeGradX', function () {
       expect(campaign instanceof CodeGradX.Campaign).toBeTruthy();
         expect(campaign).toBe(state.currentCampaign);
         //console.log(campaign);
-        campaign.getExercises().then(function (es) {
-          expect(es[0] instanceof CodeGradX.ExercisesSet).toBeTruthy();
-          expect(es[1] instanceof CodeGradX.ExercisesSet).toBeTruthy();
-          expect(es).toBe(campaign.exercises);
+        campaign.getExercisesSet().then(function (es) {
+          expect(es instanceof CodeGradX.ExercisesSet).toBeTruthy();
+          expect(es).toBe(campaign.exercisesSet);
           done();
         }, faildone);
     }, faildone);
@@ -115,9 +114,9 @@ describe('CodeGradX', function () {
     }
     var campaign = state.currentCampaign;
     expect(campaign).toBeDefined();
-    //console.log(campaign.exercises[0].exercises);
-    expect(campaign.exercises).toBeDefined();
-    exercise1 = campaign.exercises[0].exercises[0];
+    //console.log(campaign.exercisesSet);
+    expect(campaign.exercisesSet).toBeDefined();
+    exercise1 = campaign.exercisesSet.exercises[0].exercises[0];
     expect(exercise1 instanceof CodeGradX.Exercise).toBeTruthy();
     expect(exercise1.nickname).toBe('croissante');
     //console.log(exercise1);
@@ -170,7 +169,7 @@ describe('CodeGradX', function () {
   });
 
   var code1 = "" +
-  "(define (croissante? L) " +
+  "(define (croissante? L) \n" +
   "  L )";
 
   it("may send an answer", function (done) {
@@ -181,15 +180,18 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    exercise1.sendStringAnswer(code1).then(function (answer) {
-      expect(answer).toBeDefined();
-      //console.log(answer);
-      expect(answer instanceof CodeGradX.Answer).toBeTruthy();
-      expect(answer.jobid).toBeDefined();
-      answer.getReport().then(function (report) {
+    exercise1.sendStringAnswer(code1).then(function (job) {
+      expect(job).toBeDefined();
+      //console.log(job);
+      expect(job instanceof CodeGradX.Job).toBeTruthy();
+      expect(job.jobid).toBeDefined();
+      job.getReport().then(function (j) {
         //console.log(report);
-        answer.report = report;
-        expect(report).toBeDefined();
+        expect(j).toBeDefined();
+        expect(j).toBe(job);
+        expect(j.finished).toBeDefined();
+        expect(j.exerciseid).toBeDefined();
+        expect(j.report).toBeDefined();
         done();
       });
     }, faildone);
