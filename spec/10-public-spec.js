@@ -14,6 +14,7 @@ describe('CodeGradX', function () {
   it('should send failing authentication request', function (done) {
     var state = new CodeGradX.State();
     function faildone (reason) {
+      state.log.show();
       fail(reason);
       done();
     }
@@ -33,12 +34,9 @@ describe('CodeGradX', function () {
           login: 'foo',
           password: 'xyzzy'
         }
-      }).then(function (response) {
-        //console.log(response);
-        expect(response.status.code).toBe(400);
-        // set currentUser...
+      }).then(faildone).catch(function (reason) {
         done();
-      }, faildone);
+      });
     }, faildone);
   });
 

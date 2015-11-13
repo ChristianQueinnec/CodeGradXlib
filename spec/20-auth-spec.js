@@ -29,6 +29,7 @@ describe('CodeGradX', function () {
       entity: authData
     }).then(function (response) {
       //console.log(response);
+      expect(response.status).toBeDefined();
       expect(response.status.code).toBe(200);
       expect(response.headers['Set-Cookie']).toBeDefined();
       expect(response.entity.kind).toBe('authenticationAnswer');
@@ -47,7 +48,7 @@ describe('CodeGradX', function () {
         expect(response.raw.request._header).toMatch(/\r\nCookie: u=U/);
         expect(response.entity.kind).toBe('authenticationAnswer');
         done();
-      });
+      }, faildone);
     }, faildone);
   });
 

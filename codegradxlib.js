@@ -291,7 +291,15 @@ Javascript Library to interact with the CodeGradX infrastructure
           });
           state.currentCookie = cookies;
         }
-        return response;
+        return when(response);
+      }
+      function checkStatusCode (response) {
+          if ( response.status &&
+               response.status.code &&
+               response.status.code >= 300 ) {
+            return when.reject(new Error("Bad HTTP code " + response.status.code));
+          }
+          return when(response);
       }
       function getActiveServers () {
         return _.filter(state.servers[kind], {enabled: true});
@@ -305,7 +313,11 @@ Javascript Library to interact with the CodeGradX infrastructure
           descriptions = _.rest(descriptions);
           newoptions.path = 'http://' + description.host + options.path;
           state.debug('tryNext2', newoptions.path);
-          return state.userAgent(newoptions).then(updateCurrentCookie, tryNext);
+          var promise = state.userAgent(newoptions);
+          var promise1 = promise.then(checkStatusCode);
+          var promise2 = promise1.then(updateCurrentCookie);
+          return promise2.catch(tryNext);
+          //return promise.then(updateCurrentCookie, tryNext);
         } else {
           throw reason;
         }
