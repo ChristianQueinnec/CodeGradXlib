@@ -101,13 +101,14 @@ describe('CodeGradX', function () {
   it("should get a public job report", function (done) {
     var state = new CodeGradX.State();
     function faildone (reason) {
+      state.log.show();
       fail(reason);
       done();
     }
     var promise1 = state.checkServers('s');
     promise1.then(function (responses) {
       var promise2 = state.sendESServer('s', {
-        path: '/s/D/8/F/A/1/C/4/E/8/7/E/7/1/1/D/D/B/7/3/8/2/E/2/7/1/B/8/B/9/4/E/0/D8FA1C4E-87E7-11DD-B738-2E271B8B94E0.xml'
+        path: "/s/D/B/F/6/0/8/9/8/8/A/0/2/1/1/E/5/8/D/7/4/A/9/8/8/7/0/A/0/6/C/9/0/DBF60898-8A02-11E5-8D74-A98870A06C90.xml"
       }).then(function (response) {
         //console.log(response);
         //console.log(response.headers);

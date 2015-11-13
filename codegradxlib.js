@@ -568,13 +568,36 @@ Javascript Library to interact with the CodeGradX infrastructure
       _.assign(this, json);
     };
 
-    CodeGradX.Campaign.prototype.skills = function () {
+    CodeGradX.Campaign.prototype.getSkills = function () {
       // get skills of the anonymous students of this campaign
+      var state = CodeGradX.getCurrentState();
+      var campaign = this;
+      state.debug('getSkills1', campaign);
     };
 
-    CodeGradX.Campaign.prototype.jobs = function (user) {
+    /** list the jobs submitted by the current user in the current campaign.
+
+      @returns {Promise{Array[Job]}}
+    */
+
+    CodeGradX.Campaign.prototype.getJobs = function () {
       // get the jobs of the user (by default the currentUser)
       // within the campaign
+      var state = CodeGradX.getCurrentState();
+      var campaign = this;
+      state.debug('getJobs1', campaign, state.currentUser);
+      return state.sendAXServer('x', {
+        path: ('/history/campaign/' + campaign.name),
+        method: 'GET',
+        headers: {
+          Accept: "application/json"
+        }
+      }).then(function (response) {
+        state.debug('getJobs2');
+        console.log(response);
+        state.jobs = response.entity.jobs;
+        return when(state.jobs);
+      });
     };
 
     /** Get the (tree-shaped) set of exercises of a campaign.
@@ -848,10 +871,12 @@ CodeGradX.ExercisesSet = function (json) {
   }
 };
 
-/** Find an exercise by its name in a tree of Exercises.
+/** Find an exercise by its name in an ExercisesSet that is,
+    a tree of Exercises.
 
-  @param {String} name
-  @returns {Exercise}
+    @param {String} name
+    @returns {Exercise}
+
   */
 
 CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
@@ -879,7 +904,7 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
   return find(exercises);
 };
 
-// **************** abstract Job
+// **************** Job
 
 /**
 <jobStudentReport jobid="775F47E8-8988-11E5-9328-B68770A06C90">

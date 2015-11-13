@@ -138,6 +138,8 @@ describe('CodeGradX', function () {
     }, faildone);
   });
 
+  var exercise2;
+
   it("get a precise exercise", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
@@ -150,7 +152,11 @@ describe('CodeGradX', function () {
     campaign.getExercise(exerciseName).then(function (exercise) {
       expect(exercise).toBeDefined();
       expect(exercise.name).toBe(exerciseName);
-      done();
+      exercise.getDescription().then(function (description) {
+        expect(exercise.inlineFileName).toBe("min.c");
+        exercise2 = exercise;
+        done();
+      }, faildone);
     }, faildone);
   });
 
@@ -169,8 +175,9 @@ describe('CodeGradX', function () {
   });
 
   var code1 = "" +
-  "(define (croissante? L) \n" +
-  "  L )";
+  "int min (int a, int b) { \n" +
+  "  return (a<b)?a:b; \n" +
+  "}\n";
 
   it("may send an answer", function (done) {
     var state = CodeGradX.getCurrentState();
@@ -180,7 +187,9 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    exercise1.sendStringAnswer(code1).then(function (job) {
+    expect(exercise2).toBeDefined();
+    //console.log(exercise2);
+    exercise2.sendStringAnswer(code1).then(function (job) {
       expect(job).toBeDefined();
       //console.log(job);
       expect(job instanceof CodeGradX.Job).toBeTruthy();
