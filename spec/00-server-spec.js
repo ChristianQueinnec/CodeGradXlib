@@ -1,8 +1,6 @@
 // Jasmine tests for servers availability related methods.
 
-if ( typeof CodeGradX === 'undefined' ) {
-  var CodeGradX = require('../codegradxlib.js');
-}
+var CodeGradX = require('../codegradxlib.js');
 
 describe('CodeGradX', function () {
   it('should be loaded', function () {

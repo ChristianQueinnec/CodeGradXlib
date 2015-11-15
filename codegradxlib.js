@@ -26,7 +26,6 @@ Javascript Library to interact with the CodeGradX infrastructure
   var mime = require('rest/interceptor/mime');
   var registry = require('rest/mime/registry');
   var cookie = require('cookie');
-  //var sleep = require('sleep');
   var xml2js = require('xml2js');
   //var formurlencoded = require('form-urlencoded');
 
@@ -44,18 +43,21 @@ Javascript Library to interact with the CodeGradX infrastructure
   * - name differently methods returning a Promise from others
   */
 
-  // **************** log
+  // **************** log ********************************
+
   /* Constructor of log.
-     This log only keeps the last 20 facts.
-     See helper method on State to log facts.
+     This log only keeps the last `size` facts.
+     Use the `show` method to display it.
+     See also helper method `debug` on State to log facts.
   */
 
   CodeGradX.Log = function () {
     this.items = [];
-    this.size = 20;
+    this.size = 40;
   };
 
-  /** log some facts.
+  /** log some facts. The facts (the arguments) will be concatenated to
+    form a string to be recorded in the log.
 
     @param {Value...} arguments - facts to record
 
@@ -85,9 +87,9 @@ Javascript Library to interact with the CodeGradX infrastructure
     return this;
   };
 
-  // **************** Global state
+  // **************** Global state *********************************
 
-  CodeGradX.State = function () {
+  CodeGradX.State = function (initializer) {
     this.userAgent = rest.wrap(mime);
     this.log = new CodeGradX.Log();
     // State of servers:
@@ -132,6 +134,10 @@ Javascript Library to interact with the CodeGradX infrastructure
     this.currentUser = null;
     this.currentCookie = null;
     this.currentCampaign = null;
+    // Post-initialization
+    if ( _.isFunction(initializer) ) {
+      initializer(this);
+    }
     // Make the state global
     var state = this;
     CodeGradX.getCurrentState = function () {
@@ -161,7 +167,7 @@ Javascript Library to interact with the CodeGradX infrastructure
 
   @param {string} kind - the kind of server (a, e, x or s)
   @param {number} index - the number of the server.
-  @returns {Promise}
+  @returns {Promise{HTTPresponse}}
 
   Descriptions are kept in the global state.
   */
@@ -185,7 +191,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     function updateDescription (response) {
       state.debug('updateDescription', description.host, response);
       description.enabled = (response.status.code === 200);
-      return response;
+      return when(response);
     }
     function invalidateDescription (reason) {
       state.debug('invalidateDescription', description.host, reason);
@@ -203,7 +209,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     these checks are concurrently run.
 
     @param {string} kind - the kind of server (a, e, x or s)
-    @returns {Promise}
+    @returns {Promise{Array[HTTPresponse]}}
 
     */
 
@@ -217,7 +223,7 @@ Javascript Library to interact with the CodeGradX infrastructure
         if ( response.status.code === 200 ) {
           descriptions.next++;
         }
-        return descriptions;
+        return when(descriptions);
       }
       for ( var key in descriptions ) {
         if ( /^\d+$/.exec(key) ) {
@@ -225,18 +231,19 @@ Javascript Library to interact with the CodeGradX infrastructure
           promises.push(promise);
         }
       }
-      function ignoreError (reason) {
-        state.debug('ignoreError', reason);
+      function dontIncrementNext (reason) {
+        state.debug('dontIncrementNext', reason);
+        return when(null);
       }
       // Try also the next potential server:
       promise = state.checkServer(kind, descriptions.next)
-        .then(incrementNext, ignoreError);
+        .then(incrementNext, dontIncrementNext);
       promises.push(promise);
-      function returnDescriptions (results) {
-        state.debug('returnDescriptions', results);
-        return descriptions;
+      function returnDescriptions () {
+        state.debug('returnDescriptions', descriptions);
+        return when(descriptions);
       }
-      return when.settle(promises).catch(returnDescriptions);
+      return when.settle(promises).finally(returnDescriptions);
     };
 
     /** Check all possible servers of all kinds (a, e, x or s) that is,
@@ -265,7 +272,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     @property {string} options.method
     @property {object} options.headers - for instance Accept, Content-Type
     @property {object} options.entity - string or object depending on Content-Type
-    @returns {Promise}
+    @returns {Promise{HTTPresponse}}
 
     */
 
@@ -294,12 +301,14 @@ Javascript Library to interact with the CodeGradX infrastructure
         return when(response);
       }
       function checkStatusCode (response) {
-          if ( response.status &&
-               response.status.code &&
-               response.status.code >= 300 ) {
-            return when.reject(new Error("Bad HTTP code " + response.status.code));
-          }
-          return when(response);
+        state.debug('checkStatusCode', response);
+        if ( response.status &&
+             response.status.code &&
+             response.status.code >= 300 ) {
+          var error = new Error("Bad HTTP code " + response.status.code);
+          return when.reject(error);
+        }
+        return when(response);
       }
       function getActiveServers () {
         return _.filter(state.servers[kind], {enabled: true});
@@ -335,11 +344,11 @@ Javascript Library to interact with the CodeGradX infrastructure
             throw new Error('no available server ' + kind);
           } else {
             descriptions = descriptions2;
-            return tryNext('go');
+            return tryNext('goAgain');
           }
         }, allTried);
       } else {
-        return tryNext('go');
+        return tryNext('goFirst');
       }
     };
 
@@ -352,7 +361,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     @property {string} options.method
     @property {object} options.headers - for instance Accept, Content-Type
     @property {object} options.entity - string or object depending on Content-Type
-    @returns {Promise}
+    @returns {Promise{HTTPresponse}}
 
     */
 
@@ -368,23 +377,32 @@ Javascript Library to interact with the CodeGradX infrastructure
         return _.filter(state.servers[kind], {enabled: true});
       }
       var descriptions = getActiveServers();
-      function reportThen (response) {
-        state.debug('reportThen', response);
-        if ( response.status.code !== 200 ) {
-          return when.reject(new Error("Bad HTTP code " + response.status.code));
+      function checkStatusCode (response) {
+        state.debug('checkStatusCode', response.status.code);
+        if ( response.status.code >= 300 ) {
+          var error = new Error("Bad HTTP code " + response.status.code);
+          return when.reject(error);
         }
-        return response;
+        return when(response);
       }
-      function reportElse (reason) {
-        state.debug('reportElse', reason);
-        throw reason;
+      function seeError (reason) {
+        // A MIME deserialization problem may trigger seeError.
+        function see (o) {
+          var result = '';
+          for ( var key in o ) {
+            result += key + '=' + o[key] + ' ';
+          }
+          return result;
+        }
+        state.debug('seeError', see(reason));
+        var js = JSON.parse(reason.entity);
+        return when.reject(reason);
       }
       function trySending (description) {
-        state.debug('trySending', description);
         var tryoptions = _.assign({}, newoptions);
         tryoptions.path = 'http://' + description.host + options.path;
-        //console.log('sending to ' + newoptions.path);
-        return state.userAgent(tryoptions).then(reportThen, reportElse);
+        state.debug("trySending", tryoptions.path);
+        return state.userAgent(tryoptions).then(checkStatusCode, seeError);
       }
       function allTried (reason) {
         state.debug('allTried', reason);
@@ -414,6 +432,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     @property {number} parameters.step - seconds between each attempt
     @property {number} parameters.attempts - at most n attempts
     @property {function} parameters.progress -
+    @returns {Promise{HTTPresponse}}
 
     The `progress` function (parameters) {} is invoked before each attempt.
     By default, `parameters` is initialized with
@@ -434,16 +453,16 @@ Javascript Library to interact with the CodeGradX infrastructure
     function retryNext () {
       state.debug("retryNext", parameters);
       if ( parameters.i++ < parameters.attempts ) {
-      var promise = state.sendESServer(kind, options).then(function (response) {
-        if ( response.status.code !== 200 ) {
-          return when.reject(new Error(response.status.code));
-        } else {
-          return when(response);
-        }
-      });
-      var delayedPromise = when(null).delay(dt).then(retryNext);
-      var promises = [promise, delayedPromise];
-      return when.any(promises);
+        var promise = state.sendESServer(kind, options).then(function (response) {
+          if ( response.status.code !== 200 ) {
+            return when.reject(new Error(response.status.code));
+          } else {
+            return when(response);
+          }
+        });
+        var delayedPromise = when(null).delay(dt).then(retryNext);
+        var promises = [promise, delayedPromise];
+        return when.any(promises);
       } else {
         return when.reject(new Error("waitedTooMuch"));
       }
@@ -461,7 +480,7 @@ Javascript Library to interact with the CodeGradX infrastructure
 
     @param {string} login
     @param {string} password
-    @returns {Promise}
+    @returns {Promise{User}}
 
     */
 
@@ -484,12 +503,12 @@ Javascript Library to interact with the CodeGradX infrastructure
         //console.log(response);
         state.debug('getAuthenticatedUser2', response);
         state.currentUser = new CodeGradX.User(response.entity);
-        return state.currentUser;
+        return when(state.currentUser);
       });
       return promise;
     };
 
-    // **************** User
+    // **************** User *******************************
 
     /** @class {User}
     Represents a User.
@@ -531,6 +550,13 @@ Javascript Library to interact with the CodeGradX infrastructure
       });
     };
 
+    /** Get the campaigns where the current user is enrolled.
+
+      @param {bool} now - get only active campaigns.
+      @returns {Array[Campaign]}
+
+    */
+
     CodeGradX.User.prototype.getCampaigns = function (now) {
       // get active campaigns if now otherwise get all campaigns
       if ( now ) {
@@ -565,7 +591,8 @@ Javascript Library to interact with the CodeGradX infrastructure
       }
     };
 
-    // **************** Campaign
+    // **************** Campaign *********************************
+
     /** A campaign describes a set of exercises for a given group of
     students and a given group of teachers for a period of time. These
     groups of persons are not public.
@@ -648,9 +675,9 @@ Javascript Library to interact with the CodeGradX infrastructure
       // get the exercises of this campaign
       var state = CodeGradX.getCurrentState();
       var campaign = this;
-      state.debug('getExercises1', campaign);
-      if ( this.exercises ) {
-        return when(this.exercises);
+      state.debug('getExercisesSet1', campaign);
+      if ( campaign.exercisesSet ) {
+        return when(campaign.exercisesSet);
       }
       return state.sendESServer('e', {
         path: ('/path/' + (campaign.exercisesname || campaign.name)),
@@ -659,12 +686,19 @@ Javascript Library to interact with the CodeGradX infrastructure
           Accept: "application/json"
         }
       }).then(function (response) {
-        state.debug('getExercises2', response);
+        state.debug('getExercisesSet2', response);
         campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
         return when(campaign.exercisesSet);
       });
     };
 
+    /** Get a specific Exercise with its name within the tree of
+        Exercises of the current campaign.
+
+        @param {string} name - full name of the exercise
+        @returns {Promise{Exercise}}
+
+    */
 
     CodeGradX.Campaign.prototype.getExercise = function (name) {
       // get information on an Exercise
@@ -681,7 +715,8 @@ Javascript Library to interact with the CodeGradX infrastructure
       });
     };
 
-    // **************** Exercise
+    // **************** Exercise ***************************
+
     /** Constructor of an Exercise.
       When extracted from a Campaign, an Exercise looks like:
 
@@ -692,7 +727,8 @@ Javascript Library to interact with the CodeGradX infrastructure
       tags: [ 'li101', 'scheme', 'fonction' ] }
 
     This information is sufficient to list the exercises with a short
-    description of their stem.
+    description of their stem. If you need more information (the stem
+    for instance), use the `getDescription` method.
 
     */
 
@@ -845,7 +881,7 @@ Javascript Library to interact with the CodeGradX infrastructure
           state.debug('sendStringAnswer3', js);
           js = js.fw4ex.jobSubmittedReport;
           exercise.uuid = js.exercise.$.exerciseid;
-          return new CodeGradX.Job({
+          var job = new CodeGradX.Job({
             exercise: exercise,
             content: answer,
             responseXML: response.entity,
@@ -855,6 +891,7 @@ Javascript Library to interact with the CodeGradX infrastructure
             jobid: js.job.$.jobid,
             pathdir: js.$.location
           });
+          return when(job);
         });
       });
     };
@@ -870,7 +907,7 @@ Javascript Library to interact with the CodeGradX infrastructure
       // create an answer
     };
 
-    // **************** ExercisesSet
+    // **************** ExercisesSet ***************************
 
     /** Initialize a set (in fact a tree) of Exercises with some json such as:
 
@@ -942,7 +979,7 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
   return find(exercises);
 };
 
-// **************** Job
+// **************** Job ***************************
 
 /**
 <jobStudentReport jobid="775F47E8-8988-11E5-9328-B68770A06C90">
@@ -963,7 +1000,7 @@ CodeGradX.Job = function (js) {
   _.assign(this, js);
 };
 
-/** get the marking report of that Job.
+/** Get the marking report of that Job.
 
   @param {Object} parameters - for repetition see sendRepeatedlyESServer.default
   @returns {Promise{Job}}

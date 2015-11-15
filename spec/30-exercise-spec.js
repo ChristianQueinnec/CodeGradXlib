@@ -1,50 +1,8 @@
 // Jasmine test to discover exercises
 // requires file ./auth-data.json with login and password (not under git!)
 
-if ( typeof CodeGradX === 'undefined' ) {
-  var CodeGradX = require('../codegradxlib.js');
-}
-
-var xml2js = require('xml2js').parseString;
-
-function hackForVMauthor (state) {
-  state.servers = {
-    names: ['a', 'e', 'x', 's'],
-    domain: 'vmauthor.vld7net.fr',
-    a: {
-      next: 1,
-      suffix: '/alive',
-      0: {
-        host: 'avmauthor.vld7net.fr',
-        enabled: false
-      }
-    },
-    e: {
-      next: 1,
-      suffix: '/alive',
-      0: {
-        host: 'evmauthor.vld7net.fr',
-        enabled: false
-      }
-    },
-    x: {
-      next: 1,
-      suffix: '/dbalive',
-      0: {
-        host: 'xvmauthor.vld7net.fr',
-        enabled: false
-      }
-    },
-    s: {
-      next: 1,
-      suffix: '/',
-      0: {
-        host: 'svmauthor.vld7net.fr',
-        enabled: false
-      }
-    }
-  };
-}
+var CodeGradX = require('../codegradxlib.js');
+var authData = require('./auth-data.json');
 
 describe('CodeGradX', function () {
 
@@ -56,8 +14,6 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    //hackForVMauthor(state);
-    var authData = require('./auth-data.json');
     state.getAuthenticatedUser(authData.login, authData.password)
     .then(function (user) {
       expect(user).toBeDefined();

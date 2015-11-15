@@ -1,11 +1,8 @@
 // Jasmine test to check history
 // requires file ./auth-data.json with login and password (not under git!)
 
-if ( typeof CodeGradX === 'undefined' ) {
-  var CodeGradX = require('../codegradxlib.js');
-}
-
-var xml2js = require('xml2js').parseString;
+var CodeGradX = require('../codegradxlib.js');
+var authData = require('./auth-data.json');
 var _ = require('lodash');
 
 describe('CodeGradX', function () {
@@ -18,7 +15,6 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    var authData = require('./auth-data.json');
     state.getAuthenticatedUser(authData.login, authData.password)
     .then(function (user) {
       expect(user).toBeDefined();

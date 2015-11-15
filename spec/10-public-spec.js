@@ -1,12 +1,10 @@
 // Jasmine tests for public interactions
 
-if ( typeof CodeGradX === 'undefined' ) {
-  var CodeGradX = require('../codegradxlib.js');
-}
-
+var CodeGradX = require('../codegradxlib.js');
 var xml2js = require('xml2js').parseString;
 
 describe('CodeGradX', function () {
+
   it('should be loaded', function () {
     expect(CodeGradX).toBeDefined();
   });
@@ -38,7 +36,7 @@ describe('CodeGradX', function () {
         done();
       });
     }, faildone);
-  });
+  }, 10*1000); // 10 seconds
 
   it('should get public list of exercises', function (done) {
     var state = new CodeGradX.State();

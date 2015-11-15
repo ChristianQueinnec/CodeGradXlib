@@ -1,11 +1,8 @@
 // Jasmine test for user authentication
 // requires file ./auth-data.json with login and password (not under git!)
 
-if ( typeof CodeGradX === 'undefined' ) {
-  var CodeGradX = require('../codegradxlib.js');
-}
-
-var xml2js = require('xml2js').parseString;
+var CodeGradX = require('../codegradxlib.js');
+var authData = require('./auth-data.json');
 
 describe('CodeGradX', function () {
   it('should be loaded', function () {
@@ -18,7 +15,6 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    var authData = require('./auth-data.json');
     state.sendAXServer('x', {
       path: '/direct/check',
       method: 'POST',
@@ -50,7 +46,7 @@ describe('CodeGradX', function () {
         done();
       }, faildone);
     }, faildone);
-  });
+  }, 10*1000); // 10 seconds
 
   it('again with getAuthenticatedUser', function (done) {
     var state = new CodeGradX.State();
