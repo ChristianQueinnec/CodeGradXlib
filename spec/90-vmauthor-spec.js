@@ -17,10 +17,39 @@ describe('CodeGradX', function () {
     state.getAuthenticatedUser(vmauthData.login, vmauthData.password)
     .then(function (user) {
       expect(user).toBeDefined();
-      expect(user.firstname).toBe('no');
-      expect(user.lastname).toBe('one');
+      if ( user.firstname !== 'no' && user.firstname !== 'John' ) {
+        faildone();
+      }
       expect(user.email).toBe('nobody@example.com');
       done();
+    }, faildone);
+  });
+
+  it("modifies user's properties", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug('faildone', reason).show();
+      fail(reason);
+      done();
+    }
+    expect(state.currentUser).toBeDefined();
+    state.currentUser.modify({
+      lastname: "Doe",
+      firstname: "John"
+    }).then(function (user) {
+      //console.log(user);
+      expect(state.currentUser).toBe(user);
+      expect(user.lastname).toBe("Doe");
+      user.modify({
+        firstname: "no",
+        lastname: "one"
+      }).then(function (user2) {
+        expect(user2).toBe(user);
+        expect(state.currentUser).toBe(user2);
+        expect(user2.firstname).toBe('no');
+        expect(user2.lastname).toBe('one');
+        done();
+      }, faildone);
     }, faildone);
   });
 
@@ -49,6 +78,8 @@ describe('CodeGradX', function () {
       done();
     }
     expect(state.currentCampaign).toBeDefined();
+    //console.log(state.currentCampaign);
+    //state.log.show();
     state.currentCampaign.getExercisesSet().then(function (es) {
       expect(es).toBeDefined();
       expect(state.currentCampaign.exercisesSet).toBe(es);
@@ -93,7 +124,7 @@ describe('CodeGradX', function () {
     exercise1.sendStringAnswer(code1).then(function (job) {
       expect(job).toBeDefined();
       job.getReport().then(function (job) {
-        expect(job.mark).toBe(0.6);
+        expect(job.mark).toBe('0.6');
         done();
       }, faildone);
     }, faildone);

@@ -537,6 +537,7 @@ Javascript Library to interact with the CodeGradX infrastructure
       @property {string} fields.pseudo
       @property {string} fields.email
       @property {string} fields.password
+      @returns {Promise{User}}
 
     It is not possible to change user's login.
 
@@ -545,8 +546,20 @@ Javascript Library to interact with the CodeGradX infrastructure
     CodeGradX.User.prototype.modify = function (fields) {
       // send modifications then update local User
       var state = CodeGradX.getCurrentState();
-      return state.sendAXServer('x', fields).then(function (user) {
-        _.assign(state.currentUser, user);
+      state.debug('modify1', fields);
+      return state.sendAXServer('x', {
+        path: '/person/selfmodify',
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        entity: fields
+      }).then(function (response) {
+        state.debug('modify2', response);
+        delete response.entity.kind;
+        CodeGradX.User.call(state.currentUser, response.entity);
+        return when(state.currentUser);
       });
     };
 
