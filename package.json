@@ -2,31 +2,32 @@
   "name": "codegradx",
   "version": "1.0.0",
   "description": "Javascript Library to interact with the CodeGradX infrastructure",
+  "keywords": [
+    "CodeGradX",
+    "Infrastructure for mechanically grading programs",
+    "Paracamplus"
+  ],
   "main": "codegradxlib.js",
   "scripts": {
+    "lint": "jshint codegradxlib.js spec/*.js",
     "test": "jasmine",
+    "docs": "node_modules/.bin/jsdoc -c conf.json codegradxlib.js",
     "XXbrowser": "phantomjs test/run-jasmine.js test/jasmine.html",
     "XXbuild": "uglifyjs codegradx.js -c \"evaluate=false\" -m --source-map codegradx.min.map -o codegradx.min.js",
-    "build": "browserify codegradxlib.js -o codegradxlib-bundle.js",
-    "XXdocs": "docco codegradxlib.js",
-    "docs": "node_modules/.bin/jsdoc codegradxlib.js"
+    "Xbuild": "browserify codegradxlib.js -o codegradxlib-bundle.js",
+    "XXdocs": "docco codegradxlib.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ChristianQueinnec/CodeGradXlib.git"
+    "url": "https://github.com/ChristianQueinnec/CodeGradXlib.git"
   },
   "dependencies": {
     "lodash": "^3.10.1",
-    "when": "^3.7.4"
+    "when": "^3.7.4",
+    "xml2js": "^0.4.15"
   },
   "devDependencies": {
     "jasmine": "^2.3.2",
-    "gulp": "^3.9",
-    "gulp-util": "^3.0",
-    "gulp-watch": "^4.3.5",
-    "gulp-uglify": "^1.4",
-    "gulp-concat": "^2.6",
-    "gulp-notify": "^2.2",
     "jsdoc": "^3.3"
   },
   "author": {
@@ -34,7 +35,11 @@
     "email": "Christian.Queinnec@paracamplus.com",
     "url": "http://christian.queinnec.org/"
   },
-  "license": "ISC",
+  "licenses": [
+    { "type": "MIT",
+      "url": "http://opensource.org/licenses/MIT"
+    }
+  ],
   "bugs": {
     "url": "https://github.com/ChristianQueinnec/CodeGradXlib/issues"
   },

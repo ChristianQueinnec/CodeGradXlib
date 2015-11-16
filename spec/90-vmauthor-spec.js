@@ -1,4 +1,5 @@
 // Jasmine test related to the vmauthor virtual machine
+// This VM must be running, it hosts all the hostnames *vmauthor.vld7net.fr.
 
 var CodeGradX = require('../codegradxlib.js');
 var vmauthor = require('./vmauthor-data.js');

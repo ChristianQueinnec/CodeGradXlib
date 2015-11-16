@@ -1,10 +1,43 @@
 /**
-Javascript Library to interact with the CodeGradX infrastructure
+Javascript Library to interact with the CodeGradX infrastructure.
 
 @module codegradxlib
 @author Christian Queinnec <Christian.Queinnec@codegradx.org>
+@license MIT
+@see {@link http://codegradx.org/|CodeGradX}
+
+```
+npm install codegradx
+
+// Example of use:
+require('codegradx.js');
+
+new CodeGradX.State(postInitializer);
+
+CodeGradX.getCurrentState().
+  // ask for login and password:
+  getAuthenticatedUser(login, password).
+    then(function (user) {
+       // let the user choose one campaign among user.getCampaigns():
+       user.getCampaign('free').
+         then(function (campaign) {
+           // let the user choose one exercise among campaign.getExercisesSet()
+           campaign.getExercise('some.exercise.name').
+             then(function (exercise) {
+               // display stem of exercise and get answer:
+               exercise.sendFileAnswer("filename.c").
+                 then(function (job) {
+                   job.getReport().
+                     then(function (job) {
+                       // display job.report
+
+```
 
 */
+
+// Possible improvements:
+// - name differently methods returning a Promise from others
+
 
 (function () {
   var root = this;
@@ -17,17 +50,16 @@ Javascript Library to interact with the CodeGradX infrastructure
     root.CodeGradX = previous_CodeGradX;
     return CodeGradX;
   };
+
+  /** Export the `CodeGradX` object */
   module.exports = CodeGradX;
 
   var _    = require('lodash');
-  var http = require('http');
   var when = require('when');
   var rest = require('rest');
   var mime = require('rest/interceptor/mime');
   var registry = require('rest/mime/registry');
-  var cookie = require('cookie');
   var xml2js = require('xml2js');
-  //var formurlencoded = require('form-urlencoded');
 
   // Define that MIME type:
   registry.register('application/octet-stream', {
@@ -39,16 +71,16 @@ Javascript Library to interact with the CodeGradX infrastructure
     }
   });
 
-  /* improvements
-  * - name differently methods returning a Promise from others
-  */
-
   // **************** log ********************************
 
-  /* Constructor of log.
-     This log only keeps the last `size` facts.
-     Use the `show` method to display it.
-     See also helper method `debug` on State to log facts.
+  /** A log only keeps the last `size` facts.
+      Use the `show` method to display it.
+      See also helper method `debug` on State to log facts.
+
+     @constructor
+     @property {Array} items - array of kept facts
+     @property {number} size - number of facts to keep in the log
+
   */
 
   CodeGradX.Log = function () {
@@ -56,10 +88,12 @@ Javascript Library to interact with the CodeGradX infrastructure
     this.size = 40;
   };
 
-  /** log some facts. The facts (the arguments) will be concatenated to
+  /** Log some facts. The facts (the arguments) will be concatenated to
     form a string to be recorded in the log.
 
-    @param {Value...} arguments - facts to record
+    @function {CodeGradX.Log.debug}
+    @param {Value} arguments - facts to record
+    @returns {Log}
 
     */
 
@@ -82,12 +116,33 @@ Javascript Library to interact with the CodeGradX infrastructure
     return this;
   };
 
+  /** Display the log with `console.log`.
+
+    @function {Log.show}
+    @returns {Log}
+
+  */
+
   CodeGradX.Log.prototype.show = function () {
     console.log(this.items);
     return this;
   };
 
   // **************** Global state *********************************
+
+  /** The global state records the instantaneous state of the various
+  servers of the CodeGradX constellation. It also holds the current user,
+  cookie and campaign. The global `State` class is a singleton that may
+  be further customized with the `initializer` function. This singleton
+  can be obtained with `getCurrentState`.
+
+     @constructor
+     @param {Function} initializer - optional customizer
+     @returns {State}
+
+  The `initializer` will be invoked with the state as first argument.
+
+  */
 
   CodeGradX.State = function (initializer) {
     this.userAgent = rest.wrap(mime);
@@ -136,7 +191,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     this.currentCampaign = null;
     // Post-initialization
     if ( _.isFunction(initializer) ) {
-      initializer(this);
+      initializer.call(this, this);
     }
     // Make the state global
     var state = this;
@@ -144,6 +199,12 @@ Javascript Library to interact with the CodeGradX infrastructure
       return state;
     };
   };
+
+/** Get the current state (if defined).
+
+  @returns {State}
+
+*/
 
   CodeGradX.getCurrentState = function () {
     throw new Error("noState");
@@ -167,7 +228,7 @@ Javascript Library to interact with the CodeGradX infrastructure
 
   @param {string} kind - the kind of server (a, e, x or s)
   @param {number} index - the number of the server.
-  @returns {Promise{HTTPresponse}}
+  @returns {Promise} - Promise leading to {HTTPresponse}
 
   Descriptions are kept in the global state.
   */
@@ -209,7 +270,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     these checks are concurrently run.
 
     @param {string} kind - the kind of server (a, e, x or s)
-    @returns {Promise{Array[HTTPresponse]}}
+    @returns {Promise} yields Array[HTTPresponse]
 
     */
 
@@ -272,7 +333,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     @property {string} options.method
     @property {object} options.headers - for instance Accept, Content-Type
     @property {object} options.entity - string or object depending on Content-Type
-    @returns {Promise{HTTPresponse}}
+    @returns {Promise} yields {HTTPresponse}
 
     */
 
@@ -361,7 +422,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     @property {string} options.method
     @property {object} options.headers - for instance Accept, Content-Type
     @property {object} options.entity - string or object depending on Content-Type
-    @returns {Promise{HTTPresponse}}
+    @returns {Promise} yields {HTTPresponse}
 
     */
 
@@ -432,7 +493,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     @property {number} parameters.step - seconds between each attempt
     @property {number} parameters.attempts - at most n attempts
     @property {function} parameters.progress -
-    @returns {Promise{HTTPresponse}}
+    @returns {Promise} yields {HTTPresponse}
 
     The `progress` function (parameters) {} is invoked before each attempt.
     By default, `parameters` is initialized with
@@ -480,7 +541,7 @@ Javascript Library to interact with the CodeGradX infrastructure
 
     @param {string} login
     @param {string} password
-    @returns {Promise{User}}
+    @returns {Promise} yields {User}
 
     */
 
@@ -510,15 +571,14 @@ Javascript Library to interact with the CodeGradX infrastructure
 
     // **************** User *******************************
 
-    /** @class {User}
-    Represents a User.
+    /** Represents a User.
 
+    @constructor
     @property {string} lastname
     @property {string} firstname
     @property {string} email
     @property {number} personid
-    @property {Array[Campaign]} campaigns
-    ...
+    @property {Array} campaigns - array of Campaign
 
     */
 
@@ -537,7 +597,7 @@ Javascript Library to interact with the CodeGradX infrastructure
       @property {string} fields.pseudo
       @property {string} fields.email
       @property {string} fields.password
-      @returns {Promise{User}}
+      @returns {Promise yields User
 
     It is not possible to change user's login.
 
@@ -566,7 +626,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     /** Get the campaigns where the current user is enrolled.
 
       @param {bool} now - get only active campaigns.
-      @returns {Array[Campaign]}
+      @returns {Array} array of Campaign
 
     */
 
@@ -587,7 +647,7 @@ Javascript Library to interact with the CodeGradX infrastructure
         It looks for a named campaign among the campaigns the user is part of.
 
         @param {String} name - name of the Campaign to find
-        @returns {Promise{Campaign}}
+        @returns {Promise} yields {Campaign}
 
     */
 
@@ -610,6 +670,7 @@ Javascript Library to interact with the CodeGradX infrastructure
     students and a given group of teachers for a period of time. These
     groups of persons are not public.
 
+      @constructor
       @property {string} name
       @property {Date} starttime
       @property {Date} endtime
@@ -625,11 +686,11 @@ Javascript Library to interact with the CodeGradX infrastructure
 
     /** Get the skills of the students enrolled in the current campaign.
 
-    @return {Promise{Object}}
+    @return {Promise} yields {Object}
     @property {Object} skills.you
     @property {number} skills.you.personId - your numeric identifier
     @property {number} skills.you.skill - your own skill
-    @property {Array[Object]} skills.all
+    @property {Array} skills.all - array of Object
     @property {Object} skills.all[].skill - some student's skill
 
     */
@@ -655,7 +716,7 @@ Javascript Library to interact with the CodeGradX infrastructure
 
     /** list the jobs submitted by the current user in the current campaign.
 
-      @returns {Promise{Array[Job]}}
+      @returns {Promise} yields Array[Job]
     */
 
     CodeGradX.Campaign.prototype.getJobs = function () {
@@ -680,7 +741,7 @@ Javascript Library to interact with the CodeGradX infrastructure
 
     /** Get the (tree-shaped) set of exercises of a campaign.
 
-      @return {Promise{ExercisesSet}}
+      @return {Promise} yields {ExercisesSet}
 
     */
 
@@ -709,7 +770,7 @@ Javascript Library to interact with the CodeGradX infrastructure
         Exercises of the current campaign.
 
         @param {string} name - full name of the exercise
-        @returns {Promise{Exercise}}
+        @returns {Promise} yields {Exercise}
 
     */
 
@@ -743,6 +804,8 @@ Javascript Library to interact with the CodeGradX infrastructure
     description of their stem. If you need more information (the stem
     for instance), use the `getDescription` method.
 
+    @constructor
+
     */
 
     CodeGradX.Exercise = function (json) {
@@ -758,7 +821,7 @@ Javascript Library to interact with the CodeGradX infrastructure
         Caution: this description is converted from XML to a Javascript
         object with xml2js idiosyncrasies.
 
-       @returns {Promise{ExerciseDescription}}
+       @returns {Promise} yields {ExerciseDescription}
 
        */
 
@@ -863,9 +926,10 @@ Javascript Library to interact with the CodeGradX infrastructure
     };
 
     /** Send a string as the proposed solution to an Exercise.
+        Returns a Job on which you may invoke the `getReport` method.
 
       @param {string} answer
-      @returns {Promise{Job}}
+      @returns {Promise} yields {Job}
 
     */
 
@@ -910,14 +974,15 @@ Javascript Library to interact with the CodeGradX infrastructure
     };
 
     /** Send the content of a file as the proposed solution to an Exercise.
+        Returns a Job on which you may invoke the `getReport` method.
 
       @param {string} filename
-      @returns {Promise{Job}}
+      @returns {Promise} yields {Job}
 
     */
 
     CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
-      // create an answer
+      // send an answer
     };
 
     // **************** ExercisesSet ***************************
@@ -933,6 +998,8 @@ Javascript Library to interact with the CodeGradX infrastructure
          },
          ...
       ]}
+
+    @constructor
 
       */
 
@@ -1007,6 +1074,8 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
   <partialMark name="Q1" mark="0"/>
 </marking>
 <report> ...
+
+    @constructor
 */
 
 CodeGradX.Job = function (js) {
@@ -1016,7 +1085,7 @@ CodeGradX.Job = function (js) {
 /** Get the marking report of that Job.
 
   @param {Object} parameters - for repetition see sendRepeatedlyESServer.default
-  @returns {Promise{Job}}
+  @returns {Promise} yields {Job}
 
   */
 
