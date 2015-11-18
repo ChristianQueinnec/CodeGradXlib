@@ -2,14 +2,14 @@
   "opts": {
     "template": "./node_modules/jsdoc3-bootstrap",
     "encoding": "utf8",
-    "destination": "./out/"
+    "destination": "./doc/"
     },
     "tags": {
         "allowUnknownTags": false,
         "dictionaries": ["jsdoc","closure"]
     },
     "source": {
-        "includePattern": ".+\\.js(doc)?$",
+        "includePattern": ".+\\.js$",
         "excludePattern": "(^|\\/|\\\\)_"
     },
     "plugins": [

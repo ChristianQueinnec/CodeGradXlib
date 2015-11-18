@@ -113,7 +113,7 @@ describe('CodeGradX', function () {
 
   var code1 = "int min(int a, int b) { return a; }\n";
 
-  it("sends an answer to exercise1 and waits for report", function (done) {
+  it("sends a string answer to exercise1 and waits for report", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
       state.debug(reason).show();
@@ -126,6 +126,52 @@ describe('CodeGradX', function () {
       expect(job).toBeDefined();
       job.getReport().then(function (job) {
         expect(job.mark).toBe('0.6');
+        done();
+      }, faildone);
+    }, faildone);
+  }, 50*1000); // 50 seconds
+
+  var file1 = 'spec/min.c';
+
+  it("cannot read a file", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    CodeGradX.readFileContent("unexistent-foo.bar")
+    .then(faildone)
+    .catch(done);
+  });
+
+  it("can read a file", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    CodeGradX.readFileContent(file1).then(function (data) {
+      expect(data).toBeDefined();
+      expect(data).toMatch(/int x,/);
+      done();
+    }, faildone);
+  });
+
+  it("sends a file answer to exercise1 and waits for report", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    expect(state.currentCampaign).toBeDefined();
+    expect(exercise1).toBeDefined();
+    exercise1.sendFileAnswer(file1).then(function (job) {
+      expect(job).toBeDefined();
+      job.getReport().then(function (job) {
+        expect(job.mark).toBe('1');
         done();
       }, faildone);
     }, faildone);

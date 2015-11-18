@@ -1,14 +1,19 @@
 /**
+
 Javascript Library to interact with the CodeGradX infrastructure.
 
-@module codegradxlib
-@author Christian Queinnec <Christian.Queinnec@codegradx.org>
-@license MIT
-@see {@link http://codegradx.org/|CodeGradX}
+## Installation
 
-```
+```bash
 npm install codegradx
+```
 
+## Usage
+
+This library makes a huge usage of promises as may be seen in the following
+synopsis:
+
+```javascript
 // Example of use:
 require('codegradx.js');
 
@@ -30,9 +35,12 @@ CodeGradX.getCurrentState().
                    job.getReport().
                      then(function (job) {
                        // display job.report
-
 ```
 
+@module codegradxlib
+@author Christian Queinnec <Christian.Queinnec@codegradx.org>
+@license MIT
+@see {@link http://codegradx.org/|CodeGradX} site.
 */
 
 // Possible improvements:
@@ -56,12 +64,13 @@ CodeGradX.getCurrentState().
 
   var _    = require('lodash');
   var when = require('when');
+  var nodefn = require('when/node');
   var rest = require('rest');
   var mime = require('rest/interceptor/mime');
   var registry = require('rest/mime/registry');
   var xml2js = require('xml2js');
 
-  // Define that MIME type:
+  // Define that additional MIME type:
   registry.register('application/octet-stream', {
     read: function(str) {
         return str;
@@ -71,14 +80,26 @@ CodeGradX.getCurrentState().
     }
   });
 
+  // See http://stackoverflow.com/questions/17575790/environment-detection-node-js-or-browser
+  function checkIsNode () {
+      /*jshint -W054 */
+      var code = "try {return this===global;}catch(e){return false;}";
+      var f = new Function(code);
+      return f();
+  }
+  var isNode = _.memoize(checkIsNode);
+
+
+
   // **************** log ********************************
 
-  /** A log only keeps the last `size` facts.
+  /** Record facts in a log. This is useful for debug!
+      A log only keeps the last `size` facts.
       Use the `show` method to display it.
       See also helper method `debug` on State to log facts.
 
      @constructor
-     @property {Array} items - array of kept facts
+     @property {string[]} items - array of kept facts
      @property {number} size - number of facts to keep in the log
 
   */
@@ -91,9 +112,10 @@ CodeGradX.getCurrentState().
   /** Log some facts. The facts (the arguments) will be concatenated to
     form a string to be recorded in the log.
 
-    @function {CodeGradX.Log.debug}
+    @method CodeGradX.Log.debug
     @param {Value} arguments - facts to record
     @returns {Log}
+    @lends CodeGradX.Log.prototype
 
     */
 
@@ -118,8 +140,9 @@ CodeGradX.getCurrentState().
 
   /** Display the log with `console.log`.
 
-    @function {Log.show}
+    @method show
     @returns {Log}
+    @memberof CodeGradX.Log#
 
   */
 
@@ -578,7 +601,7 @@ CodeGradX.getCurrentState().
     @property {string} firstname
     @property {string} email
     @property {number} personid
-    @property {Array} campaigns - array of Campaign
+    @property {Campaign[]} campaigns - array of Campaign
 
     */
 
@@ -626,7 +649,7 @@ CodeGradX.getCurrentState().
     /** Get the campaigns where the current user is enrolled.
 
       @param {bool} now - get only active campaigns.
-      @returns {Array} array of Campaign
+      @returns {Campaign[]} array of Campaign
 
     */
 
@@ -690,7 +713,7 @@ CodeGradX.getCurrentState().
     @property {Object} skills.you
     @property {number} skills.you.personId - your numeric identifier
     @property {number} skills.you.skill - your own skill
-    @property {Array} skills.all - array of Object
+    @property {Skill[]} skills.all - array of Object
     @property {Object} skills.all[].skill - some student's skill
 
     */
@@ -913,15 +936,20 @@ CodeGradX.getCurrentState().
           explicitArray: false,
           trim: true
         });
-        var xerr, xresult;
-        parser.parseString(xml, function (err, result) {
-            xerr = err;
-            xresult = result;
-        });
-        if ( xerr ) {
-          return when.reject(xerr);
+        if ( isNode() ) {
+          // Node specific code:
+          return nodefn.call(parser.parseString, xml);
         } else {
-          return when(xresult);
+          var xerr, xresult;
+          parser.parseString(xml, function (err, result) {
+              xerr = err;
+              xresult = result;
+            });
+            if ( xerr ) {
+              return when.reject(xerr);
+            } else {
+              return when(xresult);
+            }
         }
     };
 
@@ -983,6 +1011,53 @@ CodeGradX.getCurrentState().
 
     CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
       // send an answer
+      var exercise = this;
+      var state = CodeGradX.getCurrentState();
+      state.debug('sendFileAnswer1', filename);
+      return CodeGradX.readFileContent(filename).then(function (answer) {
+        return state.sendAXServer('a', {
+          path: ('/exercise/' + exercise.safecookie + '/job'),
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition": ("inline; filename=" + filename),
+            "Accept": 'text/xml'
+          },
+          entity: answer
+        }).then(function (response) {
+          //console.log(response);
+          state.debug('sendFileAnswer2', response);
+          return CodeGradX.parsexml(response.entity).then(function (js) {
+            //console.log(js);
+            state.debug('sendFileAnswer3', js);
+            js = js.fw4ex.jobSubmittedReport;
+            exercise.uuid = js.exercise.$.exerciseid;
+            var job = new CodeGradX.Job({
+              exercise: exercise,
+              content: answer,
+              responseXML: response.entity,
+              response: js,
+              personid: js.person.$.personid,
+              archived: js.job.$.archived,
+              jobid: js.job.$.jobid,
+              pathdir: js.$.location
+            });
+            return when(job);
+          });
+        });
+      });
+    };
+
+    /** Promisify the reading of a file.
+    Caution: Specific to Node.js!
+
+        @param {string} filename - file to read
+        @returns {Promise} yields file content: a string
+
+      */
+
+    CodeGradX.readFileContent = function (filename) {
+      return nodefn.call(require('fs').readFile, filename);
     };
 
     // **************** ExercisesSet ***************************
