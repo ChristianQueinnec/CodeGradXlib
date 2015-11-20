@@ -179,7 +179,7 @@ describe('CodeGradX', function () {
 
   var exerciseTGZFile1 = "spec/org.example.fw4ex.grading.check.tgz";
 
-  it("may submit a new exercise", function (done) {
+  it("may submit a new exercise and get one pseudojob", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
       state.debug(reason).show();
@@ -191,7 +191,7 @@ describe('CodeGradX', function () {
       step: 5,
       attempts: 30,
       progress: function (parameters) {
-        state.show();
+        console.log(parameters.i + ', ');
       }
     })
     .then(function (exercise) {
@@ -202,6 +202,6 @@ describe('CodeGradX', function () {
         done();
       });
     }, faildone);
-  }, 100*1000); // 100 seconds
+  }, 60*1000); // 60 seconds
 
 });

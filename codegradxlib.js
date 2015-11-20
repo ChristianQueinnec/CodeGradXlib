@@ -11,7 +11,7 @@ npm install codegradx
 ## Usage
 
 This library makes a huge usage of promises as may be seen in the following
-synopsis:
+use case:
 
 ```javascript
 // Example of use:
@@ -20,7 +20,7 @@ require('codegradx.js');
 new CodeGradX.State(postInitializer);
 
 CodeGradX.getCurrentState().
-  // ask for login and password:
+  // ask for user's login and password:
   getAuthenticatedUser(login, password).
     then(function (user) {
        // let the user choose one campaign among user.getCampaigns():
@@ -29,13 +29,18 @@ CodeGradX.getCurrentState().
            // let the user choose one exercise among campaign.getExercisesSet()
            campaign.getExercise('some.exercise.name').
              then(function (exercise) {
-               // display stem of exercise and get answer:
+               // display stem of exercise and get user's answer:
                exercise.sendFileAnswer("filename.c").
                  then(function (job) {
                    job.getReport().
                      then(function (job) {
                        // display job.report
 ```
+
+More details on the protocols and formats used to interact with the
+CodeGradX infrastructure can be found in the documentation of
+{@link http://paracamplus.com/CodeGradX/Resources/overview.pdf|CodeGradX}.
+
 
 @module codegradxlib
 @author Christian Queinnec <Christian.Queinnec@codegradx.org>
@@ -59,6 +64,7 @@ var rest = require('rest');
 var mime = require('rest/interceptor/mime');
 var registry = require('rest/mime/registry');
 var xml2js = require('xml2js');
+var sax = require('sax');
 
 // Define that additional MIME type:
 registry.register('application/octet-stream', {
@@ -82,12 +88,12 @@ var isNode = _.memoize(_checkIsNode);
 
 
 
-// **************** log ********************************
+// **************** Log ********************************
 
 /** Record facts in a log. This is useful for debug!
-      A log only keeps the last `size` facts.
-      Use the `show` method to display it.
-      See also helper method `debug` on State to log facts.
+    A log only keeps the last `size` facts.
+    Use the `show` method to display it.
+    See also helper method `debug` on State to log facts.
 
      @constructor
      @property {string[]} items - array of kept facts
@@ -100,8 +106,8 @@ CodeGradX.Log = function () {
     this.size = 20;
 };
 
-/** Log some facts. The facts (the arguments) will be concatenated to
-    form a string to be recorded in the log.
+/** Log some facts. The facts (the arguments) will be concatenated
+    (with a separating space) to form a string to be recorded in the log.
 
     @method CodeGradX.Log.debug
     @param {Value} arguments - facts to record
@@ -138,6 +144,8 @@ CodeGradX.Log.prototype.debug = function () {
   */
 
 CodeGradX.Log.prototype.show = function () {
+  // console.log is run later so take a copy of the log now to
+  // avoid displaying a later version of the log:
   var items = this.items.slice(0);
   console.log(items);
   return this;
@@ -224,6 +232,13 @@ CodeGradX.State = function (initializer) {
 CodeGradX.getCurrentState = function () {
   throw new Error("noState");
 };
+
+/** Helper function, add a fact to the log held in the current state
+  {@see CodeGradX.Log.debug} documentation.
+
+  @returns {Log}
+
+*/
 
 CodeGradX.State.prototype.debug = function () {
   return this.log.debug.apply(this.log, arguments);
@@ -326,7 +341,7 @@ CodeGradX.State.prototype.checkServers = function (kind) {
     update the state for all of those servers. If correctly programmed
     these checks are concurrently run.
 
-    @returns {Promise}
+    @returns {Promise} yields many mingled responses.
 
     */
 
@@ -337,8 +352,7 @@ CodeGradX.State.prototype.checkAllServers = function () {
   return when.all(promises);
 };
 
-/** Check HTTP response.
-    Try to elaborate a good error message.
+/** Check HTTP response and try to elaborate a good error message.
 
     Error messages look like:
     <?xml version="1.0" encoding="UTF-8"?>
@@ -610,9 +624,9 @@ function (login, password) {
   return promise;
 };
 
-    // **************** User *******************************
+// **************** User *******************************
 
-    /** Represents a User.
+/** Represents a User.
 
     @constructor
     @property {string} lastname
@@ -630,7 +644,7 @@ CodeGradX.User = function (json) {
   });
 };
 
-    /** Modify some properties of the current user. These properties are
+/** Modify some properties of the current user. These properties are
 
       @param {object} fields
       @property {string} fields.lastname
@@ -684,8 +698,8 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
   }
 };
 
-    /** Return a specific Campaign.
-        It looks for a named campaign among the campaigns the user is part of.
+/** Return a specific Campaign.
+    It looks for a named campaign among the campaigns the user is part of.
 
         @param {String} name - name of the Campaign to find
         @returns {Promise} yields {Campaign}
@@ -705,18 +719,19 @@ CodeGradX.User.prototype.getCampaign = function (name) {
   }
 };
 
-    /** submit a new Exercise
+/** submit a new Exercise
 
-      @param {string} filename - tgz file containing the exercise
-      @param {Object} parameters - repetition parameters
-      @returns {Promise} yielding ExerciseReports (student and author)
+    @param {string} filename - tgz file containing the exercise
+    @param {Object} parameters - repetition parameters
+    @returns {Promise} yielding Exercise
 
+    An `exerciseSubmittedReport` looks like:
       <?xml version="1.0" encoding="UTF-8"?>
       <fw4ex version='1.0'>
        <exerciseSubmittedReport
-        location='/e/9/6/7/B/.../1/2/2/0'
-        jobid='967B0CA0-8EEE-11E5-B95A-8A0D62591220' >
-         <person personid='2008' />
+          location='/e/9/6/7/B/.../1/2/2/0'
+          jobid='967B0CA0-8EEE-11E5-B95A-8A0D62591220' >
+        <person personid='2008' />
         <exercise exerciseid='967B0CA0-8EEE-11E5-B95A-8A0D62591220' />
        </exerciseSubmittedReport>
       </fw4ex>
@@ -758,7 +773,7 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
   });
 };
 
-    // **************** Campaign *********************************
+// **************** Campaign *********************************
 
 /** A campaign describes a set of exercises for a given group of
     students and a given group of teachers for a period of time. These
@@ -808,7 +823,7 @@ CodeGradX.Campaign.prototype.getSkills = function () {
   });
 };
 
-    /** list the jobs submitted by the current user in the current campaign.
+/** list the jobs submitted by the current user in the current campaign.
 
       @returns {Promise} yields Array[Job]
     */
@@ -883,7 +898,7 @@ CodeGradX.Campaign.prototype.getExercise = function (name) {
   });
 };
 
-    // **************** Exercise ***************************
+// **************** Exercise ***************************
 
 /** Constructor of an Exercise.
       When extracted from a Campaign, an Exercise looks like:
@@ -908,14 +923,14 @@ CodeGradX.Exercise = function (json) {
 };
 
 /** Get the XML descriptor of the Exercise.
-        This XML descriptor will enrich the Exercise instance.
-        The raw XML string is stored under property 'XMLdescription', the
-        decoded XML string is stored under property 'description'.
+    This XML descriptor will enrich the Exercise instance.
+    The raw XML string is stored under property 'XMLdescription', the
+    decoded XML string is stored under property 'description'.
 
-        Caution: this description is converted from XML to a Javascript
-        object with xml2js idiosyncrasies.
+    Caution: this description is converted from XML to a Javascript
+    object with xml2js idiosyncrasies.
 
-       @returns {Promise} yields {ExerciseDescription}
+      @returns {Promise} yields {ExerciseDescription}
 
        */
 
@@ -1028,7 +1043,7 @@ CodeGradX.parsexml = function (xml) {
 };
 
 /** Send a string as the proposed solution to an Exercise.
-        Returns a Job on which you may invoke the `getReport` method.
+    Returns a Job on which you may invoke the `getReport` method.
 
       @param {string} answer
       @returns {Promise} yields {Job}
@@ -1079,15 +1094,19 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
 };
 
 /** Send the content of a file as the proposed solution to an Exercise.
-        Returns a Job on which you may invoke the `getReport` method.
+    Returns a Job on which you may invoke the `getReport` method.
 
       @param {string} filename
       @returns {Promise} yields {Job}
 
+    NOTA: The present implementation depends on Node.js, it uses the
+    `fs` module to read the file to send. It has to be rewritten if
+    run in a browser.
+
     */
 
 CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
-  // send an answer
+  // send an answer contained in a file
   var exercise = this;
   var state = CodeGradX.getCurrentState();
   state.debug('sendFileAnswer1', filename);
@@ -1147,11 +1166,15 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
   // send a batch
 };
 
-/** Get Exercise autocheck reports.
+/** Get Exercise autocheck reports that is, the jobs corresponding to
+    the pseudo-jobs contained in the Exercise TGZ file.
 
   @param {Object} parameters - @see CodeGradX.sendRepeatedlyESServer
   @returns {Promise} yielding an Exercise
 
+  The `exerciseAuthorReport` looks like:
+
+  ```xml
   <?xml version="1.0" encoding="UTF-8"?>
   <fw4ex version="1.0">
    <exerciseAuthorReport
@@ -1181,6 +1204,7 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
        </marking>
       </pseudojob>
       ...
+    ```
 
 */
 
@@ -1241,8 +1265,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
   });
 };
 
-
-    // **************** ExercisesSet ***************************
+// **************** ExercisesSet ***************************
 
 /** Initialize a set (in fact a tree) of Exercises with some json such as:
 
@@ -1255,6 +1278,11 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
          },
          ...
       ]}
+
+    The tree is made of nodes. Each node may contain some properties
+    such as `title`, `prologue` (sentences introducing a set of exercises),
+    `epilogue` (sentences ending a set of exercises) and `exercises` an
+    array of Exercises or ExercisesSet.
 
     @constructor
 
@@ -1318,7 +1346,12 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
 
 // **************** Job ***************************
 
-/**
+/** A Job corresponds to an attempt of solving an Exercise.
+    A Job is obtained with `sendStringAnswer` or `sendFileAnswer`.
+    From a job, you may get the marking report with `getReport`.
+
+A `jobStudentReport` looks like:
+```XML
 <jobStudentReport jobid="775F47E8-8988-11E5-9328-B68770A06C90">
 <marking archived="2015-11-12T21:58:11"
     started="2015-11-12T21:58:24Z"
@@ -1331,6 +1364,7 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
   <partialMark name="Q1" mark="0"/>
 </marking>
 <report> ...
+```
 
     @constructor
 */
@@ -1339,7 +1373,8 @@ CodeGradX.Job = function (js) {
   _.assign(this, js);
 };
 
-/** Get the marking report of that Job.
+/** Get the marking report of that Job. The marking report will be stored
+    in the `XMLreport` and `report` properties.
 
   @param {Object} parameters - for repetition see sendRepeatedlyESServer.default
   @returns {Promise} yields {Job}
@@ -1409,11 +1444,99 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
 };
 
 /** Conversion of texts (stems, reports) from XML to HTML.
- This function may be modified.
+    This function may be modified.
 */
 
-CodeGradX.xml2html = function (s) {
-  return s;
+CodeGradX.xml2html = function (s, options) {
+  options = _.assign({}, CodeGradX.xml2html.default, options);
+  var result = '';
+  var mark, totalMark;
+  var mode = 'default';
+  var questionCounter = 0, sectionLevel = 0;
+  var htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
+  var divTagsRegExp = new RegExp('^(warning|error|introduction|conclusion|normal|stem)$');
+  var spanTagsRegExp = new RegExp("^(user|machine|lineNumber)$");
+  var ignoreTagsRegExp = new RegExp("^(FW4EX)$");
+  function convertAttributes (attributes) {
+    var s = '';
+    _.forIn(attributes, function (value, name) {
+      s += ' ' + name + '="' + value + '"';
+    });
+    return s;
+  }
+  var parser = sax.parser(true, {
+    //trim: true
+  });
+  parser.onerror = function (e) {
+      throw e;
+  };
+  parser.ontext= function (text) {
+    if ( ! mode.match(/ignore/) ) {
+      result += text;
+    }
+  };
+  parser.onopentag = function (node) {
+      var tagname = node.name;
+      var attributes = convertAttributes(node.attributes);
+      if ( tagname.match(ignoreTagsRegExp) ) {
+        mode = 'ignore';
+      } else if ( tagname.match(htmlTagsRegExp) ) {
+        result += '<' + tagname + attributes + '>';
+      } else if ( tagname.match(divTagsRegExp) ) {
+        result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
+      } else if ( tagname.match(/^mark$/) ) {
+        var mark = node.attributes.value * options.markFactor;
+        result += '<span' + attributes + ' class="fw4ex_mark">' + mark;
+      } else if ( tagname.match(/^section$/) ) {
+        result += '<div' + attributes + ' class="fw4ex_section' +
+          (++sectionLevel) + '">';
+      } else if ( tagname.match(/^question$/) ) {
+        var title = node.attributes.title;
+        result += '<div' + attributes + ' class="fw4ex_question">';
+        result += '<div class="fw4ex_question_title" data_counter="' +
+          (++questionCounter) + '">' + title + '</div>';
+      } else {
+        result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
+      }
+  };
+  parser.onclosetag = function (tagname) {
+      if ( tagname.match(ignoreTagsRegExp) ) {
+        mode = 'default';
+      } else if ( tagname.match(htmlTagsRegExp) ) {
+        result += '</' + tagname + '>';
+      } else if ( tagname.match(divTagsRegExp) ) {
+        result += '</div>';
+      } else if ( tagname.match(/^mark$/) ) {
+        result += '</span>';
+      } else if ( tagname.match(/^section$/) ) {
+        --sectionLevel;
+        result += '</div>';
+      } else if ( tagname.match(/^question$/) ) {
+        result += '</div>';
+      } else {
+        result += '</div>';
+      }
+  };
+  parser.oncomment = function (text) {
+    if ( ! mode.match(/ignore/) ) {
+      result += '<!-- ' + text + ' -->';
+    }
+  };
+  parser.cdata = function (text) {
+    if ( ! mode.match(/ignore/) ) {
+      result += '<![CDATA[' + text;
+    }
+  };
+  parser.closecdata = function () {
+    if ( ! mode.match(/ignore/) ) {
+      result += ']]>';
+    }
+  };
+  parser.write(s).close();
+  return result;
+};
+CodeGradX.xml2html.default = {
+  markFactor:  100
 };
 
 // end of codegradxlib.js
