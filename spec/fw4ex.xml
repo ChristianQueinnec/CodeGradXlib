@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Check that the marking driver is working.
+     The student's submission is the mark we want.
+     This exercise is used to test codegradxlib.js
+-->
+<fw4ex version='1.0'
+       xml:lang='fr'
+       lang='fr' >
+  <exercise>
+
+    <identification
+        name='org.example.fw4ex.grading.check'
+        nickname='intern3'
+        date='2013-04-17T09:25:00Z' >
+      <summary> Test de bon fonctionnement </summary>
+      <tags>
+        <tag name='Paracamplus'/>
+        <tag name='intern'/>
+      </tags>
+      <authorship>
+        <author>
+          <firstname>Christian</firstname>
+          <lastname>Queinnec</lastname>
+          <email>christian.queinnec@paracamplus.com</email>
+        </author>
+      </authorship>
+    </identification>
+
+    <conditions cost='0' costunit='euro'>
+      <description>
+        Cet exercice est interne à Paracamplus.
+      </description>
+    </conditions>
+
+    <content>
+      <question name='one' totalMark='100'>
+        <expectations>
+          <file basename='mark.txt'>
+            <initial height='1' width='2'/>
+          </file>
+        </expectations>
+        <stem>
+          Verification de bon fonctionnement. La copie soumise consiste
+          en la note que l'on veut obtenir.
+        </stem>
+      </question>
+    </content>
+
+    <autochecking>
+      <submission
+          name='null'
+          expectedMark='0' >
+        <content>
+          <file basename='nothing' content='' />
+        </content>
+      </submission>
+      <submission
+          name='half'
+          expectedMark='45' >
+        <content>
+          <file basename='mark.txt' content='45' />
+        </content>
+      </submission>
+      <submission
+          name='perfect'
+          expectedMark='100' >
+        <content>
+          <file basename='mark.txt' content='100' />
+        </content>
+      </submission>
+    </autochecking>
+
+    <grading>
+      <machine nickname='debian 4.0r3 (etch)' version='1'/>
+      <limit predefined='cpu time' value='1' unit='second'/>
+      <question name='one'>
+        <script><![CDATA[
+source $FW4EX_LIB_DIR/basicLib.sh
+source $FW4EX_LIB_DIR/moreLib.sh
+
+fw4ex_check_existence mark.txt
+fw4ex_win `cat mark.txt`
+
+]]>
+        </script>
+      </question>
+    </grading>
+
+  </exercise>
+</fw4ex>

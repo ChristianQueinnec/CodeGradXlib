@@ -177,4 +177,31 @@ describe('CodeGradX', function () {
     }, faildone);
   }, 50*1000); // 50 seconds
 
+  var exerciseTGZFile1 = "spec/org.example.fw4ex.grading.check.tgz";
+
+  it("may submit a new exercise", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    expect(state.currentUser).toBeDefined();
+    state.currentUser.submitNewExercise(exerciseTGZFile1, {
+      step: 5,
+      attempts: 30,
+      progress: function (parameters) {
+        state.show();
+      }
+    })
+    .then(function (exercise) {
+      expect(exercise).toBeDefined();
+      var job2 = exercise.pseudojobs.perfect;
+      job2.getReport().then(function (job) {
+        expect(job).toBe(job2);
+        done();
+      });
+    }, faildone);
+  }, 100*1000); // 100 seconds
+
 });

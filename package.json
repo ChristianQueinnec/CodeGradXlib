@@ -11,7 +11,7 @@
   "scripts": {
     "lint": "jshint codegradxlib.js spec/*.js",
     "test": "jasmine",
-    "docs": "node_modules/.bin/jsdoc -c conf.json codegradxlib.js",
+    "doc": "node_modules/.bin/jsdoc -c conf.json codegradxlib.js",
     "XXbrowser": "phantomjs test/run-jasmine.js test/jasmine.html",
     "XXbuild": "uglifyjs codegradx.js -c \"evaluate=false\" -m --source-map codegradx.min.map -o codegradx.min.js",
     "Xbuild": "browserify codegradxlib.js -o codegradxlib-bundle.js",
