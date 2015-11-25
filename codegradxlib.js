@@ -309,8 +309,9 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   }
   var url = "http://" + host + descriptions.suffix;
   state.debug('checkServer2', kind, index, url);
-  return state.userAgent(url)
-  .then(updateDescription, invalidateDescription);
+  return state.userAgent({
+    path: url
+  }).then(updateDescription, invalidateDescription);
 };
 
 /** Check all possible servers of some kind (a, e, x or s) that is,
@@ -1787,8 +1788,8 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
             totalMark: _str2num(jsjob.marking.$.totalMark),
             started:   _str2Date(jsjob.marking.$.started),
             finished:  _str2Date(jsjob.marking.$.finished)
-            // duration = job.finished - job.started;
           });
+          job.duration = (job.finished.getTime() - job.started.getTime())/1000;
           batch.jobs[job.label] = job;
           return job;
         }
