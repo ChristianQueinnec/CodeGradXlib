@@ -23,6 +23,8 @@ describe('CodeGradX', function () {
     }, faildone);
   });
 
+  var campaign0;
+
   it("should get campaign free", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
@@ -33,8 +35,8 @@ describe('CodeGradX', function () {
     expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
     state.currentUser.getCampaign('free').then(function (campaign) {
       expect(campaign instanceof CodeGradX.Campaign).toBeTruthy();
-        expect(campaign).toBe(state.currentCampaign);
         //console.log(campaign);
+        campaign0 = campaign;
         campaign.getExercisesSet().then(function (es) {
           expect(es instanceof CodeGradX.ExercisesSet).toBeTruthy();
           expect(es).toBe(campaign.exercisesSet);
@@ -50,8 +52,8 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    expect(state.currentCampaign instanceof CodeGradX.Campaign).toBeTruthy();
-    state.currentCampaign.getJobs().then(function (jobs) {
+    expect(campaign0 instanceof CodeGradX.Campaign).toBeTruthy();
+    campaign0.getJobs().then(function (jobs) {
       //console.log(jobs);
       expect(jobs.length).toBeGreaterThan(2);
       done();
@@ -65,8 +67,8 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    expect(state.currentCampaign instanceof CodeGradX.Campaign).toBeTruthy();
-    state.currentCampaign.getSkills().then(function (js) {
+    expect(campaign0 instanceof CodeGradX.Campaign).toBeTruthy();
+    campaign0.getSkills().then(function (js) {
       //console.log(js);
       expect(js).toBeDefined();
       expect(js.you).toBeDefined();

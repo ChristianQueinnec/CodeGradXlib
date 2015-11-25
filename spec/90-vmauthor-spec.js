@@ -54,6 +54,8 @@ describe('CodeGradX', function () {
     }, faildone);
   });
 
+  var campaign1;
+
   it("gets the 'free' campaign", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
@@ -66,7 +68,7 @@ describe('CodeGradX', function () {
     state.currentUser.getCampaign('free').then(function (campaign) {
       expect(campaign).toBeDefined();
       expect(campaign.name).toBe('free');
-      expect(state.currentCampaign).toBe(campaign);
+      campaign1 = campaign;
       done();
     }, faildone);
   });
@@ -78,12 +80,11 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    expect(state.currentCampaign).toBeDefined();
-    //console.log(state.currentCampaign);
+    expect(campaign1).toBeDefined();
     //state.log.show();
-    state.currentCampaign.getExercisesSet().then(function (es) {
+    campaign1.getExercisesSet().then(function (es) {
       expect(es).toBeDefined();
-      expect(state.currentCampaign.exercisesSet).toBe(es);
+      expect(campaign1.exercisesSet).toBe(es);
       done();
     }, faildone);
   });
@@ -97,14 +98,14 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    expect(state.currentCampaign).toBeDefined();
+    expect(campaign1).toBeDefined();
     var exerciseName = "com.paracamplus.li205.function.1";
-    var promise = state.currentCampaign.getExercise(exerciseName);
+    var promise = campaign1.getExercise(exerciseName);
     promise.then(function (e) {
       expect(e).toBeDefined();
       expect(e.name).toBe(exerciseName);
       e.getDescription().then(function (e2) {
-        expect(e2).toBe(e.description);
+        expect(e2).toBe(e._description);
         exercise1 = e;
         done();
       }, faildone);
@@ -120,12 +121,12 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    expect(state.currentCampaign).toBeDefined();
+    expect(campaign1).toBeDefined();
     expect(exercise1).toBeDefined();
     exercise1.sendStringAnswer(code1).then(function (job) {
       expect(job).toBeDefined();
       job.getReport().then(function (job) {
-        expect(job.mark).toBe('0.6');
+        expect(job.mark).toBe(0.6);
         done();
       }, faildone);
     }, faildone);
@@ -166,42 +167,83 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    expect(state.currentCampaign).toBeDefined();
+    expect(campaign1).toBeDefined();
     expect(exercise1).toBeDefined();
     exercise1.sendFileAnswer(file1).then(function (job) {
       expect(job).toBeDefined();
       job.getReport().then(function (job) {
-        expect(job.mark).toBe('1');
+        expect(job.mark).toBe(1);
         done();
       }, faildone);
     }, faildone);
   }, 50*1000); // 50 seconds
 
   var exerciseTGZFile1 = "spec/org.example.fw4ex.grading.check.tgz";
+  var exercise2;
+  var counter = 0;
 
   it("may submit a new exercise and get one pseudojob", function (done) {
     var state = CodeGradX.getCurrentState();
+    state.log.size = 50;
     function faildone (reason) {
       state.debug(reason).show();
       fail(reason);
       done();
     }
     expect(state.currentUser).toBeDefined();
+    counter = 0;
     state.currentUser.submitNewExercise(exerciseTGZFile1, {
       step: 5,
       attempts: 30,
       progress: function (parameters) {
-        console.log(parameters.i + ', ');
+        counter = parameters.i;
+        //console.log(parameters.i + ', ');
       }
     })
     .then(function (exercise) {
       expect(exercise).toBeDefined();
+      expect(counter).toBeGreaterThan(1);
+      exercise2 = exercise;
       var job2 = exercise.pseudojobs.perfect;
       job2.getReport().then(function (job) {
         expect(job).toBe(job2);
         done();
       });
     }, faildone);
-  }, 60*1000); // 60 seconds
+  }, 70*1000); // 70 seconds
+
+  var batchTGZfile = 'spec/oefgc.tgz';
+
+  it("may send a batch", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    expect(exercise2).toBeDefined();
+    var counter = 0;
+    var parameters = {
+        progress: function (parameters) {
+          counter++;
+          getCurrentState().log.show();
+        }
+      };
+    exercise2.sendBatch(batchTGZfile).then(function (batch) {
+      //console.log(batch);
+      batch.getReport(parameters).then(function (batch2) {
+        //console.log(batch2);
+        expect(batch2).toBe(batch);
+        expect(counter).toBeGreaterThan(0);
+        batch2.getFinalReport(parameters).then(function (batch3) {
+          expect(batch3).toBe(batch2);
+          expect(counter).toBeGreaterThan(1);
+          expect(batch.finishedjobs).toBeGreaterThan(0);
+          expect(batch.totaljobs).toBe(batch.finishedjobs);
+          done();
+        }, faildone);
+      }, faildone);
+    }, faildone);
+  }, 400*1000); // 400 seconds
 
 });

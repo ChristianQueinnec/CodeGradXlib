@@ -22,6 +22,43 @@ describe('CodeGradX', function () {
     }, faildone);
   });
 
+function _str2Date (str) {
+  var ms = Date.parse(str);
+  if ( ! isNaN(ms) ) {
+    var d = new Date(ms);
+    //console.log("STR:" + str + " => " + ms + " ==> " + d);
+    return d;
+  } else {
+    throw new Error("Cannot parse " + str);
+  }
+}
+
+  it("should have a working str2Date", function (done) {
+    var string1 = "2001-01-01 00:00:00+01";
+    var date1 = _str2Date(string1);
+    expect(date1.getFullYear()).toBe(2001);
+
+    var string2 = "2032-01-01 00:00:00+01";
+    var date2 = _str2Date(string2);
+    expect(date2.getFullYear()).toBe(2032);
+
+    var string3 = "2028-01-01T00:00:00";
+    var date3 = _str2Date(string3);
+    expect(date3.getFullYear()).toBe(2028);
+
+    var string4 = "2027-01-01 00:00:00Z";
+    var date4 = _str2Date(string4);
+    expect(date4.getFullYear()).toBe(2027);
+
+    var string5 = "2026-01-01T00:00:00Z";
+    var date5 = _str2Date(string5);
+    expect(date5.getFullYear()).toBe(2026);
+
+    done();
+  });
+
+  var campaign0;
+
   it("should get campaign free", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
@@ -32,13 +69,38 @@ describe('CodeGradX', function () {
     expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
     state.currentUser.getCampaign('free').then(function (campaign) {
       expect(campaign instanceof CodeGradX.Campaign).toBeTruthy();
-        expect(campaign).toBe(state.currentCampaign);
-        //console.log(campaign);
-        campaign.getExercisesSet().then(function (es) {
-          expect(es instanceof CodeGradX.ExercisesSet).toBeTruthy();
-          expect(es).toBe(campaign.exercisesSet);
-          done();
-        }, faildone);
+      expect(campaign.name).toBe('free');
+      campaign0 = campaign;
+      //console.log(campaign); //
+      expect(campaign.starttime instanceof Date).toBeTruthy();
+      expect(campaign.endtime instanceof Date).toBeTruthy();
+      expect(campaign.starttime.getFullYear()).toBeLessThan(2008);
+      expect(campaign.endtime.getFullYear()).toBeGreaterThan(2028);
+      //console.log(campaign);
+      campaign.getExercisesSet().then(function (es) {
+        expect(es instanceof CodeGradX.ExercisesSet).toBeTruthy();
+        expect(es).toBe(campaign.exercisesSet);
+        done();
+      }, faildone);
+    }, faildone);
+  });
+
+  it("should get all campaigns", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
+    state.currentUser.getCampaigns().then(function (campaigns) {
+      expect(campaigns.free).toBeDefined();
+      expect(campaigns.free.name).toBe('free');
+      // the `free` campaign is active:
+      state.currentUser.getCampaigns(true).then(function (campaigns2) {
+        expect(campaigns2.free).toBe(campaign0);
+        done();
+      }, faildone);
     }, faildone);
   });
 
@@ -68,20 +130,19 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    var campaign = state.currentCampaign;
-    expect(campaign).toBeDefined();
+    expect(campaign0).toBeDefined();
     //console.log(campaign.exercisesSet);
-    expect(campaign.exercisesSet).toBeDefined();
-    exercise1 = campaign.exercisesSet.exercises[0].exercises[0];
+    expect(campaign0.exercisesSet).toBeDefined();
+    exercise1 = campaign0.exercisesSet.exercises[0].exercises[0];
     expect(exercise1 instanceof CodeGradX.Exercise).toBeTruthy();
     expect(exercise1.nickname).toBe('croissante');
     //console.log(exercise1);
     exercise1.getDescription().then(function (description) {
       //console.log(e);
-      expect(exercise1.XMLdescription).toBeDefined();
-      expect(exercise1.description).toBe(description);
-      expect(exercise1.description.fw4ex).toBeDefined();
-      expect(exercise1.description.fw4ex.exerciseContent).toBeDefined();
+      expect(exercise1._XMLdescription).toBeDefined();
+      expect(exercise1._description).toBe(description);
+      expect(exercise1._description.fw4ex).toBeDefined();
+      expect(exercise1._description.fw4ex.exerciseContent).toBeDefined();
       // Check authorship:
       expect(exercise1.authorship.length).toBe(1);
       expect(exercise1.authorship[0].firstname).toBe('Christian');
@@ -103,9 +164,8 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    var campaign = state.currentCampaign;
     var exerciseName = "com.paracamplus.li205.function.1";
-    campaign.getExercise(exerciseName).then(function (exercise) {
+    campaign0.getExercise(exerciseName).then(function (exercise) {
       expect(exercise).toBeDefined();
       expect(exercise.name).toBe(exerciseName);
       exercise.getDescription().then(function (description) {
@@ -123,9 +183,8 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    var campaign = state.currentCampaign;
     var exerciseName = "com.paracamplus.li205.function.1,.XXX";
-    campaign.getExercise(exerciseName).then(faildone, function (reason) {
+    campaign0.getExercise(exerciseName).then(faildone, function (reason) {
       done();
     });
   });
@@ -156,7 +215,7 @@ describe('CodeGradX', function () {
         expect(j).toBe(job);
         expect(j.finished).toBeDefined();
         expect(j.exerciseid).toBeDefined();
-        expect(j.report).toBeDefined();
+        expect(j._report).toBeDefined();
         done();
       });
     }, faildone);

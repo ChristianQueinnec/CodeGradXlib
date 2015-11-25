@@ -5,7 +5,7 @@ Javascript Library to interact with the CodeGradX infrastructure.
 ## Installation
 
 ```bash
-npm install codegradx
+npm install codegradxlib
 ```
 
 ## Usage
@@ -64,6 +64,7 @@ var rest = require('rest');
 var mime = require('rest/interceptor/mime');
 var registry = require('rest/mime/registry');
 var xml2js = require('xml2js');
+var xml2jsproc = require('xml2js/lib/processors');
 var sax = require('sax');
 
 // Define that additional MIME type:
@@ -78,15 +79,31 @@ registry.register('application/octet-stream', {
 
 // See http://stackoverflow.com/questions/17575790/environment-detection-node-js-or-browser
 function _checkIsNode () {
-      /*jshint -W054 */
-      var code = "try {return this===global;}catch(e){return false;}";
-      var f = new Function(code);
-      return f();
+  /*jshint -W054 */
+  var code = "try {return this===global;}catch(e){return false;}";
+  var f = new Function(code);
+  return f();
 }
-/** Are we running under Node.js */
+/* Are we running under Node.js */
 var isNode = _.memoize(_checkIsNode);
 
+function _str2num (str) {
+  if (!isNaN(str)) {
+    str = str % 1 === 0 ? parseInt(str, 10) : parseFloat(str);
+  }
+  return str;
+}
 
+function _str2Date (str) {
+  var ms = Date.parse(str);
+  if ( ! isNaN(ms) ) {
+    var d = new Date(ms);
+    //console.log("STR:" + str + " => " + ms + " ==> " + d);
+    return d;
+  } else {
+    throw new Error("Cannot parse " + str);
+  }
+}
 
 // **************** Log ********************************
 
@@ -96,8 +113,8 @@ var isNode = _.memoize(_checkIsNode);
     See also helper method `debug` on State to log facts.
 
      @constructor
-     @property {string[]} items - array of kept facts
-     @property {number} size - number of facts to keep in the log
+     @property {Array<string>} items - array of kept facts
+     @property {number} size - maximal number of facts to keep in the log
 
   */
 
@@ -113,7 +130,7 @@ CodeGradX.Log = function () {
     @param {Value} arguments - facts to record
     @returns {Log}
     @lends CodeGradX.Log.prototype
-
+    @alias module:codegradxlib.debug
     */
 
 CodeGradX.Log.prototype.debug = function () {
@@ -139,7 +156,7 @@ CodeGradX.Log.prototype.debug = function () {
 
     @method show
     @returns {Log}
-    @memberof CodeGradX.Log#
+    @memberof {CodeGradX.Log#}
 
   */
 
@@ -157,13 +174,14 @@ CodeGradX.Log.prototype.show = function () {
   servers of the CodeGradX constellation. It also holds the current user,
   cookie and campaign. The global `State` class is a singleton that may
   be further customized with the `initializer` function. This singleton
-  can be obtained with `getCurrentState`.
+  can be obtained with `getCurrentState()`.
 
      @constructor
      @param {Function} initializer - optional customizer
      @returns {State}
 
   The `initializer` will be invoked with the state as first argument.
+  The result of initializer() will become the final state.
 
   */
 
@@ -211,13 +229,12 @@ CodeGradX.State = function (initializer) {
   // Current values
   this.currentUser = null;
   this.currentCookie = null;
-  this.currentCampaign = null;
   // Post-initialization
+  var state = this;
   if ( _.isFunction(initializer) ) {
-    initializer.call(this, this);
+    state = initializer.call(state, state);
   }
   // Make the state global
-  var state = this;
   CodeGradX.getCurrentState = function () {
     return state;
   };
@@ -281,11 +298,12 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   delete description.lastError;
   function updateDescription (response) {
     state.debug('updateDescription', description.host, response);
-    description.enabled = (response.status.code === 200);
+    description.enabled = (response.status.code < 300);
     return when(response);
   }
   function invalidateDescription (reason) {
     state.debug('invalidateDescription', description.host, reason);
+    description.enabled = false;
     description.lastError = reason;
     throw reason;
   }
@@ -379,11 +397,12 @@ CodeGradX.checkStatusCode = function (response) {
     return '';
   }
   if ( response.status &&
-    response.status.code &&
-    response.status.code >= 300 ) {
+       response.status.code &&
+       response.status.code >= 300 ) {
       var msg = "Bad HTTP code " + response.status.code +
         extractFW4EXerrorMessage(response);
       state.debug('checkStatusCode2', msg);
+      //console.log(response);
       var error = new Error(msg);
       return when.reject(error);
   }
@@ -444,11 +463,17 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
       var promise = state.userAgent(newoptions);
       var promise1 = promise.then(CodeGradX.checkStatusCode);
       var promise2 = promise1.then(updateCurrentCookie);
-      return promise2.catch(tryNext);
-      //return promise.then(updateCurrentCookie, tryNext);
+      return promise2.catch(mk_invalidateThenTryNext(description));
     } else {
       throw reason;
     }
+  }
+  function mk_invalidateThenTryNext (description) {
+    return function (reason) {
+      description.enabled = false;
+      description.lastError = reason;
+      return tryNext(reason);
+    };
   }
   function allTried (reason) {
     state.debug('allTried', reason);
@@ -496,24 +521,31 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     return _.filter(state.servers[kind], {enabled: true});
   }
   var descriptions = getActiveServers();
-  function seeError (reason) {
-    // A MIME deserialization problem may also trigger `seeError`.
-    function see (o) {
-      var result = '';
-      for ( var key in o ) {
-        result += key + '=' + o[key] + ' ';
+  function mk_seeError (description) {
+    function seeError (reason) {
+      // A MIME deserialization problem may also trigger `seeError`.
+      function see (o) {
+        var result = '';
+        for ( var key in o ) {
+          result += key + '=' + o[key] + ' ';
+        }
+        return result;
       }
-      return result;
+      state.debug('seeError', see(reason));
+      description.enabled = false;
+      description.lastError = reason;
+      var js = JSON.parse(reason.entity);
+      return when.reject(reason);
     }
-    state.debug('seeError', see(reason));
-    var js = JSON.parse(reason.entity);
-    return when.reject(reason);
+    return seeError;
   }
   function trySending (description) {
     var tryoptions = _.assign({}, newoptions);
     tryoptions.path = 'http://' + description.host + options.path;
     state.debug("trySending", tryoptions.path);
-    return state.userAgent(tryoptions).then(CodeGradX.checkStatusCode, seeError);
+    return state.userAgent(tryoptions).then(
+      CodeGradX.checkStatusCode,
+      mk_seeError(description));
   }
   function allTried (reason) {
     state.debug('allTried', reason);
@@ -549,41 +581,46 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     By default, `parameters` is initialized with
     CodeGradX.State.prototype.sendRepeatedlyESServer.default
 
-  Nota: what become the other promises not selected by when.any ? Do they
-  continue to run ? This might be a problem for sendRepeatedlyESServer ???
+  Nota: when.any does not cancel the other concurrent promises. So use
+  the boolean `shouldStop` to avoid invoking `retryNext` forever.
   */
 
 CodeGradX.State.prototype.sendRepeatedlyESServer =
 function (kind, parameters, options) {
   var state = this;
+  var shouldStop = false;
   state.debug('sendRepeatedlyESServer', kind, parameters, options);
   parameters = _.assign({ i: 0 },
     CodeGradX.State.prototype.sendRepeatedlyESServer.default,
     parameters);
-    var dt = parameters.step * 1000;
-    function retryNext () {
-      state.debug("retryNext", parameters);
-      try {
-        parameters.progress(parameters);
-      } catch (exc) {
-        // ignore problems raised by progress()!
-      }
-      if ( parameters.i++ < parameters.attempts ) {
-        var promise = state.sendESServer(kind, options).then(function (response) {
-          if ( response.status.code !== 200 ) {
-            return when.reject(new Error(response.status.code));
-          } else {
-            return when(response);
-          }
-        });
-        var delayedPromise = when(null).delay(dt).then(retryNext);
-        var promises = [promise, delayedPromise];
-        return when.any(promises);
-      } else {
-        return when.reject(new Error("waitedTooMuch"));
-      }
+  var dt = parameters.step * 1000;
+  function retryNext () {
+    if ( shouldStop ) {
+      return when(shouldStop);
     }
-    return retryNext();
+    state.debug("retryNext", parameters);
+    try {
+      parameters.progress(parameters);
+    } catch (exc) {
+      // ignore problems raised by progress()!
+    }
+    if ( parameters.i++ < parameters.attempts ) {
+      var promise = state.sendESServer(kind, options).then(function (response) {
+        if ( response.status.code >= 300 ) {
+          return when.reject(new Error(response.status.code));
+        } else {
+          shouldStop = true;
+          return when(response);
+        }
+      });
+      var delayedPromise = when(null).delay(dt).then(retryNext);
+      var promises = [promise, delayedPromise];
+      return when.any(promises);
+    } else {
+      return when.reject(new Error("waitedTooMuch"));
+    }
+  }
+  return retryNext();
 };
 CodeGradX.State.prototype.sendRepeatedlyESServer.default = {
   step: 3, // seconds
@@ -594,9 +631,9 @@ CodeGradX.State.prototype.sendRepeatedlyESServer.default = {
 /** Authenticate the user. This will return a Promise leading to
     some User.
 
-    @param {string} login
+    @param {string} login - real login or email address
     @param {string} password
-    @returns {Promise} yields {User}
+    @returns {Promise<User>} yields {User}
 
     */
 
@@ -604,7 +641,7 @@ CodeGradX.State.prototype.getAuthenticatedUser =
 function (login, password) {
   var state = this;
   state.debug('getAuthenticatedUser1', login);
-  var promise = state.sendAXServer('x', {
+  return state.sendAXServer('x', {
     path: '/direct/check',
     method: 'POST',
     headers: {
@@ -621,27 +658,37 @@ function (login, password) {
     state.currentUser = new CodeGradX.User(response.entity);
     return when(state.currentUser);
   });
-  return promise;
 };
 
 // **************** User *******************************
 
-/** Represents a User.
+/** Represents a User. An User is found by its login and password, the login
+    may be a real login (such as upmc:1234567) or an email address.
 
     @constructor
     @property {string} lastname
     @property {string} firstname
     @property {string} email
     @property {number} personid
-    @property {Campaign[]} campaigns - array of Campaign
+    @property {string} pseudo
+    @property {Array<string>} authorprefixes
+    @property {Hashtable<Campaign>} _campaigns - Hashtable of Campaign
+
+    Campaigns may be obtained via `getCampaign()` or `getCampaigns()`.
 
     */
 
 CodeGradX.User = function (json) {
   _.assign(this, json);
-  this.campaigns = _.map(json.campaigns, function (js) {
-    return new CodeGradX.Campaign(js);
+  //console.log(json);
+  delete this.kind;
+  var campaigns = {};
+  json.campaigns.forEach(function (js) {
+    //console.log(js);
+    var campaign = new CodeGradX.Campaign(js);
+    campaigns[campaign.name] = campaign;
   });
+  this._campaigns = campaigns;
 };
 
 /** Modify some properties of the current user. These properties are
@@ -654,7 +701,7 @@ CodeGradX.User = function (json) {
       @property {string} fields.password
       @returns {Promise yields User
 
-    It is not possible to change user's login.
+    It is not possible to change user's login, personid, authorprefixes.
 
     */
 
@@ -681,20 +728,26 @@ CodeGradX.User.prototype.modify = function (fields) {
 /** Get the campaigns where the current user is enrolled.
 
       @param {bool} now - get only active campaigns.
-      @returns {Campaign[]} array of Campaign
+      @returns {Promise<Hashtable<Campaign>>} yielding a Hashtable of Campaigns
+                indexed by their name.
 
     */
 
 CodeGradX.User.prototype.getCampaigns = function (now) {
   // get active campaigns if now otherwise get all campaigns
   if ( now ) {
-    var activeCampaigns = _.filter(this.campaigns, function (campaign) {
-      var now = new Date().getTime();
-      return ( campaign.starttime <= now) && ( now <= campaign.endtime );
+    var dnow = new Date();
+    var activeCampaigns = {};
+    _.forEach(this._campaigns, function (campaign) {
+      if ( (campaign.starttime <= dnow) &&
+           ( dnow <= campaign.endtime ) ) {
+        //console.log("gotten " + campaign.name);
+        activeCampaigns[campaign.name] = campaign;
+      }
     });
-    return activeCampaigns;
+    return when(activeCampaigns);
   } else {
-    return this.campaigns;
+    return when(this._campaigns);
   }
 };
 
@@ -702,7 +755,7 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
     It looks for a named campaign among the campaigns the user is part of.
 
         @param {String} name - name of the Campaign to find
-        @returns {Promise} yields {Campaign}
+        @returns {Promise<Campaign>} yields {Campaign}
 
     */
 
@@ -710,9 +763,8 @@ CodeGradX.User.prototype.getCampaign = function (name) {
   // get information on a Campaign
   var state = CodeGradX.getCurrentState();
   state.debug('getCampaign', name);
-  var campaign = _.find(this.campaigns, {name: name});
+  var campaign = this._campaigns[name];
   if ( campaign ) {
-    state.currentCampaign = campaign;
     return when(campaign);
   } else {
     return when.reject(new Error("No such campaign " + name));
@@ -723,7 +775,7 @@ CodeGradX.User.prototype.getCampaign = function (name) {
 
     @param {string} filename - tgz file containing the exercise
     @param {Object} parameters - repetition parameters
-    @returns {Promise} yielding Exercise
+    @returns {Promise<Exercise>} yielding Exercise
 
     An `exerciseSubmittedReport` looks like:
       <?xml version="1.0" encoding="UTF-8"?>
@@ -764,7 +816,7 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
         js = js.fw4ex.exerciseSubmittedReport;
         var exercise = new CodeGradX.Exercise({
           location: js.$.location,
-          personid: js.person.$.personid, // string not number!
+          personid: _str2num(js.person.$.personid),
           exerciseid: js.exercise.$.exerciseid
         });
         return exercise.getExerciseReport(parameters);
@@ -781,16 +833,21 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
 
       @constructor
       @property {string} name
-      @property {Date} starttime
-      @property {Date} endtime
-      @property {string} exercisesname
-      @property {ExerciseSet} exercises (filled by getExercises)
+      @property {Date} starttime - Start date of the Campaign
+      @property {Date} endtime - End date of the Campaign
+      @property {string} exercisesname - Name of the set of Exercises
+      @property {ExerciseSet} _exercises (filled by getExercises)
+
+      Exercises may be obtained one by one with `getExercise()`.
 
     */
 
 CodeGradX.Campaign = function (json) {
   // initialize name, starttime, endtime
   _.assign(this, json);
+  this.starttime = _str2Date(json.starttime);
+  this.endtime = _str2Date(json.endtime);
+  //console.log(this);
 };
 
 /** Get the skills of the students enrolled in the current campaign.
@@ -799,7 +856,7 @@ CodeGradX.Campaign = function (json) {
     @property {Object} skills.you
     @property {number} skills.you.personId - your numeric identifier
     @property {number} skills.you.skill - your own skill
-    @property {Skill[]} skills.all - array of Object
+    @property {Array<skill>} skills.all - array of Object
     @property {Object} skills.all[].skill - some student's skill
 
     */
@@ -900,8 +957,7 @@ CodeGradX.Campaign.prototype.getExercise = function (name) {
 
 // **************** Exercise ***************************
 
-/** Constructor of an Exercise.
-      When extracted from a Campaign, an Exercise looks like:
+/** Exercise. When extracted from a Campaign, an Exercise looks like:
 
     { name: 'org.fw4ex.li101.croissante.0',
       nickname: 'croissante',
@@ -914,6 +970,25 @@ CodeGradX.Campaign.prototype.getExercise = function (name) {
     for instance), use the `getDescription` method.
 
     @constructor
+    @property {string} name - full name
+    @property {string} nickname - short name
+    @property {string} safecookie - long crypted identifier
+    @property {string} summary - single sentence qualifying the Exercise
+    @property {Array<string>} tags - Array of tags categorizing the Exercise.
+
+    The `getDescription()` method completes the description of an Exercise
+    with the following fields:
+
+    @property {XMLstring} _XMLdescription - raw XML description
+    @property {Object} _description - description
+    @property {Array<Author>} authorship - Array of authorship
+    @property {XMLstring} XMLstem - raw XML stem
+    @property {string} stem - default HTML translation of the XML stem
+    @property {Object} expectations - files expected in student's answer
+
+    This field may be present if there is a single file in expectations:
+
+    @property {string} inlineFileName - single file expected in student's answer
 
     */
 
@@ -930,7 +1005,7 @@ CodeGradX.Exercise = function (json) {
     Caution: this description is converted from XML to a Javascript
     object with xml2js idiosyncrasies.
 
-      @returns {Promise} yields {ExerciseDescription}
+      @returns {Promise<ExerciseDescription>} yields {ExerciseDescription}
 
        */
 
@@ -939,8 +1014,8 @@ CodeGradX.Exercise.prototype.getDescription = function () {
   var exercise = this;
   var state = CodeGradX.getCurrentState();
   state.debug('getDescription1', exercise);
-  if ( exercise.description ) {
-    return when(exercise.description);
+  if ( exercise._description ) {
+    return when(exercise._description);
   }
   if ( ! exercise.safecookie ) {
     return when.reject("Non deployed exercise " + exercise.name);
@@ -955,13 +1030,13 @@ CodeGradX.Exercise.prototype.getDescription = function () {
   var promise1 = promise.then(function (response) {
     state.debug('getDescription2', response);
     //console.log(response);
-    exercise.XMLdescription = response.entity;
+    exercise._XMLdescription = response.entity;
     function parseXML (description) {
       state.debug('getDescription2b', description);
-      exercise.description = description;
+      exercise._description = description;
       return when(description);
     }
-    return CodeGradX.parsexml(exercise.XMLdescription).then(parseXML);
+    return CodeGradX.parsexml(exercise._XMLdescription).then(parseXML);
   });
   var promise2 = promise.then(function (response) {
     // Extract authors
@@ -970,6 +1045,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     var authorship = response.entity.replace(authorshipRegExp, "$2");
     return CodeGradX.parsexml(authorship).then(function (result) {
       state.debug("getDescription3a", result);
+      //console.log(result); //
       var authors = result.authorship;
       if ( _.isArray(authors) ) {
         exercise.authorship = _.map(authors, 'author');
@@ -1001,8 +1077,9 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     '</div>';
     return CodeGradX.parsexml(expectations).then(function (result) {
       state.debug('getDescription5a');
-      if (result.div.expectations ) {
+      if ( result.div.expectations ) {
         //console.log(result.div.expectations);
+        exercise.expectations = result.div.expectations;
         exercise.inlineFileName = result.div.expectations.file.$.basename;
       }
       return when(response);
@@ -1021,24 +1098,27 @@ CodeGradX.Exercise.prototype.getDescription = function () {
       */
 
 CodeGradX.parsexml = function (xml) {
+  if ( ! xml ) {
+    return when.reject("Cannot parse " + xml);
+  }
   var parser = new xml2js.Parser({
     explicitArray: false,
     trim: true
   });
-  if ( isNode() ) {
-    // Node specific code:
-    return nodefn.call(parser.parseString, xml);
-  } else {
-    var xerr, xresult;
+  var xerr, xresult;
+  try {
     parser.parseString(xml, function (err, result) {
       xerr = err;
       xresult = result;
     });
-    if ( xerr ) {
-      return when.reject(xerr);
-    } else {
-      return when(xresult);
-    }
+  } catch (e) {
+    // for a TypeError: Cannot read property 'toString' of undefined
+    return when.reject(e);
+  }
+  if ( xerr ) {
+    return when.reject(xerr);
+  } else {
+    return when(xresult);
   }
 };
 
@@ -1046,7 +1126,7 @@ CodeGradX.parsexml = function (xml) {
     Returns a Job on which you may invoke the `getReport` method.
 
       @param {string} answer
-      @returns {Promise} yields {Job}
+      @returns {Promise<Job>} yields {Job}
 
     */
 
@@ -1061,15 +1141,17 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
   if ( typeof exercise.inlineFileName === 'undefined') {
     return when.reject(new Error("Non suitable exercise"));
   }
+  var content = new Buffer(answer, 'utf8');
   return state.sendAXServer('a', {
     path: ('/exercise/' + exercise.safecookie + '/job'),
     method: "POST",
     headers: {
       "Content-Type": "application/octet-stream",
       "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
+      "Content-Length": content.length,
       "Accept": 'text/xml'
     },
-    entity: answer
+    entity: content
   }).then(function (response) {
     //console.log(response);
     state.debug('sendStringAnswer2', response);
@@ -1083,8 +1165,8 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
         content: answer,
         responseXML: response.entity,
         response: js,
-        personid: js.person.$.personid,
-        archived: js.job.$.archived,
+        personid: _str2num(js.person.$.personid),
+        archived: _str2Date(js.job.$.archived),
         jobid:    js.job.$.jobid,
         pathdir:  js.$.location
       });
@@ -1097,7 +1179,7 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
     Returns a Job on which you may invoke the `getReport` method.
 
       @param {string} filename
-      @returns {Promise} yields {Job}
+      @returns {Promise<Job>} yields {Job}
 
     NOTA: The present implementation depends on Node.js, it uses the
     `fs` module to read the file to send. It has to be rewritten if
@@ -1114,12 +1196,14 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
     return when.reject("Non deployed exercise " + exercise.name);
   }
   return CodeGradX.readFileContent(filename).then(function (content) {
+    var basefilename = filename.replace(new RegExp("^.*/"), '');
     return state.sendAXServer('a', {
       path: ('/exercise/' + exercise.safecookie + '/job'),
       method: "POST",
       headers: {
         "Content-Type": "application/octet-stream",
-        "Content-Disposition": ("inline; filename=" + filename),
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Content-length": content.length,
         "Accept": 'text/xml'
       },
       entity: content
@@ -1136,10 +1220,10 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
           content: content,
           responseXML: response.entity,
           response: js,
-          personid: js.person.$.personid,
-          archived: js.job.$.archived,
-          jobid: js.job.$.jobid,
-          pathdir: js.$.location
+          personid: _str2num(js.person.$.personid),
+          archived: _str2Date(js.job.$.archived),
+          jobid:    js.job.$.jobid,
+          pathdir:  js.$.location
         });
         return when(job);
       });
@@ -1151,7 +1235,7 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
     Caution: Specific to Node.js!
 
         @param {string} filename - file to read
-        @returns {Promise} yields file content: a string
+        @returns {Promise} yields file content in a Buffer
 
       */
 
@@ -1162,15 +1246,93 @@ CodeGradX.readFileContent = function (filename) {
   });
 };
 
+/** Send a batch of files to be marked against an Exercise.
+
+    @param {string} filename - the tgz holding all students' files
+    @returns {Promise<Batch>} yielding a Batch.
+
+    A `multiJobSubmittedReport` looks like:
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <fw4ex version="1.0">
+      <multiJobSubmittedReport location="/b/7/0/4/A/2/2/.../2/7/F/6/D">
+        <batch archived="2015-11-22T17:42:45"
+          batchid="704A22A6-9140-11E5-A56E-935272130F6D" />
+        <person personid="2008" />
+        <exercise exerciseid="555DEA22-9140-11E5-9CE7-C824CDA02616" />
+      </multiJobSubmittedReport>
+    </fw4ex>
+
+    */
+
 CodeGradX.Exercise.prototype.sendBatch = function (filename) {
-  // send a batch
+  // send multiple answers in a batch
+  var exercise = this;
+  var state = CodeGradX.getCurrentState();
+  state.debug('sendBatch1', filename);
+  if ( ! exercise.safecookie ) {
+    return when.reject("Non deployed exercise " + exercise.name);
+  }
+  return CodeGradX.readFileContent(filename).then(function (content) {
+    var basefilename = filename.replace(new RegExp("^.*/"), '');
+    return state.sendAXServer('a', {
+      path: ('/exercise/' + exercise.safecookie + '/batch'),
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Content-Length": content.length,
+        "Accept": 'text/xml'
+      },
+      entity: content
+    }).then(function (response) {
+      //console.log(response.entity);
+      state.debug('sendBatch2', response);
+      return CodeGradX.parsexml(response.entity).then(function (js) {
+        //console.log(js);
+        state.debug('sendBatch3', js);
+        js = js.fw4ex.multiJobSubmittedReport;
+        exercise.uuid = js.exercise.$.exerciseid;
+        var batch = new CodeGradX.Batch({
+          exercise: exercise,
+          //content: content,  // Too heavy
+          responseXML: response.entity,
+          response: js,
+          personid: _str2num(js.person.$.personid),
+          archived: _str2Date(js.batch.$.archived),
+          batchid:  js.batch.$.batchid,
+          pathdir:  js.$.location,
+          finishedjobs: 0
+        });
+        return when(batch);
+      });
+    });
+  });
 };
 
-/** Get Exercise autocheck reports that is, the jobs corresponding to
-    the pseudo-jobs contained in the Exercise TGZ file.
+/** After submitting a new Exercise, get Exercise autocheck reports
+    that is, the jobs corresponding to the pseudo-jobs contained in
+    the Exercise TGZ file.
 
   @param {Object} parameters - @see CodeGradX.sendRepeatedlyESServer
-  @returns {Promise} yielding an Exercise
+  @returns {Promise<Exercise>} yielding an Exercise
+
+  The `getExerciseReport()` method will add some new fields to the
+  Exercise object:
+
+  @property {XMLstring} XMLauthorReport - raw XML report
+  @property {number} totaljobs - the total number of pseudo-jobs
+  @property {number} finishedjobs - the number of marked pseudo-jobs
+  @property {Hashtable<Job>} pseudojobs - Hashtable of pseudo-jobs
+
+  For each pseudo-job, are recorded all the fields of a regular Job
+  plus some additional fields such as `duration`.
+
+  If the exercise is successfully autochecked, it may be used by
+  `sendStringAnswer()`, `sendFileAnswer()` or `sendBatch()` methods
+  using the additional `safecookie` field:
+
+  @property {string} safecookie - the long identifier of the exercise.
+
 
   The `exerciseAuthorReport` looks like:
 
@@ -1236,8 +1398,8 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
       if ( ! _.isArray(exercise.authorship) ) {
         exercise.authorship = [ exercise.authorship ];
       }
-      exercise.totaljobs = js.pseudojobs.$.totaljobs;
-      exercise.finishedjobs = js.pseudojobs.$.finishedjobs;
+      exercise.totaljobs    = _str2num(js.pseudojobs.$.totaljobs);
+      exercise.finishedjobs = _str2num(js.pseudojobs.$.finishedjobs);
       function processPseudoJob (jspj) {
         var name = jspj.submission.$.name;
         var job = new CodeGradX.Job({
@@ -1245,10 +1407,15 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
           XMLpseudojob: jspj,
           jobid:     jspj.$.jobid,
           pathdir:   jspj.$.location,
-          duration:  jspj.$.duration
+          duration:  _str2num(jspj.$.duration),
+          mark:      _str2num(jspj.marking.$.mark),
+          totalMark: _str2num(jspj.marking.$.totalMark),
+          archived:  _str2Date(jspj.marking.$.archived),
+          started:   _str2Date(jspj.marking.$.started),
+          ended:     _str2Date(jspj.marking.$.ended),
+          finished:  _str2Date(jspj.marking.$.finished)
+          // partial marks TOBEDONE
         });
-        _.assign(job, jspj.marking.$);
-        _.assign(job, jspj.marking.exercise.$);
         exercise.pseudojobs[name] = job;
       }
       js.pseudojobs.pseudojob.forEach(processPseudoJob);
@@ -1285,6 +1452,10 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
     array of Exercises or ExercisesSet.
 
     @constructor
+    @property {string} title
+    @property {string} prologue
+    @property {string} epilogue
+    @property {Array} exercises - Array of Exercises or ExercisesSet.
 
       */
 
@@ -1367,6 +1538,10 @@ A `jobStudentReport` looks like:
 ```
 
     @constructor
+    @property {string} XMLreport - raw XML report
+    @property {string} _report - default HTML from XML report
+
+
 */
 
 CodeGradX.Job = function (js) {
@@ -1386,9 +1561,9 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   parameters = parameters || {};
   var job = this;
   var state = CodeGradX.getCurrentState();
-  state.debug('getReport1', job);
-  if ( job.report ) {
-    return when(job.report);
+  state.debug('getJobReport1', job);
+  if ( job._report ) {
+    return when(job._report);
   }
   var path = job.pathdir + '/' + job.jobid + '.xml';
   var promise = state.sendRepeatedlyESServer('s', parameters, {
@@ -1401,26 +1576,32 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   var promise1 = promise.then(function (response) {
     //state.log.show();
     //console.log(response);
-    state.debug('getReport2', job);
+    state.debug('getJobReport2', job);
     job.XMLreport = response.entity;
     return when(job);
   });
   var promise2 = promise.then(function (response) {
     // Fill archived, started, ended, finished, mark and totalMark
-    state.debug('getReport3', job);
+    state.debug('getJobReport3', job);
     var markingRegExp = new RegExp("^(.|\n)*(<marking (.|\n)*?>)(.|\n)*$");
     var marking = response.entity.replace(markingRegExp, "$2");
     marking = marking.replace(/>/, "/>");
     //console.log(marking);
     return CodeGradX.parsexml(marking).then(function (js) {
       //console.log(js);
-      _.assign(job, js.marking.$);
+      job.mark      = _str2num(js.marking.$.mark);
+      job.totalMark = _str2num(js.marking.$.totalMark);
+      job.archived  = _str2Date(js.marking.$.archived);
+      job.started   = _str2Date(js.marking.$.started);
+      job.ended     = _str2Date(js.marking.$.ended);
+      job.finished  = _str2Date(js.marking.$.finished);
+      // machine, partial marks TO BE DONE
       return when(response);
     });
   });
   var promise3 = promise.then(function (response) {
     // Fill exerciseid (already in exercise.uuid !)
-    state.debug('getReport4', job);
+    state.debug('getJobReport4', job);
     var exerciseRegExp = new RegExp("^(.|\n)*(<exercise (.|\n)*?>)(.|\n)*$");
     var exercise = response.entity.replace(exerciseRegExp, "$2");
     //console.log(exercise);
@@ -1431,13 +1612,13 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   });
   var promise4 = promise.then(function (response) {
     // Fill report
-    state.debug('getReport6');
+    state.debug('getJobReport5');
     var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*?</content>)(.|\n)*$");
     var content = response.entity.replace(contentRegExp, "$2");
-    job.report = CodeGradX.xml2html(content);
+    job._report = CodeGradX.xml2html(content);
   });
   return when.join(promise2, promise3, promise4).then(function (values) {
-    state.debug('getReport5', job);
+    state.debug('getJobReport6', job);
     //console.log(job);
     return promise1;
   });
@@ -1537,6 +1718,118 @@ CodeGradX.xml2html = function (s, options) {
 };
 CodeGradX.xml2html.default = {
   markFactor:  100
+};
+
+// ************************** Batch *************************
+/** A Batch is a set of students' answers to be marked by a single
+    Exercise. Instantaneous reports or final reports may be obtained
+    with the `getReport()` or `getFinalReport()` methods.
+
+    @constructor
+    @property {string} label - name of the batch
+    @property {number} totaljobs - the total number of students' jobs to mark
+    @property {number} finishedjobs - the total number of marked students' jobs
+    @property {Hashtable<Job>} jobs - Hashtable of jobs indexed by their label
+
+    */
+
+CodeGradX.Batch = function (js) {
+  // initialize ...
+  _.assign(this, js);
+};
+
+/** Get the current state of the Batch report. See also
+    `getFinalReport()` to get the final report of the batch where all
+    answers are marked.
+
+  @param {Object} parameters - parameters {@see sendRepeatedlyESServer}
+  @returns {Promise<Batch>} yielding Batch
+
+  */
+
+CodeGradX.Batch.prototype.getReport = function (parameters) {
+  // get the marking report
+  parameters = _.assign({},
+    CodeGradX.Batch.prototype.getReport.default,
+    parameters);
+  var batch = this;
+  var state = CodeGradX.getCurrentState();
+  state.debug('getBatchReport1', batch);
+  var path = batch.pathdir + '/' + batch.batchid + '.xml';
+  return state.sendRepeatedlyESServer('s', parameters, {
+    path: path,
+    method: 'GET',
+    headers: {
+      "Accept": "text/xml"
+    }
+  }).then(function (response) {
+    //console.log(response);
+    state.debug('getBatchReport2', batch);
+    batch.XMLreport = response.entity;
+    return CodeGradX.parsexml(response.entity).then(function (js) {
+        //console.log(js);
+        state.debug('getBatchReport3', js);
+        js = js.fw4ex.multiJobStudentReport;
+        batch.totaljobs    = _str2num(js.$.totaljobs);
+        batch.finishedjobs = _str2num(js.$.finishedjobs);
+        batch.jobs = {};
+        //console.log(js);
+        function processJob (jsjob) {
+          //console.log(jsjob);
+          var job = new CodeGradX.Job({
+            exercise:  batch.exercise,
+            XMLjob:    jsjob,
+            jobid:     jsjob.$.jobid,
+            pathdir:   jsjob.$.location,
+            label:     jsjob.$.label,
+            problem:   _str2num(jsjob.$.problem),
+            mark:      _str2num(jsjob.marking.$.mark),
+            totalMark: _str2num(jsjob.marking.$.totalMark),
+            started:   _str2Date(jsjob.marking.$.started),
+            finished:  _str2Date(jsjob.marking.$.finished)
+            // duration = job.finished - job.started;
+          });
+          batch.jobs[job.label] = job;
+          return job;
+        }
+        if ( _.isArray(js.jobStudentReport) ) {
+          js.jobStudentReport.forEach(processJob);
+        } else {
+          processJob(js.jobStudentReport);
+        }
+        return when(batch);
+      });
+  });
+};
+CodeGradX.Batch.prototype.getReport.default = {
+  step: 5, // seconds
+  attempts: 100,
+  progress: function (parameters) {}
+};
+
+/** Get the final state of the Batch report where all
+    answers are marked. This method will update the `finishedjobs`
+    and `jobs` fields.
+
+  @param {Object} parameters - parameters {@see sendRepeatedlyESServer}
+  @returns {Promise<Batch>} yielding Batch
+
+  */
+
+CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
+  // get the final marking report
+  var batch = this;
+  var state = CodeGradX.getCurrentState();
+  state.debug('getBatchFinalReport1', batch);
+  function fetchAgainReport () {
+    state.debug('getBatchFinalReport2', batch);
+    if ( batch.finishedjobs < batch.totaljobs ) {
+      return batch.getReport(parameters).then(fetchAgainReport);
+    } else {
+      return when(batch);
+    }
+  }
+  return fetchAgainReport();
 };
 
 // end of codegradxlib.js

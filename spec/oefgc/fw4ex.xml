@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<fw4ex version='1.0'>
+  <multiJobSubmission label='batch.test'>
+    <job label='first'    filename='1.tgz' />
+    <job label='second'   filename='2.tgz' />
+    <job label='third'    filename='3.tgz' />
+    <job label='fourth'   filename='4.tgz' />
+    <job label='fifth'    filename='5.tgz' />
+    <job label='sixth'    filename='6.tgz' />
+    <job label='seventh'  filename='7.tgz' />
+    <job label='eighth'   filename='8.tgz' />
+    <job label='nineth'   filename='9.tgz' />
+  </multiJobSubmission>
+</fw4ex>

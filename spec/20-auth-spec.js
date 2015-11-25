@@ -1,5 +1,7 @@
 // Jasmine test for user authentication
 // requires file ./auth-data.json with login and password (not under git!)
+// Don't copy code from this, this is not the regular usage of the library.
+// This file was more used as a test and experiment code.
 
 var CodeGradX = require('../codegradxlib.js');
 var authData = require('./auth-data.json');
