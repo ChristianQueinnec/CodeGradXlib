@@ -545,7 +545,11 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     newoptions.headers.Cookie = state.currentCookie;
   }
   function getActiveServers () {
-    return _.filter(state.servers[kind], {enabled: true});
+    state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
+    //console.log(state.servers[kind]);
+    var active = _.filter(state.servers[kind], {enabled: true});
+    state.debug('Active:', _.pluck(active, 'host'));
+    return active;
   }
   var adescriptions = getActiveServers();
   function mk_seeError (description) {
@@ -582,7 +586,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     return state.checkServers(kind).then(function (descriptions) {
       var adescriptions2 = getActiveServers();
       if ( adescriptions2.length === 0 ) {
-        throw new Error("no available server " + kind);
+        return when.reject(new Error("no available server " + kind));
       } else {
         state.debug('sendESServer2',  adescriptions2);
         var promises = _.map(adescriptions2, trySending);
