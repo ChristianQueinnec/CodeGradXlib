@@ -190,16 +190,23 @@ CodeGradX.State = function (initializer) {
   this.log = new CodeGradX.Log();
   // State of servers:
   this.servers = {
+    // The domain to be suffixed to short hostnames:
     domain: '.paracamplus.com',
+    // the shortnames of the four kinds of servers:
     names: ['a', 'e', 'x', 's'],
+    // Description of the A servers:
     a: {
+      // a0 and a1 are listed, 2 is the number of the next possible A server
       next: 2,
+      // Use that URI to check whether the server is available or not:
       suffix: '/alive',
       0: {
+        // a full hostname supersedes the default FQDN:
         host: 'a0.paracamplus.com',
         enabled: false
       },
       1: {
+        // the default FQDN is a1.paracamplus.com
         enabled: false
       }
     },
@@ -284,7 +291,7 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   var state = this;
   state.debug('checkServer1', kind, index);
   if ( ! state.servers[kind] ) {
-    state.servers = {};
+    state.servers[kind] = {};
   }
   var descriptions = state.servers[kind];
   if ( ! descriptions[index] ) {
@@ -305,7 +312,7 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
     state.debug('invalidateDescription', description.host, reason);
     description.enabled = false;
     description.lastError = reason;
-    throw reason;
+    return when.reject(reason);
   }
   var url = "http://" + host + descriptions.suffix;
   state.debug('checkServer2', kind, index, url);
@@ -318,6 +325,9 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
     update the state for those servers. If correctly programmed
     these checks are concurrently run.
 
+    If server ki (kind k, index i) emit an HTTPresponse, then
+    descriptions.next should be at least greater than i.
+
     @param {string} kind - the kind of server (a, e, x or s)
     @returns {Promise} yields Array[HTTPresponse]
 
@@ -326,29 +336,31 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
 CodeGradX.State.prototype.checkServers = function (kind) {
   var state = this;
   state.debug('checkServers', kind);
-  var promise, promises = [];
   var descriptions = state.servers[kind];
   function incrementNext (response) {
     state.debug('incrementNext', response);
-    if ( response.status.code === 200 ) {
+    if ( response.status.code < 300 ) {
       descriptions.next++;
     }
     return when(descriptions);
   }
+  function dontIncrementNext (reason) {
+    state.debug('dontIncrementNext', reason);
+    return when(null);
+  }
+  var promise, promises = [];
   for ( var key in descriptions ) {
     if ( /^\d+$/.exec(key) ) {
       promise = state.checkServer(kind, key);
       promises.push(promise);
     }
   }
-  function dontIncrementNext (reason) {
-    state.debug('dontIncrementNext', reason);
-    return when(null);
-  }
   // Try also the next potential server:
-  promise = state.checkServer(kind, descriptions.next)
-    .then(incrementNext, dontIncrementNext);
-  promises.push(promise);
+  if ( descriptions.next >= promises.length ) {
+    promise = state.checkServer(kind, descriptions.next)
+      .then(incrementNext, dontIncrementNext);
+      promises.push(promise);
+  }
   function returnDescriptions () {
     state.debug('returnDescriptions', descriptions);
     return when(descriptions);
@@ -433,6 +445,9 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   if ( state.currentCookie ) {
     newoptions.headers.Cookie = state.currentCookie;
   }
+  var adescriptions = getActiveServers();
+  var checkServersCount = 0;
+
   function updateCurrentCookie (response) {
     //console.log(response.headers);
     //console.log(response);
@@ -450,15 +465,17 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
     return when(response);
   }
   function getActiveServers () {
-    return _.filter(state.servers[kind], {enabled: true});
+    state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
+    //console.log(state.servers[kind]);
+    var active = _.filter(state.servers[kind], {enabled: true});
+    state.debug('Active:', _.pluck(active, 'host'));
+    return active;
   }
-  var descriptions = getActiveServers();
-  state.debug('sendAXServer3', descriptions);
   function tryNext (reason) {
     state.debug('tryNext1', reason);
-    if ( descriptions.length > 0 ) {
-      var description = _.first(descriptions);
-      descriptions = _.rest(descriptions);
+    if ( adescriptions.length > 0 ) {
+      var description = _.first(adescriptions);
+      adescriptions = _.rest(adescriptions);
       newoptions.path = 'http://' + description.host + options.path;
       state.debug('tryNext2', newoptions.path);
       var promise = state.userAgent(newoptions);
@@ -466,11 +483,16 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
       var promise2 = promise1.then(updateCurrentCookie);
       return promise2.catch(mk_invalidateThenTryNext(description));
     } else {
-      throw reason;
+      if ( checkServersCount++ === 0 ) {
+        return tryAll();
+      } else {
+        return allTried(new Error("All unavailable servers " + kind));
+      }
     }
   }
   function mk_invalidateThenTryNext (description) {
     return function (reason) {
+      state.debug('mk_invalidateThenTryNext', description);
       description.enabled = false;
       description.lastError = reason;
       return tryNext(reason);
@@ -478,23 +500,27 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   }
   function allTried (reason) {
     state.debug('allTried', reason);
-    throw reason;
+    return when.reject(reason);
   }
-  if ( descriptions.length === 0 ) {
-    // Determine available servers if not yet done:
-    return state.checkServers(kind).then(function (responses) {
-      state.debug('sendAXServer2', responses);
-      var descriptions2 = getActiveServers();
-      if ( descriptions2.length === 0 ) {
-        throw new Error('no available server ' + kind);
-      } else {
-        descriptions = descriptions2;
-        return tryNext('goAgain');
-      }
-    }, allTried);
-  } else {
-    return tryNext('goFirst');
-  }
+  function tryAll () {
+    state.debug('tryAll', adescriptions);
+    if ( adescriptions.length === 0 ) {
+      // Determine available servers if not yet done:
+      return state.checkServers(kind).then(function (descriptions) {
+        state.debug('sendAXServer2 ', descriptions);
+        var adescriptions2 = getActiveServers();
+        if ( adescriptions2.length === 0 ) {
+          return allTried(new Error('no available server ' + kind));
+        } else {
+          adescriptions = adescriptions2;
+          return tryNext('goAgain');
+        }
+      }, allTried);
+    } else {
+      return tryNext('goFirst');
+    }
+}
+return tryAll();
 };
 
 /** Ask once an E or S server.
@@ -521,7 +547,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   function getActiveServers () {
     return _.filter(state.servers[kind], {enabled: true});
   }
-  var descriptions = getActiveServers();
+  var adescriptions = getActiveServers();
   function mk_seeError (description) {
     function seeError (reason) {
       // A MIME deserialization problem may also trigger `seeError`.
@@ -552,19 +578,19 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     state.debug('allTried', reason);
     throw reason;
   }
-  if ( descriptions.length === 0 ) {
-    return state.checkServers(kind).then(function (responses) {
-      var descriptions2 = getActiveServers();
-      if ( descriptions2.length === 0 ) {
+  if ( adescriptions.length === 0 ) {
+    return state.checkServers(kind).then(function (descriptions) {
+      var adescriptions2 = getActiveServers();
+      if ( adescriptions2.length === 0 ) {
         throw new Error("no available server " + kind);
       } else {
-        state.debug('sendESServer2',  descriptions2);
-        var promises = _.map(descriptions2, trySending);
+        state.debug('sendESServer2',  adescriptions2);
+        var promises = _.map(adescriptions2, trySending);
         return when.any(promises);
       }
     }, allTried);
   } else {
-    var promises = _.map(descriptions, trySending);
+    var promises = _.map(adescriptions, trySending);
     return when.any(promises);
   }
 };
