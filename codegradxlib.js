@@ -551,7 +551,6 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     state.debug('Active:', _.pluck(active, 'host'));
     return active;
   }
-  var adescriptions = getActiveServers();
   function mk_seeError (description) {
     function seeError (reason) {
       // A MIME deserialization problem may also trigger `seeError`.
@@ -582,6 +581,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     state.debug('allTried', reason);
     throw reason;
   }
+  var adescriptions = getActiveServers();
   if ( adescriptions.length === 0 ) {
     return state.checkServers(kind).then(function (descriptions) {
       var adescriptions2 = getActiveServers();

@@ -61,7 +61,7 @@ describe('CodeGradX', function () {
           return when({
             status: { code: item.status },
             headers: {}
-          });
+          }).delay(100 * Math.random());
         } else {
           return when.reject("Non responding server " + options.path);
         }
@@ -374,6 +374,84 @@ describe('CodeGradX', function () {
         expect(state.servers.a[1].enabled).toBeTruthy();
         expect(state.servers.a[0].enabled).toBeFalsy();
         done();
+      }, faildone);
+    }, faildone);
+  });
+
+  it('request an A server twice via a0 then a1 dying', function (done) {
+    // since no A server is initially available, this will force a
+    // checkServers('a') which in turn will trigger checkServer('a', 0)
+    // and checkServer('a', 1).
+    var state = new CodeGradX.State(initializer);
+    state.log.size = 50;
+    state.userAgent = make_fakeUserAgent([
+      // implicit via checkServer('a', 0)
+      { path: 'http://a0.localdomain/alive',
+        status: 200
+      },
+      // implicit via checkServer('a', 1)
+      { path: 'http://a1.localdomain/alive',
+        status: 0
+      },
+      // 1st request: ok
+      { path: 'http://a0.localdomain/foo',
+        status: 201
+      },
+      // 2nd request: ko since a0 subitly failed!
+      { path: 'http://a0.localdomain/bar',
+        status: 0
+      },
+      // checkServers('a') again: a0 still ko
+      { path: 'http://a0.localdomain/alive',
+        status: 402
+      },
+      // checkServers('a') again, a1 now ok
+      { path: 'http://a1.localdomain/alive',
+        status: 202
+      },
+      // 2nd request again: ok
+      { path: 'http://a1.localdomain/bar',
+        status: 203
+      },
+      // 3rd request again: ko
+      { path: 'http://a1.localdomain/hux',
+        status: 0
+      },
+      // checkServers('a') again: a0 still ko
+      { path: 'http://a0.localdomain/alive',
+        status: 0
+      },
+      // checkServers('a') again, a1 still ko
+      { path: 'http://a1.localdomain/alive',
+        status: 404
+      }
+    ]);
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    expect(state).toBeDefined();
+    state.sendAXServer('a', {
+      path: '/foo'
+    }).then(function (response) {
+      expect(response.status.code).toBe(201);
+      expect(state.servers.a[0].enabled).toBeTruthy();
+      expect(state.servers.a[1].enabled).toBeFalsy();
+      state.sendAXServer('a', {
+        path: '/bar'
+      }).then(function (response2) {
+        expect(response2.status.code).toBe(203);
+        expect(state.servers.a[1].enabled).toBeTruthy();
+        expect(state.servers.a[0].enabled).toBeFalsy();
+        state.sendAXServer('a', {
+          path: '/hux'
+        }).then(function (response3) {
+          faildone("should not answer");
+        }, function (reason) {
+          // all servers unavailable
+          done();
+        });
       }, faildone);
     }, faildone);
   });
