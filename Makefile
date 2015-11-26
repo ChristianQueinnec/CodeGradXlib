@@ -25,8 +25,12 @@ spec/oefgc.tgz : Makefile spec/oefgc/fw4ex.xml
 	tar tzf spec/oefgc.tgz
 
 # ############## NPM package
+
 pack :
 	npm version patch
+	m CodeGradXlib.tgz
+
+CodeGradXlib.tgz :
 	-rm -rf tmp
 	mkdir -p tmp
 	cd tmp/ && git clone https://github.com/ChristianQueinnec/CodeGradXlib.git
@@ -34,7 +38,7 @@ pack :
 	tar tzf CodeGradXlib.tgz
 
 REMOTE	=	www.paracamplus.com
-install : pack
+install : CodeGradXlib.tgz
 	rsync -avu CodeGradXlib.tgz \
 		${REMOTE}:/var/www/www.paracamplus.com/Resources/Javascript/
 

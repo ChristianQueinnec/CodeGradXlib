@@ -1,5 +1,5 @@
 {
-  "name": "codegradx",
+  "name": "codegradxlib",
   "version": "1.0.1",
   "description": "Javascript Library to interact with the CodeGradX infrastructure",
   "keywords": [
