@@ -17,10 +17,10 @@ describe('CodeGradX', function () {
       done();
     }
     var promise1 = state.checkServers('x');
-    promise1.then(function (responses) {
+    promise1.then(function (descriptions) {
       //console.log(state.servers.x);
       // At least one X server is available:
-      expect(responses.length).toBeGreaterThan(0);
+      expect(descriptions.next).toBeGreaterThan(0);
       var promise2 = state.sendAXServer('x', {
         path: '/direct/check',
         method: 'POST',
@@ -45,8 +45,8 @@ describe('CodeGradX', function () {
       done();
     }
     var promise1 = state.checkServers('e');
-    promise1.then(function (responses) {
-      expect(responses.length).toBeGreaterThan(0);
+    promise1.then(function (descriptions) {
+      expect(descriptions.next).toBeGreaterThan(0);
       var promise2 = state.sendESServer('e', {
         path: '/path/insta2',
         headers: {

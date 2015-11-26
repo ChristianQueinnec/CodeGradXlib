@@ -41,7 +41,7 @@ describe('CodeGradX', function () {
         path: '/',
         method: 'GET'
       }).then(function (response) {
-        //console.log(response.raw.request._header);
+        //console.log(response.request);
         // Check that the received cookie is sent
         expect(response.raw.request._header).toMatch(/\r\nCookie: u=U/);
         expect(response.entity.kind).toBe('authenticationAnswer');

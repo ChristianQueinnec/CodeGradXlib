@@ -72,10 +72,10 @@ describe('CodeGradX', function () {
     }
     var state = new CodeGradX.State();
     var promise = state.checkServers('a');
-    promise.then(function (responses) {
+    promise.then(function (descriptions) {
       //console.log(responses);
       //console.log(state.servers.a);
-      expect(responses.length).toBe(3);
+      expect(descriptions).toBe(state.servers.a);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeTruthy();
       expect(state.servers.a.next).toBe(2);

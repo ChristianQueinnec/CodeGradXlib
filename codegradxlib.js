@@ -347,13 +347,13 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   }
   // Try also the next potential server:
   promise = state.checkServer(kind, descriptions.next)
-  .then(incrementNext, dontIncrementNext);
+    .then(incrementNext, dontIncrementNext);
   promises.push(promise);
   function returnDescriptions () {
     state.debug('returnDescriptions', descriptions);
     return when(descriptions);
   }
-  return when.settle(promises).finally(returnDescriptions);
+  return when.settle(promises).then(returnDescriptions, returnDescriptions);
 };
 
 /** Check all possible servers of all kinds (a, e, x or s) that is,
