@@ -1,6 +1,6 @@
 {
   "name": "codegradx",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Javascript Library to interact with the CodeGradX infrastructure",
   "keywords": [
     "CodeGradX",
@@ -35,7 +35,8 @@
     "url": "http://christian.queinnec.org/"
   },
   "licenses": [
-    { "type": "MIT",
+    {
+      "type": "MIT",
       "url": "http://opensource.org/licenses/MIT"
     }
   ],
