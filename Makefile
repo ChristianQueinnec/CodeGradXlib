@@ -44,7 +44,7 @@ install : CodeGradXlib.tgz
 # content of CodeGradXlib.tgz 
 publish : 
 	git status .
-	git commit -m "NPM publication `date`" .
+	-git commit -m "NPM publication `date`" .
 	git push
 	-rm -f CodeGradXlib.tgz
 	m CodeGradXlib.tgz install
