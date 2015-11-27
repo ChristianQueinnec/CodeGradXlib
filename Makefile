@@ -45,9 +45,11 @@ install : CodeGradXlib.tgz
 publish : 
 	git status .
 	git commit -m "NPM publication `date`" .
+	git push
 	-rm -f CodeGradXlib.tgz
 	m CodeGradXlib.tgz install
 	cd tmp/CodeGradXlib/ && npm version patch && npm publish
+	cp -pf tmp/CodeGradXlib/package.json .
 	rm -rf tmp
 
 # ############## Various experiments (not all finished)
