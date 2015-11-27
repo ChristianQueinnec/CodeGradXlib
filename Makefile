@@ -26,14 +26,12 @@ spec/oefgc.tgz : Makefile spec/oefgc/fw4ex.xml
 
 # ############## NPM package
 
-pack :
-	npm version patch
-	m CodeGradXlib.tgz
-
 CodeGradXlib.tgz :
 	-rm -rf tmp
 	mkdir -p tmp
 	cd tmp/ && git clone https://github.com/ChristianQueinnec/CodeGradXlib.git
+	rm -rf tmp/CodeGradXlib/.git
+	cp -p package.json tmp/CodeGradXlib/ 
 	tar czf CodeGradXlib.tgz -C tmp CodeGradXlib
 	tar tzf CodeGradXlib.tgz
 
@@ -42,8 +40,15 @@ install : CodeGradXlib.tgz
 	rsync -avu CodeGradXlib.tgz \
 		${REMOTE}:/var/www/www.paracamplus.com/Resources/Javascript/
 
-publish :
-	npm publish
+# Caution: npm takes the whole directory that is . and not the sole
+# content of CodeGradXlib.tgz 
+publish : 
+	git status .
+	git commit -m "NPM publication `date`" .
+	-rm -f CodeGradXlib.tgz
+	m CodeGradXlib.tgz install
+	cd tmp/CodeGradXlib/ && npm version patch && npm publish
+	rm -rf tmp
 
 # ############## Various experiments (not all finished)
 
