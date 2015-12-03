@@ -282,7 +282,7 @@ CodeGradX.State.prototype.debug = function () {
 
   @param {string} kind - the kind of server (a, e, x or s)
   @param {number} index - the number of the server.
-  @returns {Promise} - Promise leading to {HTTPresponse}
+  @returns {Promise<Response>} - Promise leading to {HTTPresponse}
 
   Descriptions are kept in the global state.
   */
@@ -353,6 +353,7 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   var nextDone = false;
   for ( var key in descriptions ) {
     if ( /^\d+$/.exec(key) ) {
+      key = _str2num(key);
       promise = state.checkServer(kind, key);
       if ( key === descriptions.next ) {
          // Try also the next potential server:
