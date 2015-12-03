@@ -510,7 +510,7 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   function mk_invalidate (description) {
     return function (reason) {
       state.debug('invalidate', description, reason);
-      console.log(reason);
+      //console.log(reason);
       description.enabled = false;
       description.lastError = reason;
       return when.reject(reason);
