@@ -339,10 +339,10 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   state.debug('checkServers', kind);
   var descriptions = state.servers[kind];
   function incrementNext (response) {
-    state.debug('incrementNext', response);
     if ( response.status.code < 300 ) {
       descriptions.next++;
     }
+    state.debug('incrementNext', response, descriptions.next);
     return when(descriptions);
   }
   function dontIncrementNext (reason) {
@@ -350,18 +350,25 @@ CodeGradX.State.prototype.checkServers = function (kind) {
     return when(descriptions);
   }
   var promise, promises = [];
+  var nextDone = false;
   for ( var key in descriptions ) {
-    if ( /^\d+$/.exec(key) &&
-       key !== descriptions.next ) {
-      promise = state.checkServer(kind, key)
-        .catch(dontIncrementNext);
+    if ( /^\d+$/.exec(key) ) {
+      promise = state.checkServer(kind, key);
+      if ( key === descriptions.next ) {
+         // Try also the next potential server:
+         promise = promise.then(incrementNext);
+         nextDone = true;
+      }
+      promise = promise.catch(dontIncrementNext);
       promises.push(promise);
     }
   }
-  // Try also the next potential server:
-  promise = state.checkServer(kind, descriptions.next)
-      .then(incrementNext, dontIncrementNext);
-  promises.push(promise);
+  if ( ! nextDone ) {
+      promise = state.checkServer(kind, descriptions.next)
+          .then(incrementNext)
+          .catch(dontIncrementNext);
+      promises.push(promise);
+  }
   function returnDescriptions () {
     state.debug('returnDescriptions', descriptions);
     promises.forEach(function (promise) {

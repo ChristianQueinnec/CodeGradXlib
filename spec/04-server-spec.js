@@ -128,7 +128,7 @@ describe('CodeGradX', function () {
       expect(state.servers.s.next).toBe(2);
       done();
     }, faildone);
-  });
+  }, 10*1000); // 10 seconds);
 
 });
 

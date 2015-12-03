@@ -15,6 +15,7 @@ describe('CodeGradX', function () {
 
   function make_faildone (done) {
     return function faildone (reason) {
+      var state = CodeGradX.getCurrentState();
       state.debug(reason).show();
       fail(reason);
       done();
