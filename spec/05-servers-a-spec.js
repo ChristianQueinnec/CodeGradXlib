@@ -13,6 +13,14 @@ describe('CodeGradX', function () {
     expect(CodeGradX).toBeDefined();
   });
 
+  function make_faildone (done) {
+    return function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    };
+  }
+
   function initializer (state) {
     state.servers = {
       domain: '.localdomain',
@@ -83,6 +91,7 @@ describe('CodeGradX', function () {
   it('checks A servers: a0 ok', function (done) {
     // since no A server is initially available, check a0 and a1.
     var state = new CodeGradX.State(initializer);
+    var faildone = make_faildone(done);
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
@@ -93,11 +102,6 @@ describe('CodeGradX', function () {
         status: 400
       }
     ]);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state).toBeDefined();
     state.checkServers('a').then(function (descriptions) {
       expect(descriptions).toBe(state.servers.a);
@@ -111,6 +115,7 @@ describe('CodeGradX', function () {
   it('checks A servers: a0 and a1 ok', function (done) {
     // since no A server is initially available, check a0 and a1.
     var state = new CodeGradX.State(initializer);
+    var faildone = make_faildone(done);
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
@@ -121,11 +126,6 @@ describe('CodeGradX', function () {
         status: 200
       }
     ]);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state).toBeDefined();
     state.checkServers('a').then(function (descriptions) {
       expect(descriptions).toBe(state.servers.a);
@@ -143,6 +143,7 @@ describe('CodeGradX', function () {
     // checkServers('a') which in turn will trigger checkServer('a', 0)
     // and checkServer('a', 1).
     var state = new CodeGradX.State(initializer);
+    var faildone = make_faildone(done);
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
@@ -156,11 +157,6 @@ describe('CodeGradX', function () {
         status: 201
       }
     ]);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foobar'
@@ -177,6 +173,7 @@ describe('CodeGradX', function () {
     // checkServers('a') which in turn will trigger checkServer('a', 0)
     // and checkServer('a', 1).
     var state = new CodeGradX.State(initializer);
+    var faildone = make_faildone(done);
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
@@ -193,11 +190,6 @@ describe('CodeGradX', function () {
         status: 202
       }
     ]);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
@@ -221,6 +213,7 @@ describe('CodeGradX', function () {
     // checkServers('a') which in turn will trigger checkServer('a', 0)
     // and checkServer('a', 1).
     var state = new CodeGradX.State(initializer);
+    var faildone = make_faildone(done);
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
@@ -237,11 +230,6 @@ describe('CodeGradX', function () {
         status: 202
       }
     ]);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
@@ -265,6 +253,7 @@ describe('CodeGradX', function () {
     // checkServers('a') which in turn will trigger checkServer('a', 0)
     // and checkServer('a', 1).
     var state = new CodeGradX.State(initializer);
+    var faildone = make_faildone(done);
     state.log.size = 50;
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
@@ -296,11 +285,6 @@ describe('CodeGradX', function () {
         status: 203
       }
     ]);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
@@ -324,6 +308,7 @@ describe('CodeGradX', function () {
     // checkServers('a') which in turn will trigger checkServer('a', 0)
     // and checkServer('a', 1).
     var state = new CodeGradX.State(initializer);
+    var faildone = make_faildone(done);
     state.log.size = 50;
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
@@ -355,11 +340,6 @@ describe('CodeGradX', function () {
         status: 203
       }
     ]);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
@@ -383,6 +363,7 @@ describe('CodeGradX', function () {
     // checkServers('a') which in turn will trigger checkServer('a', 0)
     // and checkServer('a', 1).
     var state = new CodeGradX.State(initializer);
+    var faildone = make_faildone(done);
     state.log.size = 50;
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
@@ -409,7 +390,7 @@ describe('CodeGradX', function () {
       { path: 'http://a1.localdomain/alive',
         status: 202
       },
-      // 2nd request again: ok
+      // 2nd request again, now towards a1: ok
       { path: 'http://a1.localdomain/bar',
         status: 203
       },
@@ -426,11 +407,6 @@ describe('CodeGradX', function () {
         status: 404
       }
     ]);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
@@ -438,18 +414,22 @@ describe('CodeGradX', function () {
       expect(response.status.code).toBe(201);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeFalsy();
-      state.sendAXServer('a', {
+      return state.sendAXServer('a', {
         path: '/bar'
       }).then(function (response2) {
         expect(response2.status.code).toBe(203);
         expect(state.servers.a[1].enabled).toBeTruthy();
         expect(state.servers.a[0].enabled).toBeFalsy();
-        state.sendAXServer('a', {
+        return state.sendAXServer('a', {
           path: '/hux'
         }).then(function (response3) {
           faildone("should not answer");
-        }, function (reason) {
+        }).catch(function (reason) {
           // all servers unavailable
+          expect(state.servers.a[0].enabled).toBeFalsy();
+          expect(state.servers.a[1].enabled).toBeFalsy();
+          //console.log(reason);
+          //state.log.show();
           done();
         });
       }, faildone);

@@ -318,7 +318,8 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   state.debug('checkServer2', kind, index, url);
   return state.userAgent({
     path: url
-  }).then(updateDescription, invalidateDescription);
+  }).then(updateDescription)
+    .catch(invalidateDescription);
 };
 
 /** Check all possible servers of some kind (a, e, x or s) that is,
@@ -346,23 +347,26 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   }
   function dontIncrementNext (reason) {
     state.debug('dontIncrementNext', reason);
-    return when(null);
+    return when(descriptions);
   }
   var promise, promises = [];
   for ( var key in descriptions ) {
-    if ( /^\d+$/.exec(key) ) {
-      promise = state.checkServer(kind, key);
+    if ( /^\d+$/.exec(key) &&
+       key !== descriptions.next ) {
+      promise = state.checkServer(kind, key)
+        .catch(dontIncrementNext);
       promises.push(promise);
     }
   }
   // Try also the next potential server:
-  if ( descriptions.next >= promises.length ) {
-    promise = state.checkServer(kind, descriptions.next)
+  promise = state.checkServer(kind, descriptions.next)
       .then(incrementNext, dontIncrementNext);
-      promises.push(promise);
-  }
+  promises.push(promise);
   function returnDescriptions () {
     state.debug('returnDescriptions', descriptions);
+    promises.forEach(function (promise) {
+        promise.done(descriptions);
+    });
     return when(descriptions);
   }
   return when.settle(promises).then(returnDescriptions, returnDescriptions);
@@ -448,6 +452,13 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   var adescriptions = getActiveServers();
   var checkServersCount = 0;
 
+  function getActiveServers () {
+    state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
+    //console.log(state.servers[kind]);
+    var active = _.filter(state.servers[kind], {enabled: true});
+    state.debug('Active:', _.pluck(active, 'host'));
+    return active;
+  }
   function updateCurrentCookie (response) {
     //console.log(response.headers);
     //console.log(response);
@@ -464,38 +475,37 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
     }
     return when(response);
   }
-  function getActiveServers () {
-    state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
-    //console.log(state.servers[kind]);
-    var active = _.filter(state.servers[kind], {enabled: true});
-    state.debug('Active:', _.pluck(active, 'host'));
-    return active;
-  }
+  var lastReason;
   function tryNext (reason) {
+    if ( _.isError(reason) ) {
+        lastReason = reason;
+    }
     state.debug('tryNext1', reason);
     if ( adescriptions.length > 0 ) {
       var description = _.first(adescriptions);
       adescriptions = _.rest(adescriptions);
       newoptions.path = 'http://' + description.host + options.path;
       state.debug('tryNext2', newoptions.path);
-      var promise = state.userAgent(newoptions);
-      var promise1 = promise.then(CodeGradX.checkStatusCode);
-      var promise2 = promise1.then(updateCurrentCookie);
-      return promise2.catch(mk_invalidateThenTryNext(description));
-    } else {
-      if ( checkServersCount++ === 0 ) {
+      return state.userAgent(newoptions)
+            .catch(mk_invalidate(description))
+            .then(CodeGradX.checkStatusCode)
+            .then(updateCurrentCookie)
+            .catch(tryNext);
+    } else if ( checkServersCount++ === 0 ) {
         return tryAll();
-      } else {
+    } else if ( _.isError(lastReason) ) {
+        return when.reject(lastReason);
+    } else {
         return allTried(new Error("All unavailable servers " + kind));
-      }
     }
   }
-  function mk_invalidateThenTryNext (description) {
+  function mk_invalidate (description) {
     return function (reason) {
-      state.debug('mk_invalidateThenTryNext', description);
+      state.debug('invalidate', description, reason);
+      console.log(reason);
       description.enabled = false;
       description.lastError = reason;
-      return tryNext(reason);
+      return when.reject(reason);
     };
   }
   function allTried (reason) {
@@ -510,7 +520,7 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
         state.debug('sendAXServer2 ', descriptions);
         var adescriptions2 = getActiveServers();
         if ( adescriptions2.length === 0 ) {
-          return allTried(new Error('no available server ' + kind));
+          return allTried(new Error('No available server ' + kind));
         } else {
           adescriptions = adescriptions2;
           return tryNext('goAgain');
@@ -519,8 +529,8 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
     } else {
       return tryNext('goFirst');
     }
-}
-return tryAll();
+  }
+  return tryAll();
 };
 
 /** Ask once an E or S server.

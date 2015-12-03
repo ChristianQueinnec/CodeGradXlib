@@ -3,3 +3,8 @@ spec/vmauth-data.json
 spec/vmauthor-data.js
 spec/oefgc/*.tgz
 spec/oefgc/*/mark.txt
+Archive/
+CodeGradXlib.tgz
+node_modules/
+notes.QNC
+doc/
