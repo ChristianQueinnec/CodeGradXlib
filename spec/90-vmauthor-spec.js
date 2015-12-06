@@ -210,7 +210,7 @@ describe('CodeGradX', function () {
         done();
       });
     }, faildone);
-  }, 70*1000); // 70 seconds
+  }, 150*1000); // 150 seconds
 
   var batchTGZfile = 'spec/oefgc.tgz';
 
@@ -240,6 +240,7 @@ describe('CodeGradX', function () {
           expect(counter).toBeGreaterThan(1);
           expect(batch.finishedjobs).toBeGreaterThan(0);
           expect(batch.totaljobs).toBe(batch.finishedjobs);
+          //state.log.show();
           done();
         }, faildone);
       }, faildone);

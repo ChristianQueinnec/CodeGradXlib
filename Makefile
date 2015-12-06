@@ -11,7 +11,7 @@ doc/index.html : codegradxlib.js
 	node_modules/.bin/jsdoc -c conf.json codegradxlib.js
 
 tests : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
-	for spec in spec/*-spec.js ; do jasmine $$spec || exit 1 ; done
+	jasmine
 
 spec/org.example.fw4ex.grading.check.tgz : spec/fw4ex.xml
 	cd spec/ && tar czf org.example.fw4ex.grading.check.tgz ./fw4ex.xml

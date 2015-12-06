@@ -101,7 +101,7 @@ function _str2Date (str) {
     //console.log("STR:" + str + " => " + ms + " ==> " + d);
     return d;
   } else {
-    throw new Error("Cannot parse " + str);
+    throw new Error("Cannot parse Date" + str);
   }
 }
 
@@ -372,12 +372,14 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   }
   function returnDescriptions () {
     state.debug('returnDescriptions', descriptions);
-    promises.forEach(function (promise) {
+    promises.forEach(function (promise) { // probably useless!
         promise.done(descriptions);
     });
     return when(descriptions);
   }
-  return when.settle(promises).then(returnDescriptions, returnDescriptions);
+  return when.settle(promises)
+        .then(returnDescriptions)
+        .catch(returnDescriptions);
 };
 
 /** Check all possible servers of all kinds (a, e, x or s) that is,
@@ -524,16 +526,17 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
     state.debug('tryAll', adescriptions);
     if ( adescriptions.length === 0 ) {
       // Determine available servers if not yet done:
-      return state.checkServers(kind).then(function (descriptions) {
-        state.debug('sendAXServer2 ', descriptions);
-        var adescriptions2 = getActiveServers();
-        if ( adescriptions2.length === 0 ) {
-          return allTried(new Error('No available server ' + kind));
-        } else {
-          adescriptions = adescriptions2;
-          return tryNext('goAgain');
-        }
-      }, allTried);
+      return state.checkServers(kind)
+            .then(function (descriptions) {
+                state.debug('sendAXServer2 ', descriptions);
+                var adescriptions2 = getActiveServers();
+                if ( adescriptions2.length === 0 ) {
+                    return allTried(new Error('No available server ' + kind));
+                } else {
+                    adescriptions = adescriptions2;
+                    return tryNext('goAgain');
+                }
+            }).catch(allTried);
     } else {
       return tryNext('goFirst');
     }
@@ -582,7 +585,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
       state.debug('seeError', see(reason));
       description.enabled = false;
       description.lastError = reason;
-      var js = JSON.parse(reason.entity);
+      //var js = JSON.parse(reason.entity);
       return when.reject(reason);
     }
     return seeError;
@@ -591,13 +594,13 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     var tryoptions = _.assign({}, newoptions);
     tryoptions.path = 'http://' + description.host + options.path;
     state.debug("trySending", tryoptions.path);
-    return state.userAgent(tryoptions).then(
-      CodeGradX.checkStatusCode,
-      mk_seeError(description));
+    return state.userAgent(tryoptions)
+      .then(CodeGradX.checkStatusCode)
+      .catch(mk_seeError(description));
   }
   function allTried (reason) {
     state.debug('allTried', reason);
-    throw reason;
+    return when.reject(reason);
   }
   var adescriptions = getActiveServers();
   if ( adescriptions.length === 0 ) {
@@ -610,7 +613,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
         var promises = _.map(adescriptions2, trySending);
         return when.any(promises);
       }
-    }, allTried);
+    }).catch(allTried);
   } else {
     var promises = _.map(adescriptions, trySending);
     return when.any(promises);
@@ -637,15 +640,14 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
 CodeGradX.State.prototype.sendRepeatedlyESServer =
 function (kind, parameters, options) {
   var state = this;
-  var shouldStop = false;
+  var finalResponse;
   state.debug('sendRepeatedlyESServer', kind, parameters, options);
   parameters = _.assign({ i: 0 },
     CodeGradX.State.prototype.sendRepeatedlyESServer.default,
     parameters);
-  var dt = parameters.step * 1000;
   function retryNext () {
-    if ( shouldStop ) {
-      return when(shouldStop);
+    if ( finalResponse ) {
+      return when(finalResponse);
     }
     state.debug("retryNext", parameters);
     try {
@@ -654,15 +656,17 @@ function (kind, parameters, options) {
       // ignore problems raised by progress()!
     }
     if ( parameters.i++ < parameters.attempts ) {
-      var promise = state.sendESServer(kind, options).then(function (response) {
-        if ( response.status.code >= 300 ) {
-          return when.reject(new Error(response.status.code));
-        } else {
-          shouldStop = true;
-          return when(response);
-        }
+      var promise = state.sendESServer(kind, options)
+         .then(function (response) {
+                if ( response.status.code >= 300 ) {
+                    return when.reject(new Error(response.status.code));
+                } else {
+                    finalResponse = response;
+                    return when(response);
+                }
       });
-      var delayedPromise = when(null).delay(dt).then(retryNext);
+      var dt = parameters.step * 1000;
+      var delayedPromise = when(true).delay(dt).then(retryNext);
       var promises = [promise, delayedPromise];
       return when.any(promises);
     } else {
@@ -755,7 +759,6 @@ CodeGradX.User = function (json) {
     */
 
 CodeGradX.User.prototype.modify = function (fields) {
-  // send modifications then update local User
   var state = CodeGradX.getCurrentState();
   state.debug('modify1', fields);
   return state.sendAXServer('x', {
@@ -783,7 +786,6 @@ CodeGradX.User.prototype.modify = function (fields) {
     */
 
 CodeGradX.User.prototype.getCampaigns = function (now) {
-  // get active campaigns if now otherwise get all campaigns
   if ( now ) {
     var dnow = new Date();
     var activeCampaigns = {};
@@ -809,7 +811,6 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
     */
 
 CodeGradX.User.prototype.getCampaign = function (name) {
-  // get information on a Campaign
   var state = CodeGradX.getCurrentState();
   state.debug('getCampaign', name);
   var campaign = this._campaigns[name];
@@ -826,37 +827,13 @@ CodeGradX.User.prototype.getCampaign = function (name) {
     @param {Object} parameters - repetition parameters
     @returns {Promise<Exercise>} yielding Exercise
 
-    An `exerciseSubmittedReport` looks like:
-      <?xml version="1.0" encoding="UTF-8"?>
-      <fw4ex version='1.0'>
-       <exerciseSubmittedReport
-          location='/e/9/6/7/B/.../1/2/2/0'
-          jobid='967B0CA0-8EEE-11E5-B95A-8A0D62591220' >
-        <person personid='2008' />
-        <exercise exerciseid='967B0CA0-8EEE-11E5-B95A-8A0D62591220' />
-       </exerciseSubmittedReport>
-      </fw4ex>
-
     */
 
 CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
   var user = this;
   var state = CodeGradX.getCurrentState();
   state.debug('submitNewExercise1', filename);
-  return CodeGradX.readFileContent(filename).then(function (content) {
-    state.debug('submitNewExercise2', content);
-    var basefilename = filename.replace(new RegExp("^.*/"), '');
-    return state.sendESServer('e', {
-      path: '/exercises/',
-      method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": ("inline; filename=" + basefilename),
-        "Content-Length": content.length,
-        "Accept": 'text/xml'
-      },
-      entity: content
-    }).then(function (response) {
+  function processResponse (response) {
       //console.log(response);
       state.debug('submitNewExercise3', response);
       return CodeGradX.parsexml(response.entity).then(function (js) {
@@ -870,7 +847,21 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
         });
         return exercise.getExerciseReport(parameters);
       });
-    });
+  }
+  return CodeGradX.readFileContent(filename).then(function (content) {
+    state.debug('submitNewExercise2', content);
+    var basefilename = filename.replace(new RegExp("^.*/"), '');
+    return state.sendESServer('e', {
+      path: '/exercises/',
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Content-Length": content.length,
+        "Accept": 'text/xml'
+      },
+      entity: content
+    }).then(processResponse);
   });
 };
 
@@ -911,7 +902,6 @@ CodeGradX.Campaign = function (json) {
     */
 
 CodeGradX.Campaign.prototype.getSkills = function () {
-  // get skills of the anonymous students of this campaign
   var state = CodeGradX.getCurrentState();
   var campaign = this;
   state.debug('getSkills1', campaign);
@@ -935,8 +925,6 @@ CodeGradX.Campaign.prototype.getSkills = function () {
     */
 
 CodeGradX.Campaign.prototype.getJobs = function () {
-  // get the jobs of the user (by default the currentUser)
-  // within the campaign
   var state = CodeGradX.getCurrentState();
   var campaign = this;
   state.debug('getJobs1', campaign, state.currentUser);
@@ -961,7 +949,6 @@ CodeGradX.Campaign.prototype.getJobs = function () {
     */
 
 CodeGradX.Campaign.prototype.getExercisesSet = function () {
-  // get the exercises of this campaign
   var state = CodeGradX.getCurrentState();
   var campaign = this;
   state.debug('getExercisesSet1', campaign);
@@ -982,7 +969,7 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
 };
 
 /** Get a specific Exercise with its name within the tree of
-        Exercises of the current campaign.
+    Exercises of the current campaign.
 
         @param {string} name - full name of the exercise
         @returns {Promise} yields {Exercise}
@@ -990,7 +977,6 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
     */
 
 CodeGradX.Campaign.prototype.getExercise = function (name) {
-  // get information on an Exercise
   var state = CodeGradX.getCurrentState();
   state.debug('getExercise', name);
   var campaign = this;
@@ -1059,7 +1045,6 @@ CodeGradX.Exercise = function (json) {
        */
 
 CodeGradX.Exercise.prototype.getDescription = function () {
-  // get metadata
   var exercise = this;
   var state = CodeGradX.getCurrentState();
   state.debug('getDescription1', exercise);
@@ -1148,7 +1133,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
 
 CodeGradX.parsexml = function (xml) {
   if ( ! xml ) {
-    return when.reject("Cannot parse " + xml);
+    return when.reject("Cannot parse XML " + xml);
   }
   var parser = new xml2js.Parser({
     explicitArray: false,
@@ -1180,7 +1165,6 @@ CodeGradX.parsexml = function (xml) {
     */
 
 CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
-  // send an answer
   var exercise = this;
   var state = CodeGradX.getCurrentState();
   state.debug('sendStringAnswer1', answer);
@@ -1190,18 +1174,7 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
   if ( typeof exercise.inlineFileName === 'undefined') {
     return when.reject(new Error("Non suitable exercise"));
   }
-  var content = new Buffer(answer, 'utf8');
-  return state.sendAXServer('a', {
-    path: ('/exercise/' + exercise.safecookie + '/job'),
-    method: "POST",
-    headers: {
-      "Content-Type": "application/octet-stream",
-      "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
-      "Content-Length": content.length,
-      "Accept": 'text/xml'
-    },
-    entity: content
-  }).then(function (response) {
+  function processResponse (response) {
     //console.log(response);
     state.debug('sendStringAnswer2', response);
     return CodeGradX.parsexml(response.entity).then(function (js) {
@@ -1221,7 +1194,19 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
       });
       return when(job);
     });
-  });
+  }
+  var content = new Buffer(answer, 'utf8');
+  return state.sendAXServer('a', {
+    path: ('/exercise/' + exercise.safecookie + '/job'),
+    method: "POST",
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
+      "Content-Length": content.length,
+      "Accept": 'text/xml'
+    },
+    entity: content
+  }).then(processResponse);
 };
 
 /** Send the content of a file as the proposed solution to an Exercise.
@@ -1237,26 +1222,14 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
     */
 
 CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
-  // send an answer contained in a file
   var exercise = this;
   var state = CodeGradX.getCurrentState();
   state.debug('sendFileAnswer1', filename);
   if ( ! exercise.safecookie ) {
     return when.reject("Non deployed exercise " + exercise.name);
   }
-  return CodeGradX.readFileContent(filename).then(function (content) {
-    var basefilename = filename.replace(new RegExp("^.*/"), '');
-    return state.sendAXServer('a', {
-      path: ('/exercise/' + exercise.safecookie + '/job'),
-      method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": ("inline; filename=" + basefilename),
-        "Content-length": content.length,
-        "Accept": 'text/xml'
-      },
-      entity: content
-    }).then(function (response) {
+  function make_processResponse (content) {
+    return function (response) {
       //console.log(response);
       state.debug('sendFileAnswer2', response);
       return CodeGradX.parsexml(response.entity).then(function (js) {
@@ -1276,7 +1249,21 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
         });
         return when(job);
       });
-    });
+    };
+  }
+  return CodeGradX.readFileContent(filename).then(function (content) {
+    var basefilename = filename.replace(new RegExp("^.*/"), '');
+    return state.sendAXServer('a', {
+      path: ('/exercise/' + exercise.safecookie + '/job'),
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Content-length": content.length,
+        "Accept": 'text/xml'
+      },
+      entity: content
+    }).then(make_processResponse(content));
   });
 };
 
@@ -1295,45 +1282,22 @@ CodeGradX.readFileContent = function (filename) {
   });
 };
 
-/** Send a batch of files to be marked against an Exercise.
+/** Send a batch of files that is, multiple answers to be marked
+    against an Exercise.
 
     @param {string} filename - the tgz holding all students' files
     @returns {Promise<Batch>} yielding a Batch.
 
-    A `multiJobSubmittedReport` looks like:
-    <?xml version="1.0" encoding="UTF-8" ?>
-    <fw4ex version="1.0">
-      <multiJobSubmittedReport location="/b/7/0/4/A/2/2/.../2/7/F/6/D">
-        <batch archived="2015-11-22T17:42:45"
-          batchid="704A22A6-9140-11E5-A56E-935272130F6D" />
-        <person personid="2008" />
-        <exercise exerciseid="555DEA22-9140-11E5-9CE7-C824CDA02616" />
-      </multiJobSubmittedReport>
-    </fw4ex>
-
     */
 
 CodeGradX.Exercise.prototype.sendBatch = function (filename) {
-  // send multiple answers in a batch
   var exercise = this;
   var state = CodeGradX.getCurrentState();
   state.debug('sendBatch1', filename);
   if ( ! exercise.safecookie ) {
     return when.reject("Non deployed exercise " + exercise.name);
   }
-  return CodeGradX.readFileContent(filename).then(function (content) {
-    var basefilename = filename.replace(new RegExp("^.*/"), '');
-    return state.sendAXServer('a', {
-      path: ('/exercise/' + exercise.safecookie + '/batch'),
-      method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": ("inline; filename=" + basefilename),
-        "Content-Length": content.length,
-        "Accept": 'text/xml'
-      },
-      entity: content
-    }).then(function (response) {
+  function processResponse  (response) {
       //console.log(response.entity);
       state.debug('sendBatch2', response);
       return CodeGradX.parsexml(response.entity).then(function (js) {
@@ -1354,7 +1318,20 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
         });
         return when(batch);
       });
-    });
+  }
+  return CodeGradX.readFileContent(filename).then(function (content) {
+    var basefilename = filename.replace(new RegExp("^.*/"), '');
+    return state.sendAXServer('a', {
+      path: ('/exercise/' + exercise.safecookie + '/batch'),
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Content-Length": content.length,
+        "Accept": 'text/xml'
+      },
+      entity: content
+    }).then(processResponse);
   });
 };
 
@@ -1382,54 +1359,13 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
 
   @property {string} safecookie - the long identifier of the exercise.
 
-
-  The `exerciseAuthorReport` looks like:
-
-  ```xml
-  <?xml version="1.0" encoding="UTF-8"?>
-  <fw4ex version="1.0">
-   <exerciseAuthorReport
-     exerciseid="78F777C6-8EF4-11E5-A721-E43D7FB62B9E"
-     safecookie="UTsHpDi..Lc@">
-    <identification name="org.example.fw4ex.grading.check"
-          nickname="intern3"
-          date="2013-04-17T09:25:00Z">
-      <summary> Test de bon fonctionnement </summary>
-      <tags><tag name="Paracamplus"/><tag name="intern"/></tags>
-      <authorship><author>...</author></authorship>
-    </identification>
-    <pseudojobs totaljobs="3" finishedjobs="3">
-      <pseudojob jobid="7C813C92-8EF4-11E5-BF4B-52901557139C"
-        location="/s/7/C/8/1/3/C/9/2/8/E/F/4/1/1/E/5/B/F/4/B/5/2/9/0/1/5/5/7/1/3/9/C"
-        duration="1">
-       <submission name="null" expectedMark="0">
-        <content><file basename="nothing" content=""/></content>
-       </submission>
-       <marking archived="2015-11-19T19:34:01"
-         started="2015-11-19T19:34:09Z"
-         ended="2015-11-19T19:34:09Z"
-         finished="2015-11-19T19:34:15"
-         mark="0" totalMark="100">
-        <machine nickname="debian 4.0r3 (etch)" version="1"/>
-        <exercise exerciseid="78F777C68EF411E5A721E43D7FB62B9E"/>
-       </marking>
-      </pseudojob>
-      ...
-    ```
-
 */
 
 CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
   var exercise = this;
   var state = CodeGradX.getCurrentState();
   state.debug("getExerciseReport1", exercise, parameters);
-  return state.sendRepeatedlyESServer('s', parameters, {
-    path: (exercise.location + '/' + exercise.exerciseid + '.xml'),
-    method: 'GET',
-    headers: {
-      "Accept": 'text/xml'
-    }
-  }).then(function (response) {
+  function processResponse  (response) {
     state.debug("getExerciseReport2", response);
     //console.log(response);
     exercise.XMLauthorReport = response.entity;
@@ -1478,7 +1414,14 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
         return when.reject(error);
       }
     });
-  });
+  }
+  return state.sendRepeatedlyESServer('s', parameters, {
+    path: (exercise.location + '/' + exercise.exerciseid + '.xml'),
+    method: 'GET',
+    headers: {
+      "Accept": 'text/xml'
+    }
+  }).then(processResponse);
 };
 
 // **************** ExercisesSet ***************************
@@ -1570,26 +1513,9 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
     A Job is obtained with `sendStringAnswer` or `sendFileAnswer`.
     From a job, you may get the marking report with `getReport`.
 
-A `jobStudentReport` looks like:
-```XML
-<jobStudentReport jobid="775F47E8-8988-11E5-9328-B68770A06C90">
-<marking archived="2015-11-12T21:58:11"
-    started="2015-11-12T21:58:24Z"
-    ended="2015-11-12T21:58:24Z"
-    finished="2015-11-12T21:58:25"
-    mark="0"
-    totalMark="1">
-  <machine nickname="Debian 4.0r3 32bit" version="1"/>
-  <exercise exerciseid="11111111-1111-1111-2232-000000130002"/>
-  <partialMark name="Q1" mark="0"/>
-</marking>
-<report> ...
-```
-
     @constructor
     @property {string} XMLreport - raw XML report
     @property {string} _report - default HTML from XML report
-
 
 */
 
@@ -1606,7 +1532,6 @@ CodeGradX.Job = function (js) {
   */
 
 CodeGradX.Job.prototype.getReport = function (parameters) {
-  // get the marking report
   parameters = parameters || {};
   var job = this;
   var state = CodeGradX.getCurrentState();
@@ -1783,7 +1708,6 @@ CodeGradX.xml2html.default = {
     */
 
 CodeGradX.Batch = function (js) {
-  // initialize ...
   _.assign(this, js);
 };
 
@@ -1797,58 +1721,75 @@ CodeGradX.Batch = function (js) {
   */
 
 CodeGradX.Batch.prototype.getReport = function (parameters) {
-  // get the marking report
-  parameters = _.assign({},
+  var batch = this;
+  parameters = _.assign({
+      // So progress() may look at the current version of the batch report:
+      batch: batch
+    },
     CodeGradX.Batch.prototype.getReport.default,
     parameters);
-  var batch = this;
   var state = CodeGradX.getCurrentState();
   state.debug('getBatchReport1', batch);
   var path = batch.pathdir + '/' + batch.batchid + '.xml';
+  function processResponse (response) {
+    //console.log(response);
+    state.debug('getBatchReport2', response, batch);
+    if ( response.headers['Content-Length'] > 0 ) {
+        batch.XMLreport = response.entity;
+        function processJS (js) {
+            //console.log(js);
+            state.debug('getBatchReport3', js);
+            js = js.fw4ex.multiJobStudentReport;
+            batch.totaljobs    = _str2num(js.$.totaljobs);
+            batch.finishedjobs = _str2num(js.$.finishedjobs);
+            batch.jobs = {};
+            //console.log(js);
+            function processJob (jsjob) {
+                //console.log(jsjob);
+                var job = new CodeGradX.Job({
+                    exercise:  batch.exercise,
+                    XMLjob:    jsjob,
+                    jobid:     jsjob.$.jobid,
+                    pathdir:   jsjob.$.location,
+                    label:     jsjob.$.label,
+                    problem:   _str2num(jsjob.$.problem),
+                    mark:      _str2num(jsjob.marking.$.mark),
+                    totalMark: _str2num(jsjob.marking.$.totalMark),
+                    started:   _str2Date(jsjob.marking.$.started),
+                    finished:  _str2Date(jsjob.marking.$.finished)
+                });
+                job.duration = (job.finished.getTime() - 
+                                job.started.getTime() )/1000; // seconds
+                batch.jobs[job.label] = job;
+                return job;
+            }
+            if ( js.jobStudentReport ) {
+                if ( _.isArray(js.jobStudentReport) ) {
+                    js.jobStudentReport.forEach(processJob);
+                } else {
+                    processJob(js.jobStudentReport);
+                }
+            }
+            return when(batch);
+        }
+        return CodeGradX.parsexml(response.entity)
+            .then(processJS)
+            .catch(function (reason) {
+                console.log(reason);
+                console.log(response);
+                return when.reject(reason);
+            });
+    } else {
+        return when.reject(new Error("Empty response!"));
+    }
+  }
   return state.sendRepeatedlyESServer('s', parameters, {
     path: path,
     method: 'GET',
     headers: {
       "Accept": "text/xml"
     }
-  }).then(function (response) {
-    //console.log(response);
-    state.debug('getBatchReport2', batch);
-    batch.XMLreport = response.entity;
-    return CodeGradX.parsexml(response.entity).then(function (js) {
-        //console.log(js);
-        state.debug('getBatchReport3', js);
-        js = js.fw4ex.multiJobStudentReport;
-        batch.totaljobs    = _str2num(js.$.totaljobs);
-        batch.finishedjobs = _str2num(js.$.finishedjobs);
-        batch.jobs = {};
-        //console.log(js);
-        function processJob (jsjob) {
-          //console.log(jsjob);
-          var job = new CodeGradX.Job({
-            exercise:  batch.exercise,
-            XMLjob:    jsjob,
-            jobid:     jsjob.$.jobid,
-            pathdir:   jsjob.$.location,
-            label:     jsjob.$.label,
-            problem:   _str2num(jsjob.$.problem),
-            mark:      _str2num(jsjob.marking.$.mark),
-            totalMark: _str2num(jsjob.marking.$.totalMark),
-            started:   _str2Date(jsjob.marking.$.started),
-            finished:  _str2Date(jsjob.marking.$.finished)
-          });
-          job.duration = (job.finished.getTime() - job.started.getTime())/1000;
-          batch.jobs[job.label] = job;
-          return job;
-        }
-        if ( _.isArray(js.jobStudentReport) ) {
-          js.jobStudentReport.forEach(processJob);
-        } else {
-          processJob(js.jobStudentReport);
-        }
-        return when(batch);
-      });
-  });
+  }).then(processResponse);
 };
 CodeGradX.Batch.prototype.getReport.default = {
   step: 5, // seconds
@@ -1866,19 +1807,33 @@ CodeGradX.Batch.prototype.getReport.default = {
   */
 
 CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
-  // get the final marking report
   var batch = this;
   var state = CodeGradX.getCurrentState();
+  parameters = _.assign({
+      // So progress() may look at the current version of the batch report:
+      batch: batch
+    },
+    CodeGradX.Batch.prototype.getReport.default,
+    parameters);
+  if ( parameters.step < CodeGradX.Batch.prototype.getReport.default.step ) {
+      parameters.step = CodeGradX.Batch.prototype.getReport.default.step;
+  }
   state.debug('getBatchFinalReport1', batch);
+  function tryFetching () {
+    state.debug('getBatchFinalReport3', parameters);
+    // Get at least one report to access finishedjobs and totaljobs:
+    return batch.getReport(parameters).then(fetchAgainReport);
+  }
   function fetchAgainReport () {
     state.debug('getBatchFinalReport2', batch);
     if ( batch.finishedjobs < batch.totaljobs ) {
-      return batch.getReport(parameters).then(fetchAgainReport);
+      var dt = parameters.step * 1000; // seconds
+      return when(batch).delay(dt).then(tryFetching);
     } else {
       return when(batch);
     }
   }
-  return fetchAgainReport();
+  return tryFetching();
 };
 
 // end of codegradxlib.js
