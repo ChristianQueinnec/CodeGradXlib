@@ -80,7 +80,10 @@ function _str2Date (str) {
       campaign.getExercisesSet().then(function (es) {
         expect(es instanceof CodeGradX.ExercisesSet).toBeTruthy();
         expect(es).toBe(campaign.exercisesSet);
-        done();
+        campaign.getExercisesSet().then(function (es2) {
+            expect(es2).toBe(es);
+            done();
+        }, faildone);
       }, faildone);
     }, faildone);
   });
@@ -215,8 +218,11 @@ function _str2Date (str) {
         expect(j).toBe(job);
         expect(j.finished).toBeDefined();
         expect(j.exerciseid).toBeDefined();
-        expect(j._report).toBeDefined();
-        done();
+        expect(j.HTMLreport).toBeDefined();
+        job.getReport().then(function (j2) {
+            expect(j2).toBe(j);
+            done();
+        });
       });
     }, faildone);
   }, 50*1000); // 50 seconds

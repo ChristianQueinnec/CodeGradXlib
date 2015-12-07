@@ -149,7 +149,7 @@ CodeGradX.Log.prototype.debug = function () {
     this.items.splice(0, 1);
   }
   this.items.push(msg);
-  return this;
+  return this.show();
 };
 
 /** Display the log with `console.log`.
@@ -843,7 +843,8 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
         var exercise = new CodeGradX.Exercise({
           location: js.$.location,
           personid: _str2num(js.person.$.personid),
-          exerciseid: js.exercise.$.exerciseid
+          exerciseid: js.exercise.$.exerciseid,
+          XMLsubmission: response.entity
         });
         return exercise.getExerciseReport(parameters);
       });
@@ -1365,6 +1366,9 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
   var exercise = this;
   var state = CodeGradX.getCurrentState();
   state.debug("getExerciseReport1", exercise, parameters);
+  if ( exercise.finishedjobs ) {
+      return when(exercise);
+  }
   function processResponse  (response) {
     state.debug("getExerciseReport2", response);
     //console.log(response);
@@ -1515,7 +1519,7 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
 
     @constructor
     @property {string} XMLreport - raw XML report
-    @property {string} _report - default HTML from XML report
+    @property {string} HTMLreport - default HTML from XML report
 
 */
 
@@ -1536,8 +1540,8 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   var job = this;
   var state = CodeGradX.getCurrentState();
   state.debug('getJobReport1', job);
-  if ( job._report ) {
-    return when(job._report);
+  if ( job.HTMLreport ) {
+    return when(job);
   }
   var path = job.pathdir + '/' + job.jobid + '.xml';
   var promise = state.sendRepeatedlyESServer('s', parameters, {
@@ -1589,7 +1593,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     state.debug('getJobReport5');
     var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*?</content>)(.|\n)*$");
     var content = response.entity.replace(contentRegExp, "$2");
-    job._report = CodeGradX.xml2html(content);
+    job.HTMLreport = CodeGradX.xml2html(content);
   });
   return when.join(promise2, promise3, promise4).then(function (values) {
     state.debug('getJobReport6', job);
@@ -1599,7 +1603,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
 };
 
 /** Conversion of texts (stems, reports) from XML to HTML.
-    This function may be modified.
+    This function may be modified to accommodate your own desires.
 */
 
 CodeGradX.xml2html = function (s, options) {
@@ -1711,9 +1715,9 @@ CodeGradX.Batch = function (js) {
   _.assign(this, js);
 };
 
-/** Get the current state of the Batch report. See also
-    `getFinalReport()` to get the final report of the batch where all
-    answers are marked.
+/** Get the current state of the Batch report that is, always fetch
+    it. See also `getFinalReport()` to get the final report of the
+    batch where all answers are marked.
 
   @param {Object} parameters - parameters {@see sendRepeatedlyESServer}
   @returns {Promise<Batch>} yielding Batch
@@ -1722,56 +1726,56 @@ CodeGradX.Batch = function (js) {
 
 CodeGradX.Batch.prototype.getReport = function (parameters) {
   var batch = this;
+  var state = CodeGradX.getCurrentState();
+  state.debug('getBatchReport1', batch);
   parameters = _.assign({
       // So progress() may look at the current version of the batch report:
       batch: batch
     },
     CodeGradX.Batch.prototype.getReport.default,
     parameters);
-  var state = CodeGradX.getCurrentState();
-  state.debug('getBatchReport1', batch);
   var path = batch.pathdir + '/' + batch.batchid + '.xml';
   function processResponse (response) {
     //console.log(response);
     state.debug('getBatchReport2', response, batch);
+      function processJS (js) {
+          //console.log(js);
+          state.debug('getBatchReport3', js);
+          js = js.fw4ex.multiJobStudentReport;
+          batch.totaljobs    = _str2num(js.$.totaljobs);
+          batch.finishedjobs = _str2num(js.$.finishedjobs);
+          batch.jobs = {};
+          //console.log(js);
+          function processJob (jsjob) {
+              //console.log(jsjob);
+              var job = new CodeGradX.Job({
+                  exercise:  batch.exercise,
+                  XMLjob:    jsjob,
+                  jobid:     jsjob.$.jobid,
+                  pathdir:   jsjob.$.location,
+                  label:     jsjob.$.label,
+                  problem:   _str2num(jsjob.$.problem),
+                  mark:      _str2num(jsjob.marking.$.mark),
+                  totalMark: _str2num(jsjob.marking.$.totalMark),
+                  started:   _str2Date(jsjob.marking.$.started),
+                  finished:  _str2Date(jsjob.marking.$.finished)
+              });
+              job.duration = (job.finished.getTime() - 
+                              job.started.getTime() )/1000; // seconds
+                  batch.jobs[job.label] = job;
+              return job;
+          }
+          if ( js.jobStudentReport ) {
+              if ( _.isArray(js.jobStudentReport) ) {
+                  js.jobStudentReport.forEach(processJob);
+              } else {
+                  processJob(js.jobStudentReport);
+              }
+          }
+          return when(batch);
+    }
     if ( response.headers['Content-Length'] > 0 ) {
         batch.XMLreport = response.entity;
-        function processJS (js) {
-            //console.log(js);
-            state.debug('getBatchReport3', js);
-            js = js.fw4ex.multiJobStudentReport;
-            batch.totaljobs    = _str2num(js.$.totaljobs);
-            batch.finishedjobs = _str2num(js.$.finishedjobs);
-            batch.jobs = {};
-            //console.log(js);
-            function processJob (jsjob) {
-                //console.log(jsjob);
-                var job = new CodeGradX.Job({
-                    exercise:  batch.exercise,
-                    XMLjob:    jsjob,
-                    jobid:     jsjob.$.jobid,
-                    pathdir:   jsjob.$.location,
-                    label:     jsjob.$.label,
-                    problem:   _str2num(jsjob.$.problem),
-                    mark:      _str2num(jsjob.marking.$.mark),
-                    totalMark: _str2num(jsjob.marking.$.totalMark),
-                    started:   _str2Date(jsjob.marking.$.started),
-                    finished:  _str2Date(jsjob.marking.$.finished)
-                });
-                job.duration = (job.finished.getTime() - 
-                                job.started.getTime() )/1000; // seconds
-                batch.jobs[job.label] = job;
-                return job;
-            }
-            if ( js.jobStudentReport ) {
-                if ( _.isArray(js.jobStudentReport) ) {
-                    js.jobStudentReport.forEach(processJob);
-                } else {
-                    processJob(js.jobStudentReport);
-                }
-            }
-            return when(batch);
-        }
         return CodeGradX.parsexml(response.entity)
             .then(processJS)
             .catch(function (reason) {
@@ -1809,6 +1813,12 @@ CodeGradX.Batch.prototype.getReport.default = {
 CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
   var batch = this;
   var state = CodeGradX.getCurrentState();
+  state.debug('getBatchFinalReport1', batch);
+  if ( batch.finishedjobs &&
+       batch.finishedjobs === batch.totaljobs ) {
+      // Only return a complete report
+      return when(batch);
+  }
   parameters = _.assign({
       // So progress() may look at the current version of the batch report:
       batch: batch
@@ -1818,7 +1828,6 @@ CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
   if ( parameters.step < CodeGradX.Batch.prototype.getReport.default.step ) {
       parameters.step = CodeGradX.Batch.prototype.getReport.default.step;
   }
-  state.debug('getBatchFinalReport1', batch);
   function tryFetching () {
     state.debug('getBatchFinalReport3', parameters);
     // Get at least one report to access finishedjobs and totaljobs:

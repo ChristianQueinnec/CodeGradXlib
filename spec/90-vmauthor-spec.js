@@ -7,14 +7,19 @@ var vmauthData = require('./vmauth-data.json');
 
 describe('CodeGradX', function () {
 
+  function make_faildone (done) {
+      return function faildone (reason) {
+          state.debug('faildone', reason).show();
+          //console.log(reason);
+          fail(reason);
+          done();
+      };
+  }
+
   it('authenticates user', function (done) {
     expect(CodeGradX).toBeDefined();
     var state = new CodeGradX.State(vmauthor.initialize);
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     state.getAuthenticatedUser(vmauthData.login, vmauthData.password)
     .then(function (user) {
       expect(user).toBeDefined();
@@ -28,11 +33,7 @@ describe('CodeGradX', function () {
 
   it("modifies user's properties", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug('faildone', reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(state.currentUser).toBeDefined();
     state.currentUser.modify({
       lastname: "Doe",
@@ -58,11 +59,7 @@ describe('CodeGradX', function () {
 
   it("gets the 'free' campaign", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(state.currentUser).toBeDefined();
     //console.log(state.currentUser);
     state.currentUser.getCampaign('free').then(function (campaign) {
@@ -75,11 +72,7 @@ describe('CodeGradX', function () {
 
   it("gets the exercises of the 'free' campaign", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(campaign1).toBeDefined();
     //state.log.show();
     campaign1.getExercisesSet().then(function (es) {
@@ -93,11 +86,7 @@ describe('CodeGradX', function () {
 
   it("gets one exercise", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(campaign1).toBeDefined();
     var exerciseName = "com.paracamplus.li205.function.1";
     var promise = campaign1.getExercise(exerciseName);
@@ -116,11 +105,7 @@ describe('CodeGradX', function () {
 
   it("sends a string answer to exercise1 and waits for report", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(campaign1).toBeDefined();
     expect(exercise1).toBeDefined();
     exercise1.sendStringAnswer(code1).then(function (job) {
@@ -136,11 +121,7 @@ describe('CodeGradX', function () {
 
   it("cannot read a file", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     CodeGradX.readFileContent("unexistent-foo.bar")
     .then(faildone)
     .catch(done);
@@ -148,11 +129,7 @@ describe('CodeGradX', function () {
 
   it("can read a file", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     CodeGradX.readFileContent(file1).then(function (data) {
       expect(data).toBeDefined();
       expect(data).toMatch(/int x,/);
@@ -162,11 +139,7 @@ describe('CodeGradX', function () {
 
   it("sends a file answer to exercise1 and waits for report", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(campaign1).toBeDefined();
     expect(exercise1).toBeDefined();
     exercise1.sendFileAnswer(file1).then(function (job) {
@@ -184,12 +157,8 @@ describe('CodeGradX', function () {
 
   it("may submit a new exercise and get one pseudojob", function (done) {
     var state = CodeGradX.getCurrentState();
+    var faildone = make_faildone(done);
     state.log.size = 50;
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
     expect(state.currentUser).toBeDefined();
     counter = 0;
     state.currentUser.submitNewExercise(exerciseTGZFile1, {
@@ -204,11 +173,21 @@ describe('CodeGradX', function () {
       expect(exercise).toBeDefined();
       expect(counter).toBeGreaterThan(1);
       exercise2 = exercise;
-      var job2 = exercise.pseudojobs.perfect;
-      job2.getReport().then(function (job) {
-        expect(job).toBe(job2);
-        done();
-      });
+      exercise.getExerciseReport().then(function (e3) {
+          expect(e3).toBe(exercise2);
+          console.log(exercise); // DEBUG
+          var job2 = exercise.pseudojobs.perfect;
+          job2.getReport().then(function (job) {
+              expect(job).toBe(job2);
+              expect(job.mark).toBe(100);
+              var job3 = exercise.pseudojobs.half;
+              job3.getReport().then(function (job) {
+                  expect(job).toBe(job3);
+                  expect(job.mark).toBe(45);
+                  done();
+              }, faildone);
+          }, faildone);
+      }, faildone);
     }, faildone);
   }, 150*1000); // 150 seconds
 
@@ -216,19 +195,17 @@ describe('CodeGradX', function () {
 
   it("may send a batch", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(exercise2).toBeDefined();
     var counter = 0;
     var parameters = {
+        step: 10,
+        retry: 40,
         progress: function (parameters) {
           counter++;
-          getCurrentState().log.show();
+          state.log.show();
         }
-      };
+    };
     exercise2.sendBatch(batchTGZfile).then(function (batch) {
       //console.log(batch);
       batch.getReport(parameters).then(function (batch2) {
