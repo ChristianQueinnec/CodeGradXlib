@@ -54,6 +54,11 @@ publish :
 
 # ############## Various experiments (not all finished)
 
+README.tex : README.md
+	pandoc -o README.tex -f markdown README.md 
+README.pdf : README.tex
+	pandoc -o README.pdf -f markdown README.md 
+
 docco :
 	docco codegradxlib.js
 

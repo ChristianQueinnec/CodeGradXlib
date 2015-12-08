@@ -1,6 +1,6 @@
 // This is an example of use of the codegradxlib library.
 
-var CodeGradX = require('./codegradxlib.js');
+var CodeGradX = require('codegradxlib');
 
 // First initialize the library with a State. By default, it uses the
 // real constellation of servers running the CodeGradX infrastructure:
