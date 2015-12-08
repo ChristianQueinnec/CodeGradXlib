@@ -6,14 +6,19 @@ var authData = require('./auth-data.json');
 
 describe('CodeGradX', function () {
 
+  function make_faildone (done) {
+      return function faildone (reason) {
+          state.debug('faildone', reason).show();
+          //console.log(reason);
+          fail(reason);
+          done();
+      };
+  }
+
   it('should be loaded', function (done) {
     expect(CodeGradX).toBeDefined();
     var state = new CodeGradX.State();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     state.getAuthenticatedUser(authData.login, authData.password)
     .then(function (user) {
       expect(user).toBeDefined();
@@ -61,11 +66,7 @@ function _str2Date (str) {
 
   it("should get campaign free", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
     state.currentUser.getCampaign('free').then(function (campaign) {
       expect(campaign instanceof CodeGradX.Campaign).toBeTruthy();
@@ -90,11 +91,7 @@ function _str2Date (str) {
 
   it("should get all campaigns", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
     state.currentUser.getCampaigns().then(function (campaigns) {
       expect(campaigns.free).toBeDefined();
@@ -128,13 +125,9 @@ function _str2Date (str) {
 
   it("get one exercise description", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(campaign0).toBeDefined();
-    //console.log(campaign0.exercisesSet.exercises[0]);
+    //console.log(campaign0.exercisesSet.exercises[1]);
     expect(campaign0.exercisesSet).toBeDefined();
     exercise1 = campaign0.exercisesSet.exercises[0].exercises[0];
     expect(exercise1 instanceof CodeGradX.Exercise).toBeTruthy();
@@ -162,11 +155,7 @@ function _str2Date (str) {
 
   it("get a precise exercise by its name", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     var exerciseName = "com.paracamplus.li205.function.1";
     campaign0.getExercise(exerciseName).then(function (exercise) {
       expect(exercise).toBeDefined();
@@ -188,13 +177,11 @@ function _str2Date (str) {
     // 5 -> com.paracamplus.li362.tr.4
     // 6 -> com.paracamplus.lt216.1
     // 7 -> org.fw4ex.ocaml.1
+  // ExercisesSet.exercises[1]:
+    // 8 -> org.fw4ex.li218.devoir.2010nov.3
   it("get a precise exercise by its rank", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     var exerciseName = "com.paracamplus.li314.java.3";
     campaign0.getExercise(3).then(function (exercise) {
       expect(exercise).toBeDefined();
@@ -203,13 +190,31 @@ function _str2Date (str) {
     }, faildone);
   });
 
+  it("get a precise exercise by its rank", function (done) {
+    var state = CodeGradX.getCurrentState();
+    var faildone = make_faildone(done);
+    var exerciseName = "com.paracamplus.li362.sh.7";
+    campaign0.getExercise(4).then(function (exercise) {
+      expect(exercise).toBeDefined();
+      expect(exercise.name).toBe(exerciseName);
+      done();
+    }, faildone);
+  });
+
+  it("get a precise exercise by its rank", function (done) {
+    var state = CodeGradX.getCurrentState();
+    var faildone = make_faildone(done);
+    var exerciseName = "org.fw4ex.li218.devoir.2010nov.3";
+    campaign0.getExercise(8).then(function (exercise) {
+      expect(exercise).toBeDefined();
+      expect(exercise.name).toBe(exerciseName);
+      done();
+    }, faildone);
+  });
+
   it("get an absent exercise", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     var exerciseName = "com.paracamplus.li205.function.1,.XXX";
     campaign0.getExercise(exerciseName).then(faildone, function (reason) {
       done();
@@ -223,12 +228,7 @@ function _str2Date (str) {
 
   it("may send an answer", function (done) {
     var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      console.log(reason);
-      fail(reason);
-      done();
-    }
+    var faildone = make_faildone(done);
     expect(exercise2).toBeDefined();
     //console.log(exercise2);
     exercise2.sendStringAnswer(code1).then(function (job) {
