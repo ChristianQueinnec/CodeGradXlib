@@ -15,7 +15,7 @@ use case:
 
 ```javascript
 // Example of use:
-require('codegradx.js');
+var CodeGradX = require('codegradxlib');
 
 new CodeGradX.State(postInitializer);
 
@@ -1190,7 +1190,14 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
     return when.reject("Non deployed exercise " + exercise.name);
   }
   if ( typeof exercise.inlineFileName === 'undefined') {
-    return when.reject(new Error("Non suitable exercise"));
+      if ( exercise._description ) {
+          return when.reject(new Error("Non suitable exercise"));
+      } else {
+          return exercise.getDescription()
+          .then(function (description) {
+              return exercise.sendStringAnswer(answer);
+          });
+      }
   }
   function processResponse (response) {
     //console.log(response);
