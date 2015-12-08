@@ -149,7 +149,7 @@ CodeGradX.Log.prototype.debug = function () {
     this.items.splice(0, 1);
   }
   this.items.push(msg);
-  return this.show();
+  return this;
 };
 
 /** Display the log with `console.log`.
@@ -164,6 +164,23 @@ CodeGradX.Log.prototype.show = function () {
   // console.log is run later so take a copy of the log now to
   // avoid displaying a later version of the log:
   var items = this.items.slice(0);
+  console.log(items);
+  return this;
+};
+
+/** Display the log with `console.log` and empty it.
+
+    @method showAndRemove
+    @returns {Log}
+    @memberof {CodeGradX.Log#}
+
+  */
+
+CodeGradX.Log.prototype.showAndRemove = function () {
+  // console.log is run later so take a copy of the log now to
+  // avoid displaying a later version of the log:
+  var items = this.items;
+  this.items = [];
   console.log(items);
   return this;
 };
@@ -1488,6 +1505,15 @@ CodeGradX.ExercisesSet = function (json) {
 
 CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
   var exercises = this;
+  if ( _.isNumber(name) ) {
+      return exercises.getExerciseByIndex(name);
+  } else {
+      return exercises.getExerciseByName(name);
+  }
+}
+
+CodeGradX.ExercisesSet.prototype.getExerciseByName = function (name) {
+  var exercises = this;
   function find (exercises) {
     if ( _.isArray(exercises) ) {
       for ( var i=0 ; i<exercises.length ; i++ ) {
@@ -1504,6 +1530,31 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
       if ( exercises.name === name ) {
         return exercises;
       } else {
+        return false;
+      }
+    }
+  }
+  return find(exercises);
+};
+
+CodeGradX.ExercisesSet.prototype.getExerciseByIndex = function (index) {
+  var exercises = this;
+  function find (exercises) {
+    if ( _.isArray(exercises) ) {
+      for ( var i=0 ; i<exercises.length ; i++ ) {
+        //console.log("explore " + i);
+        var result = find(exercises[i]);
+        if ( result ) {
+          return result;
+        }
+      }
+    } else if ( exercises instanceof CodeGradX.ExercisesSet ) {
+      return find(exercises.exercises);
+    } else if ( exercises instanceof CodeGradX.Exercise ) {
+      if ( index === 0 ) {
+        return exercises;
+      } else {
+        index--;
         return false;
       }
     }

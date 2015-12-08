@@ -171,6 +171,7 @@ describe('CodeGradX', function () {
     })
     .then(function (exercise) {
       expect(exercise).toBeDefined();
+      expect(exercise instanceof CodeGradX.Exercise).toBeTruthy();
       expect(counter).toBeGreaterThan(1);
       exercise2 = exercise;
       exercise.getExerciseReport().then(function (e3) {

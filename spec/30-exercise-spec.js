@@ -134,7 +134,7 @@ function _str2Date (str) {
       done();
     }
     expect(campaign0).toBeDefined();
-    //console.log(campaign.exercisesSet);
+    //console.log(campaign0.exercisesSet.exercises[0]);
     expect(campaign0.exercisesSet).toBeDefined();
     exercise1 = campaign0.exercisesSet.exercises[0].exercises[0];
     expect(exercise1 instanceof CodeGradX.Exercise).toBeTruthy();
@@ -160,7 +160,7 @@ function _str2Date (str) {
 
   var exercise2;
 
-  it("get a precise exercise", function (done) {
+  it("get a precise exercise by its name", function (done) {
     var state = CodeGradX.getCurrentState();
     function faildone (reason) {
       state.debug(reason).show();
@@ -176,6 +176,30 @@ function _str2Date (str) {
         exercise2 = exercise;
         done();
       }, faildone);
+    }, faildone);
+  });
+
+  // ExercisesSet.exercises[0]:
+    // 0 -> org.fw4ex.li101.croissante.0
+    // 1 -> org.fw4ex.li101.l2p
+    // 2 -> com.paracamplus.li205.function.1
+    // 3 -> com.paracamplus.li314.java.3
+    // 4 -> com.paracamplus.li362.sh.7
+    // 5 -> com.paracamplus.li362.tr.4
+    // 6 -> com.paracamplus.lt216.1
+    // 7 -> org.fw4ex.ocaml.1
+  it("get a precise exercise by its rank", function (done) {
+    var state = CodeGradX.getCurrentState();
+    function faildone (reason) {
+      state.debug(reason).show();
+      fail(reason);
+      done();
+    }
+    var exerciseName = "com.paracamplus.li314.java.3";
+    campaign0.getExercise(3).then(function (exercise) {
+      expect(exercise).toBeDefined();
+      expect(exercise.name).toBe(exerciseName);
+      done();
     }, faildone);
   });
 
