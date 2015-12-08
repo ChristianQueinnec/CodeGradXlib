@@ -1517,7 +1517,7 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
   } else {
       return exercises.getExerciseByName(name);
   }
-}
+};
 
 CodeGradX.ExercisesSet.prototype.getExerciseByName = function (name) {
   var exercises = this;
