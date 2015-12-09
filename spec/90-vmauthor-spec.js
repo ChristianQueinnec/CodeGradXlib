@@ -9,6 +9,7 @@ describe('CodeGradX', function () {
 
   function make_faildone (done) {
       return function faildone (reason) {
+          var state = CodeGradX.getCurrentState();
           state.debug('faildone', reason).show();
           //console.log(reason);
           fail(reason);

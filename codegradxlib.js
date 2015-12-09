@@ -255,6 +255,10 @@ CodeGradX.State = function (initializer) {
   this.currentCookie = null;
   // Post-initialization
   var state = this;
+  // Cache for jobs useful when processing batches:
+  state.cache = {
+      jobs: {} 
+  };
   if ( _.isFunction(initializer) ) {
     state = initializer.call(state, state);
   }
@@ -284,6 +288,14 @@ CodeGradX.getCurrentState = function () {
 CodeGradX.State.prototype.debug = function () {
   return this.log.debug.apply(this.log, arguments);
 };
+
+/** Empty cache to gain room.
+*/
+
+CodeGradX.State.prototype.gc = function () {
+    var state = this;
+    state.cache.jobs = {};
+}
 
 /** Update the description of a server in order to determine if that
   server is available. The description may contain an optional `host`
@@ -1601,7 +1613,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   var job = this;
   var state = CodeGradX.getCurrentState();
   state.debug('getJobReport1', job);
-  if ( job.HTMLreport ) {
+  if ( job.XMLreport ) {
     return when(job);
   }
   var path = job.pathdir + '/' + job.jobid + '.xml';
@@ -1796,7 +1808,6 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
     CodeGradX.Batch.prototype.getReport.default,
     parameters);
   var path = batch.pathdir + '/' + batch.batchid + '.xml';
-  var jobsCache = {};
   function processResponse (response) {
     //console.log(response);
     state.debug('getBatchReport2', response, batch);
@@ -1811,7 +1822,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
           function processJob (jsjob) {
               //console.log(jsjob);
               var job;
-              job = jobsCache[jsjob.$.jobid];
+              job = state.cache.jobs[jsjob.$.jobid];
               if ( ! job ) {
                   job = new CodeGradX.Job({
                       exercise:  batch.exercise,
@@ -1827,9 +1838,9 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
                   });
                   job.duration = (job.finished.getTime() - 
                                   job.started.getTime() )/1000; // seconds
-                      batch.jobs[job.label] = job;
-                  jobsCache[job.jobid] = job;
+                  state.cache.jobs[job.jobid] = job;
               }
+              batch.jobs[job.label] = job;
               return job;
           }
           if ( js.jobStudentReport ) {
