@@ -295,7 +295,7 @@ CodeGradX.State.prototype.debug = function () {
 CodeGradX.State.prototype.gc = function () {
     var state = this;
     state.cache.jobs = {};
-}
+};
 
 /** Update the description of a server in order to determine if that
   server is available. The description may contain an optional `host`
