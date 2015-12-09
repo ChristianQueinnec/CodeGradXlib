@@ -176,7 +176,7 @@ describe('CodeGradX', function () {
       exercise2 = exercise;
       exercise.getExerciseReport().then(function (e3) {
           expect(e3).toBe(exercise2);
-          console.log(exercise); // DEBUG
+          //console.log(exercise); // DEBUG
           var job2 = exercise.pseudojobs.perfect;
           job2.getReport().then(function (job) {
               expect(job).toBe(job2);
@@ -204,20 +204,27 @@ describe('CodeGradX', function () {
         retry: 40,
         progress: function (parameters) {
           counter++;
-          state.log.show();
+          //state.log.show();
         }
     };
+    var job1;
     exercise2.sendBatch(batchTGZfile).then(function (batch) {
       //console.log(batch);
       batch.getReport(parameters).then(function (batch2) {
         //console.log(batch2);
         expect(batch2).toBe(batch);
         expect(counter).toBeGreaterThan(0);
+        if ( batch.jobs.one ) {
+            // Hope that this batch report is not the final one!
+            job1 = batch.jobs.one;
+        }
         batch2.getFinalReport(parameters).then(function (batch3) {
           expect(batch3).toBe(batch2);
           expect(counter).toBeGreaterThan(1);
           expect(batch.finishedjobs).toBeGreaterThan(0);
           expect(batch.totaljobs).toBe(batch.finishedjobs);
+          // Check jobsCache:
+          expect(batch.jobs.one === job1).toBeTruthy();
           //state.log.show();
           done();
         }, faildone);

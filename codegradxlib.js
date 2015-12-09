@@ -1796,6 +1796,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
     CodeGradX.Batch.prototype.getReport.default,
     parameters);
   var path = batch.pathdir + '/' + batch.batchid + '.xml';
+  var jobsCache = {};
   function processResponse (response) {
     //console.log(response);
     state.debug('getBatchReport2', response, batch);
@@ -1809,21 +1810,26 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
           //console.log(js);
           function processJob (jsjob) {
               //console.log(jsjob);
-              var job = new CodeGradX.Job({
-                  exercise:  batch.exercise,
-                  XMLjob:    jsjob,
-                  jobid:     jsjob.$.jobid,
-                  pathdir:   jsjob.$.location,
-                  label:     jsjob.$.label,
-                  problem:   _str2num(jsjob.$.problem),
-                  mark:      _str2num(jsjob.marking.$.mark),
-                  totalMark: _str2num(jsjob.marking.$.totalMark),
-                  started:   _str2Date(jsjob.marking.$.started),
-                  finished:  _str2Date(jsjob.marking.$.finished)
-              });
-              job.duration = (job.finished.getTime() - 
-                              job.started.getTime() )/1000; // seconds
-                  batch.jobs[job.label] = job;
+              var job;
+              job = jobsCache[jsjob.$.jobid];
+              if ( ! job ) {
+                  job = new CodeGradX.Job({
+                      exercise:  batch.exercise,
+                      XMLjob:    jsjob,
+                      jobid:     jsjob.$.jobid,
+                      pathdir:   jsjob.$.location,
+                      label:     jsjob.$.label,
+                      problem:   _str2num(jsjob.$.problem),
+                      mark:      _str2num(jsjob.marking.$.mark),
+                      totalMark: _str2num(jsjob.marking.$.totalMark),
+                      started:   _str2Date(jsjob.marking.$.started),
+                      finished:  _str2Date(jsjob.marking.$.finished)
+                  });
+                  job.duration = (job.finished.getTime() - 
+                                  job.started.getTime() )/1000; // seconds
+                      batch.jobs[job.label] = job;
+                  jobsCache[job.jobid] = job;
+              }
               return job;
           }
           if ( js.jobStudentReport ) {
