@@ -87,14 +87,14 @@ function _checkIsNode () {
 /* Are we running under Node.js */
 var isNode = _.memoize(_checkIsNode);
 
-function _str2num (str) {
+CodeGradX._str2num = function (str) {
   if (!isNaN(str)) {
     str = str % 1 === 0 ? parseInt(str, 10) : parseFloat(str);
   }
   return str;
-}
+};
 
-function _str2Date (str) {
+CodeGradX._str2Date = function (str) {
   var ms = Date.parse(str);
   if ( ! isNaN(ms) ) {
     var d = new Date(ms);
@@ -103,7 +103,7 @@ function _str2Date (str) {
   } else {
     throw new Error("Cannot parse Date" + str);
   }
-}
+};
 
 // **************** Log ********************************
 
@@ -382,7 +382,7 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   var nextDone = false;
   for ( var key in descriptions ) {
     if ( /^\d+$/.exec(key) ) {
-      key = _str2num(key);
+      key = CodeGradX._str2num(key);
       promise = state.checkServer(kind, key);
       if ( key === descriptions.next ) {
          // Try also the next potential server:
@@ -871,7 +871,7 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
         js = js.fw4ex.exerciseSubmittedReport;
         var exercise = new CodeGradX.Exercise({
           location: js.$.location,
-          personid: _str2num(js.person.$.personid),
+          personid: CodeGradX._str2num(js.person.$.personid),
           exerciseid: js.exercise.$.exerciseid,
           XMLsubmission: response.entity
         });
@@ -915,8 +915,8 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
 CodeGradX.Campaign = function (json) {
   // initialize name, starttime, endtime
   _.assign(this, json);
-  this.starttime = _str2Date(json.starttime);
-  this.endtime = _str2Date(json.endtime);
+  this.starttime = CodeGradX._str2Date(json.starttime);
+  this.endtime = CodeGradX._str2Date(json.endtime);
   //console.log(this);
 };
 
@@ -1224,8 +1224,8 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
         content: answer,
         responseXML: response.entity,
         response: js,
-        personid: _str2num(js.person.$.personid),
-        archived: _str2Date(js.job.$.archived),
+        personid: CodeGradX._str2num(js.person.$.personid),
+        archived: CodeGradX._str2Date(js.job.$.archived),
         jobid:    js.job.$.jobid,
         pathdir:  js.$.location
       });
@@ -1279,8 +1279,8 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
           content: content,
           responseXML: response.entity,
           response: js,
-          personid: _str2num(js.person.$.personid),
-          archived: _str2Date(js.job.$.archived),
+          personid: CodeGradX._str2num(js.person.$.personid),
+          archived: CodeGradX._str2Date(js.job.$.archived),
           jobid:    js.job.$.jobid,
           pathdir:  js.$.location
         });
@@ -1347,8 +1347,8 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
           //content: content,  // Too heavy
           responseXML: response.entity,
           response: js,
-          personid: _str2num(js.person.$.personid),
-          archived: _str2Date(js.batch.$.archived),
+          personid: CodeGradX._str2num(js.person.$.personid),
+          archived: CodeGradX._str2Date(js.batch.$.archived),
           batchid:  js.batch.$.batchid,
           pathdir:  js.$.location,
           finishedjobs: 0
@@ -1423,8 +1423,8 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
       if ( ! _.isArray(exercise.authorship) ) {
         exercise.authorship = [ exercise.authorship ];
       }
-      exercise.totaljobs    = _str2num(js.pseudojobs.$.totaljobs);
-      exercise.finishedjobs = _str2num(js.pseudojobs.$.finishedjobs);
+      exercise.totaljobs    = CodeGradX._str2num(js.pseudojobs.$.totaljobs);
+      exercise.finishedjobs = CodeGradX._str2num(js.pseudojobs.$.finishedjobs);
       function processPseudoJob (jspj) {
         var name = jspj.submission.$.name;
         var job = new CodeGradX.Job({
@@ -1432,13 +1432,13 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
           XMLpseudojob: jspj,
           jobid:     jspj.$.jobid,
           pathdir:   jspj.$.location,
-          duration:  _str2num(jspj.$.duration),
-          mark:      _str2num(jspj.marking.$.mark),
-          totalMark: _str2num(jspj.marking.$.totalMark),
-          archived:  _str2Date(jspj.marking.$.archived),
-          started:   _str2Date(jspj.marking.$.started),
-          ended:     _str2Date(jspj.marking.$.ended),
-          finished:  _str2Date(jspj.marking.$.finished)
+          duration:  CodeGradX._str2num(jspj.$.duration),
+          mark:      CodeGradX._str2num(jspj.marking.$.mark),
+          totalMark: CodeGradX._str2num(jspj.marking.$.totalMark),
+          archived:  CodeGradX._str2Date(jspj.marking.$.archived),
+          started:   CodeGradX._str2Date(jspj.marking.$.started),
+          ended:     CodeGradX._str2Date(jspj.marking.$.ended),
+          finished:  CodeGradX._str2Date(jspj.marking.$.finished)
           // partial marks TOBEDONE
         });
         exercise.pseudojobs[name] = job;
@@ -1640,12 +1640,12 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     //console.log(marking);
     return CodeGradX.parsexml(marking).then(function (js) {
       //console.log(js);
-      job.mark      = _str2num(js.marking.$.mark);
-      job.totalMark = _str2num(js.marking.$.totalMark);
-      job.archived  = _str2Date(js.marking.$.archived);
-      job.started   = _str2Date(js.marking.$.started);
-      job.ended     = _str2Date(js.marking.$.ended);
-      job.finished  = _str2Date(js.marking.$.finished);
+      job.mark      = CodeGradX._str2num(js.marking.$.mark);
+      job.totalMark = CodeGradX._str2num(js.marking.$.totalMark);
+      job.archived  = CodeGradX._str2Date(js.marking.$.archived);
+      job.started   = CodeGradX._str2Date(js.marking.$.started);
+      job.ended     = CodeGradX._str2Date(js.marking.$.ended);
+      job.finished  = CodeGradX._str2Date(js.marking.$.finished);
       // machine, partial marks TO BE DONE
       return when(response);
     });
@@ -1815,8 +1815,8 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
           //console.log(js);
           state.debug('getBatchReport3', js);
           js = js.fw4ex.multiJobStudentReport;
-          batch.totaljobs    = _str2num(js.$.totaljobs);
-          batch.finishedjobs = _str2num(js.$.finishedjobs);
+          batch.totaljobs    = CodeGradX._str2num(js.$.totaljobs);
+          batch.finishedjobs = CodeGradX._str2num(js.$.finishedjobs);
           batch.jobs = {};
           //console.log(js);
           function processJob (jsjob) {
@@ -1830,11 +1830,11 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
                       jobid:     jsjob.$.jobid,
                       pathdir:   jsjob.$.location,
                       label:     jsjob.$.label,
-                      problem:   _str2num(jsjob.$.problem),
-                      mark:      _str2num(jsjob.marking.$.mark),
-                      totalMark: _str2num(jsjob.marking.$.totalMark),
-                      started:   _str2Date(jsjob.marking.$.started),
-                      finished:  _str2Date(jsjob.marking.$.finished)
+                      problem:   CodeGradX._str2num(jsjob.$.problem),
+                      mark:      CodeGradX._str2num(jsjob.marking.$.mark),
+                      totalMark: CodeGradX._str2num(jsjob.marking.$.totalMark),
+                      started:   CodeGradX._str2Date(jsjob.marking.$.started),
+                      finished:  CodeGradX._str2Date(jsjob.marking.$.finished)
                   });
                   job.duration = (job.finished.getTime() - 
                                   job.started.getTime() )/1000; // seconds

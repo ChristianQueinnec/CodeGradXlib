@@ -1,5 +1,6 @@
 work : lint doc tests
-clean :: cleanMakefile
+clean :
+	-rm README.log README.tex
 
 # ############## Working rules:
 

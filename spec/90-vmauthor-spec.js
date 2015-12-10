@@ -1,5 +1,7 @@
-// Jasmine test related to the vmauthor virtual machine
-// This VM must be running, it hosts all the hostnames *vmauthor.vld7net.fr.
+// Jasmine test related to the vmauthor virtual machine. The vmauthor
+// virtual machine hosts a full constellation of CodeGradX servers.
+// The vmauthor virtual machine is available from 
+//       http://paracamplus.com/CodeGradX/VM/latest/
 
 var CodeGradX = require('../codegradxlib.js');
 var vmauthor = require('./vmauthor-data.js');
