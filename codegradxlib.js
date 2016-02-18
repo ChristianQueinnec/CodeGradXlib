@@ -278,6 +278,36 @@ CodeGradX.getCurrentState = function () {
   throw new Error("noState");
 };
 
+/** Get current user (if defined). This is particularly useful when
+    the user is not authenticated via getAuthenticatedUser() (for
+    instance, via GoogleOpenId).
+
+    @return {Promise<User>} yields {User}
+
+*/
+
+CodeGradX.getCurrentUser = function () {
+    var state = CodeGradX.getCurrentState();
+    if ( state.currentUser ) {
+        return when(state.currentUser);
+    }
+    state.debug('getCurrentUser1');
+    return state.sendAXServer('x', {
+        path: '/',
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        entity: {}
+    }).then(function (response) {
+        //console.log(response);
+        state.debug('getCurrentUser2', response);
+        state.currentUser = new CodeGradX.User(response.entity);
+        return when(state.currentUser);
+    });
+};
+
 /** Helper function, add a fact to the log held in the current state
   {@see CodeGradX.Log.debug} documentation.
 
