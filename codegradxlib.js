@@ -293,11 +293,10 @@ CodeGradX.getCurrentUser = function () {
     }
     state.debug('getCurrentUser1');
     return state.sendAXServer('x', {
-        path: '/',
+        path: '/whoami',
         method: 'GET',
         headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded'
+            'Accept': 'application/json'
         },
         entity: {}
     }).then(function (response) {
