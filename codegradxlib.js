@@ -483,14 +483,18 @@ CodeGradX.checkStatusCode = function (response) {
 CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   var state = this;
   state.debug('sendAXServer', kind, options);
-  var newoptions = _.assign({}, options);
-  newoptions.headers = newoptions.headers || {};
-  if ( state.currentCookie ) {
-    newoptions.headers.Cookie = state.currentCookie;
-  }
+  var newoptions = regenerateNewOptions();
   var adescriptions = getActiveServers();
   var checkServersCount = 0;
 
+  function regenerateNewOptions (options) {
+      var newoptions = _.assign({}, options);
+      newoptions.headers = newoptions.headers || {};
+      if ( state.currentCookie ) {
+          newoptions.headers.Cookie = state.currentCookie;
+      } 
+      return newoptions;
+  }
   function getActiveServers () {
     state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
     //console.log(state.servers[kind]);
@@ -523,6 +527,7 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
     if ( adescriptions.length > 0 ) {
       var description = _.first(adescriptions);
       adescriptions = _.rest(adescriptions);
+      newoptions = regenerateNewOptions(options);
       newoptions.path = 'http://' + description.host + options.path;
       state.debug('tryNext2', newoptions.path);
       return state.userAgent(newoptions)
