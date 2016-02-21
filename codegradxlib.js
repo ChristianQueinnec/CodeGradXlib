@@ -396,6 +396,9 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   var state = this;
   state.debug('checkServers', kind);
   var descriptions = state.servers[kind];
+  if ( ! descriptions.next ) {
+      descriptions.next = 0;
+  }
   function incrementNext (response) {
     if ( response.status.code < 300 ) {
       descriptions.next++;
@@ -535,16 +538,19 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
     //console.log(response.headers);
     //console.log(response);
     state.debug('updateCurrentCookie', response);
-    if ( response.headers['Set-Cookie'] ) {
-      var cookies = response.headers['Set-Cookie'];
-      cookies = _.map(cookies, function (s) {
-        return s.replace(/;.*$/, '');
-      });
-      cookies = _.filter(cookies, function (s) {
-        return /^u=U/.exec(s);
-      });
-      state.currentCookie = cookies;
+    function extractCookie (tag) {
+        if ( response.headers[tag] ) {
+            var cookies = response.headers[tag];
+            cookies = _.map(cookies, function (s) {
+                return s.replace(/;.*$/, '');
+            });
+            cookies = _.filter(cookies, function (s) {
+                return /^(u=)?U/.exec(s);
+            });
+            return (state.currentCookie = cookies);
+        }
     }
+    extractCookie('Set-Cookie') || extractCookie('X-CodeGradX-Cookie');
     return when(response);
   }
   var lastReason;
@@ -785,6 +791,7 @@ function (login, password) {
     @property {string} lastname
     @property {string} firstname
     @property {string} email
+    @property {string} cookie
     @property {number} personid
     @property {string} pseudo
     @property {Array<string>} authorprefixes
@@ -798,6 +805,14 @@ CodeGradX.User = function (json) {
   _.assign(this, json);
   //console.log(json);
   delete this.kind;
+  var state = CodeGradX.getCurrentState();
+  if ( this.cookie ) {
+      if ( ! state.currentCookie ) {
+          state.currentCookie = this.cookie;
+      }
+  } else if ( state.currentCookie ) {
+      this.cookie = state.currentCookie;
+  }
   var campaigns = {};
   json.campaigns.forEach(function (js) {
     //console.log(js);
