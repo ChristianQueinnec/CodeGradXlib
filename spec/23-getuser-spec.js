@@ -30,18 +30,18 @@ describe('CodeGradX', function () {
                 .then(function (user2) {
                     expect(user2).toBe(user);
                     done();
-                });
+                }).catch(faildone);
             }, faildone);
     });
 
-    it("really authenticate and check", function (done) {
+    it("really authenticate and re-check", function (done) {
         var state = new CodeGradX.State();
         var faildone = make_faildone(done);
         state.getAuthenticatedUser(authData.login, authData.password)
             .then(function (user) {
                 expect(user).toBeDefined();
                 expect(user).toBe(state.currentUser);
-                state.currentUser = null;
+                state.currentUser = null; // erase currentUser
                 CodeGradX.getCurrentUser()
                 .then(function (user2) {
                     expect(user2.personid).toBe(user.personid);

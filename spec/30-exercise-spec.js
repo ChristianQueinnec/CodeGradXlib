@@ -8,6 +8,7 @@ describe('CodeGradX', function () {
 
   function make_faildone (done) {
       return function faildone (reason) {
+          var state = CodeGradX.getCurrentState();
           state.debug('faildone', reason).show();
           //console.log(reason);
           fail(reason);
@@ -143,7 +144,7 @@ function _str2Date (str) {
       expect(exercise1.authorship.length).toBe(1);
       expect(exercise1.authorship[0].firstname).toBe('Christian');
       // check stem:
-      expect(exercise1.XMLstem).toBeDefined();
+      expect(exercise1.XMLcontent).toBeDefined();
       // check inlineFileName
       expect(exercise1.inlineFileName).toBe("croissante.scm");
       //console.log(exercise1);

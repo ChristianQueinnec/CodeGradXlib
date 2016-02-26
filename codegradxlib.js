@@ -286,9 +286,9 @@ CodeGradX.getCurrentState = function () {
 
 */
 
-CodeGradX.getCurrentUser = function () {
+CodeGradX.getCurrentUser = function (force) {
     var state = CodeGradX.getCurrentState();
-    if ( state.currentUser ) {
+    if ( !force && state.currentUser ) {
         return when(state.currentUser);
     }
     state.debug('getCurrentUser1');
@@ -374,10 +374,17 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   }
   var url = "http://" + host + descriptions.suffix;
   state.debug('checkServer2', kind, index, url);
-  return state.userAgent({
-    path: url
-  }).then(updateDescription)
-    .catch(invalidateDescription);
+  var request = {
+      path: url
+  };
+  if ( kind !== 's' ) {
+      request.mixin = {
+          withCredentials: true
+      };
+  }
+  return state.userAgent(request)
+        .then(updateDescription)
+        .catch(invalidateDescription);
 };
 
 /** Check all possible servers of some kind (a, e, x or s) that is,
@@ -522,9 +529,9 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   function regenerateNewOptions (options) {
       var newoptions = _.assign({}, options);
       newoptions.headers = newoptions.headers || {};
-      if ( state.currentCookie ) {
+      if ( _checkIsNode() && state.currentCookie ) {
           newoptions.headers.Cookie = state.currentCookie;
-      } 
+      }
       return newoptions;
   }
   function getActiveServers () {
@@ -539,7 +546,7 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
     //console.log(response);
     state.debug('updateCurrentCookie', response);
     function extractCookie (tag) {
-        if ( response.headers[tag] ) {
+        if ( response.headers[tag] ) { // char case ?
             var cookies = response.headers[tag];
             cookies = _.map(cookies, function (s) {
                 return s.replace(/;.*$/, '');
@@ -564,6 +571,9 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
       adescriptions = _.rest(adescriptions);
       newoptions = regenerateNewOptions(options);
       newoptions.path = 'http://' + description.host + options.path;
+      newoptions.mixin = {
+          withCredentials: true
+      };
       state.debug('tryNext2', newoptions.path);
       return state.userAgent(newoptions)
             .catch(mk_invalidate(description))
@@ -631,9 +641,9 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   state.debug('sendESServer1', kind, options);
   var newoptions = _.assign({}, options);
   newoptions.headers = _.assign({}, options.headers);
-  if ( state.currentCookie ) {
-    newoptions.headers.Cookie = state.currentCookie;
-  }
+    if ( _checkIsNode() && state.currentCookie ) {
+        newoptions.headers.Cookie = state.currentCookie;
+    }
   function getActiveServers () {
     state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
     //console.log(state.servers[kind]);
@@ -662,6 +672,11 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   function trySending (description) {
     var tryoptions = _.assign({}, newoptions);
     tryoptions.path = 'http://' + description.host + options.path;
+    if ( kind === 'e' ) {
+        tryoptions.mixin = {
+            withCredentials: true
+        };
+    }
     state.debug("trySending", tryoptions.path);
     return state.userAgent(tryoptions)
       .then(CodeGradX.checkStatusCode)
@@ -936,7 +951,7 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
       headers: {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": ("inline; filename=" + basefilename),
-        "Content-Length": content.length,
+        //"Content-Length": content.length,
         "Accept": 'text/xml'
       },
       entity: content
@@ -1147,6 +1162,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     function parseXML (description) {
       state.debug('getDescription2b', description);
       exercise._description = description;
+      //description._exercise = exercise;
       return when(description);
     }
     return CodeGradX.parsexml(exercise._XMLdescription).then(parseXML);
@@ -1173,14 +1189,15 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     state.debug("getDescription4", response);
     var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*</content>)(.|\n)*$");
     var content = response.entity.replace(contentRegExp, "$2");
-    exercise.XMLstem = content;
+    exercise.XMLcontent = content;
     exercise.stem = CodeGradX.xml2html(content);
     return when(response);
   });
   var promise4 = promise.then(function (response) {
     // If only one question expecting one file, retrieve its name:
     state.debug('getDescription5');
-    var expectationsRegExp = new RegExp("<expectations>(.|\n)*</expectations>", "g");
+    var expectationsRegExp =
+          new RegExp("<expectations>(.|\n)*</expectations>", "g");
     function concat (s1, s2) {
       return s1 + s2;
     }
@@ -1288,7 +1305,7 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
     headers: {
       "Content-Type": "application/octet-stream",
       "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
-      "Content-Length": content.length,
+      //"Content-Length": content.length,
       "Accept": 'text/xml'
     },
     entity: content
@@ -1345,7 +1362,7 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
       headers: {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": ("inline; filename=" + basefilename),
-        "Content-length": content.length,
+        //"Content-length": content.length,
         "Accept": 'text/xml'
       },
       entity: content
@@ -1413,7 +1430,7 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
       headers: {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": ("inline; filename=" + basefilename),
-        "Content-Length": content.length,
+        //"Content-Length": content.length,
         "Accept": 'text/xml'
       },
       entity: content
@@ -1581,29 +1598,32 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
 };
 
 CodeGradX.ExercisesSet.prototype.getExerciseByName = function (name) {
-  var exercises = this;
-  function find (exercises) {
-    if ( _.isArray(exercises) ) {
+  var exercisesSet = this;
+  //console.log(exercisesSet);// DEBUG
+  function find (thing) {
+    if ( thing instanceof CodeGradX.ExercisesSet ) {
+      var exercises = thing.exercises;
       for ( var i=0 ; i<exercises.length ; i++ ) {
-        //console.log("explore " + i);
+        //console.log("explore " + i + '/' + exercises.length);
         var result = find(exercises[i]);
         if ( result ) {
           return result;
         }
       }
       return false;
-    } else if ( exercises instanceof CodeGradX.ExercisesSet ) {
-      return find(exercises.exercises);
-    } else if ( exercises instanceof CodeGradX.Exercise ) {
-      //console.log("compare " + exercises.name);
-      if ( exercises.name === name ) {
-        return exercises;
+    } else if ( thing instanceof CodeGradX.Exercise ) {
+      var exercise = thing;
+      //console.log("compare with " + exercise.name);
+      if ( exercise.name === name ) {
+        return exercise;
       } else {
         return false;
       }
+    } else {
+        throw new Error("Not an Exercise nor an ExerciseSet", thing);
     }
   }
-  return find(exercises);
+  return find(exercisesSet);
 };
 
 CodeGradX.ExercisesSet.prototype.getExerciseByIndex = function (index) {
@@ -1737,7 +1757,7 @@ CodeGradX.xml2html = function (s, options) {
   var htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
   var divTagsRegExp = new RegExp('^(warning|error|introduction|conclusion|normal|stem)$');
   var spanTagsRegExp = new RegExp("^(user|machine|lineNumber)$");
-  var ignoreTagsRegExp = new RegExp("^(FW4EX)$");
+  var ignoreTagsRegExp = new RegExp("^(FW4EX|expectations|title|fw4ex)$");
   function convertAttributes (attributes) {
     var s = '';
     _.forIn(attributes, function (value, name) {
@@ -1763,11 +1783,15 @@ CodeGradX.xml2html = function (s, options) {
         mode = 'ignore';
       } else if ( tagname.match(htmlTagsRegExp) ) {
         result += '<' + tagname + attributes + '>';
+      } else if ( tagname.match(spanTagsRegExp) ) {
+        result += '<span class="fw4ex_' + tagname + '"' + attributes + '>';
       } else if ( tagname.match(divTagsRegExp) ) {
         result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
       } else if ( tagname.match(/^mark$/) ) {
-        var mark = node.attributes.value * options.markFactor;
-        result += '<span' + attributes + ' class="fw4ex_mark">' + mark;
+        var markOrig = CodeGradX._str2num(node.attributes.value);
+        var mark = markOrig * options.markFactor;
+        result += '<span' + attributes + ' class="fw4ex_mark">' + 
+              mark + '<!-- ' + markOrig;
       } else if ( tagname.match(/^section$/) ) {
         result += '<div' + attributes + ' class="fw4ex_section' +
           (++sectionLevel) + '">';
@@ -1775,7 +1799,7 @@ CodeGradX.xml2html = function (s, options) {
         var title = node.attributes.title;
         result += '<div' + attributes + ' class="fw4ex_question">';
         result += '<div class="fw4ex_question_title" data_counter="' +
-          (++questionCounter) + '">' + title + '</div>';
+          (++questionCounter) + '">' + (title||'') + '</div>';
       } else {
         result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
       }
@@ -1785,10 +1809,12 @@ CodeGradX.xml2html = function (s, options) {
         mode = 'default';
       } else if ( tagname.match(htmlTagsRegExp) ) {
         result += '</' + tagname + '>';
+      } else if ( tagname.match(spanTagsRegExp) ) {
+        result += '</span>';
       } else if ( tagname.match(divTagsRegExp) ) {
         result += '</div>';
       } else if ( tagname.match(/^mark$/) ) {
-        result += '</span>';
+        result += ' --></span>';
       } else if ( tagname.match(/^section$/) ) {
         --sectionLevel;
         result += '</div>';

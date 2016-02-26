@@ -14,6 +14,7 @@ describe('CodeGradX', function () {
   it('should send authentication request', function (done) {
     var state = new CodeGradX.State();
     function faildone (reason) {
+      state.debug('faildone', reason).show();
       fail(reason);
       done();
     }
@@ -57,7 +58,6 @@ describe('CodeGradX', function () {
       fail(reason);
       done();
     }
-    var authData = require('./auth-data.json');
     state.getAuthenticatedUser(authData.login, authData.password)
     .then(function (user) {
       //console.log(user);

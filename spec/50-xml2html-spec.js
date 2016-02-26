@@ -55,7 +55,7 @@ describe('CodeGradX', function () {
   it("should convert mark", function (done) {
     var xml = "<section>You win <mark value='0.4'/> points</section>";
     var html = CodeGradX.xml2html(xml);
-    expect(html).toMatch(/<div class="fw4ex_section1">You win <span value="0.4" class="fw4ex_mark">40<\/span> points<\/div>/);
+    expect(html).toMatch(/<div class="fw4ex_section1">You win <span value="0.4" class="fw4ex_mark">40<!-- 0.4 --><\/span> points<\/div>/);
     done();
   });
 

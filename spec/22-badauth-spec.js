@@ -22,7 +22,7 @@ describe('CodeGradX bad authentication', function () {
                 faildone();
             })
             .catch(function (reason) {
-                console.log(reason);
+                //console.log(reason);
                 expect(reason.message)
                     .toEqual(jasmine.stringMatching(/e150/));
                 done();
@@ -37,7 +37,7 @@ describe('CodeGradX bad authentication', function () {
                 faildone();
             })
             .catch(function (reason) {
-                console.log(reason);
+                //console.log(reason);
                 expect(reason.message)
                     .toEqual(jasmine.stringMatching(/e151/));
                 done();
@@ -52,7 +52,7 @@ describe('CodeGradX bad authentication', function () {
                 faildone();
             })
             .catch(function (reason) {
-                console.log(reason);
+                //console.log(reason);
                 expect(reason.message)
                     .toEqual(jasmine.stringMatching(/e152-a/));
                 done();
@@ -67,8 +67,8 @@ describe('CodeGradX bad authentication', function () {
                 faildone();
             })
             .catch(function (reason) {
-                console.log(reason);
-                state.log.show();
+                //console.log(reason);
+                //state.log.show();
                 expect(reason.message)
                     .toEqual(jasmine.stringMatching(/e152-b/));
                 done();
