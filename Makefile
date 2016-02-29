@@ -12,7 +12,8 @@ doc/index.html : codegradxlib.js
 	node_modules/.bin/jsdoc -c conf.json codegradxlib.js
 
 tests : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
-	jasmine
+	jasmine 2>&1 | tee /tmp/spec.log
+	@echo "*** Report with         less /tmp/spec.log"
 
 spec/org.example.fw4ex.grading.check.tgz : spec/fw4ex.xml
 	cd spec/ && tar czf org.example.fw4ex.grading.check.tgz ./fw4ex.xml
@@ -26,6 +27,18 @@ spec/oefgc.tgz : Makefile spec/oefgc/fw4ex.xml
 	tar tzf spec/oefgc.tgz
 
 # ############## NPM package
+# Caution: npm takes the whole directory that is . and not the sole
+# content of CodeGradXlib.tgz 
+
+publish : 
+	git status .
+	-git commit -m "NPM publication `date`" .
+	git push
+	-rm -f CodeGradXlib.tgz
+	m CodeGradXlib.tgz install
+	cd tmp/CodeGradXlib/ && npm version patch && npm publish
+	cp -pf tmp/CodeGradXlib/package.json .
+	rm -rf tmp
 
 CodeGradXlib.tgz :
 	-rm -rf tmp
@@ -40,18 +53,6 @@ REMOTE	=	www.paracamplus.com
 install : CodeGradXlib.tgz
 	rsync -avu CodeGradXlib.tgz \
 		${REMOTE}:/var/www/www.paracamplus.com/Resources/Javascript/
-
-# Caution: npm takes the whole directory that is . and not the sole
-# content of CodeGradXlib.tgz 
-publish : 
-	git status .
-	-git commit -m "NPM publication `date`" .
-	git push
-	-rm -f CodeGradXlib.tgz
-	m CodeGradXlib.tgz install
-	cd tmp/CodeGradXlib/ && npm version patch && npm publish
-	cp -pf tmp/CodeGradXlib/package.json .
-	rm -rf tmp
 
 # ############## Various experiments (not all finished)
 

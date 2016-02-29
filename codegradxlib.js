@@ -557,7 +557,9 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
             return (state.currentCookie = cookies);
         }
     }
-    extractCookie('Set-Cookie') || extractCookie('X-CodeGradX-Cookie');
+    if ( ! extractCookie('Set-Cookie') ) {
+        extractCookie('X-CodeGradX-Cookie');
+    }
     return when(response);
   }
   var lastReason;
@@ -641,9 +643,9 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   state.debug('sendESServer1', kind, options);
   var newoptions = _.assign({}, options);
   newoptions.headers = _.assign({}, options.headers);
-    if ( _checkIsNode() && state.currentCookie ) {
-        newoptions.headers.Cookie = state.currentCookie;
-    }
+  if ( _checkIsNode() && state.currentCookie ) {
+      newoptions.headers.Cookie = state.currentCookie;
+  }
   function getActiveServers () {
     state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
     //console.log(state.servers[kind]);
@@ -943,17 +945,20 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
       });
   }
   return CodeGradX.readFileContent(filename).then(function (content) {
-    state.debug('submitNewExercise2', content);
+    state.debug('submitNewExercise2', content.length);
     var basefilename = filename.replace(new RegExp("^.*/"), '');
+    var headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Accept": 'text/xml'
+    };
+    if ( _checkIsNode() ) {
+        headers["Content-Length"] = content.length;
+    }
     return state.sendESServer('e', {
       path: '/exercises/',
       method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": ("inline; filename=" + basefilename),
-        //"Content-Length": content.length,
-        "Accept": 'text/xml'
-      },
+      headers: headers,
       entity: content
     }).then(processResponse);
   });
@@ -1031,7 +1036,18 @@ CodeGradX.Campaign.prototype.getJobs = function () {
   }).then(function (response) {
     state.debug('getJobs2');
     //console.log(response);
-    state.jobs = response.entity.jobs;
+    function normalizeUUID (uuid) {
+        var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
+        return uuid.replace(uuidRegexp, "$1-$2-$3-$4-$5");
+    }
+    state.jobs = _.map(response.entity.jobs, 
+                       function (js) {
+                           var job = new CodeGradX.Job(js);
+                           job.jobid = normalizeUUID(js.uuid);
+                           job.pathdir = '/s' + 
+                               js.uuid.replace(/(.)/g, "/$1");
+                           return job;
+                       });
     return when(state.jobs);
   });
 };
@@ -1299,15 +1315,18 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
     });
   }
   var content = new Buffer(answer, 'utf8');
+  var headers = {
+      "Content-Type": "application/octet-stream",
+      "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
+      "Accept": 'text/xml'
+  };
+    if ( _checkIsNode() ) {
+        headers["Content-Length"] = content.length;
+    }
   return state.sendAXServer('a', {
     path: ('/exercise/' + exercise.safecookie + '/job'),
     method: "POST",
-    headers: {
-      "Content-Type": "application/octet-stream",
-      "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
-      //"Content-Length": content.length,
-      "Accept": 'text/xml'
-    },
+    headers: headers,
     entity: content
   }).then(processResponse);
 };
@@ -1356,15 +1375,18 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
   }
   return CodeGradX.readFileContent(filename).then(function (content) {
     var basefilename = filename.replace(new RegExp("^.*/"), '');
+    var headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Accept": 'text/xml'
+    };
+    if ( _checkIsNode() ) {
+        headers["Content-Length"] = content.length;
+    }
     return state.sendAXServer('a', {
       path: ('/exercise/' + exercise.safecookie + '/job'),
       method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": ("inline; filename=" + basefilename),
-        //"Content-length": content.length,
-        "Accept": 'text/xml'
-      },
+      headers: headers,
       entity: content
     }).then(make_processResponse(content));
   });
@@ -1424,15 +1446,18 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
   }
   return CodeGradX.readFileContent(filename).then(function (content) {
     var basefilename = filename.replace(new RegExp("^.*/"), '');
+    var headers = {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Accept": 'text/xml'
+    };
+    if ( _checkIsNode() ) {
+        headers["Content-Length"] = content.length;
+    }
     return state.sendAXServer('a', {
       path: ('/exercise/' + exercise.safecookie + '/batch'),
       method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": ("inline; filename=" + basefilename),
-        //"Content-Length": content.length,
-        "Accept": 'text/xml'
-      },
+      headers: headers,
       entity: content
     }).then(processResponse);
   });
@@ -1493,14 +1518,15 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
       exercise.finishedjobs = CodeGradX._str2num(js.pseudojobs.$.finishedjobs);
       function processPseudoJob (jspj) {
         var name = jspj.submission.$.name;
+        var markFactor = CodeGradX.xml2html.default.markFactor;
         var job = new CodeGradX.Job({
           exercise:  exercise,
           XMLpseudojob: jspj,
           jobid:     jspj.$.jobid,
           pathdir:   jspj.$.location,
           duration:  CodeGradX._str2num(jspj.$.duration),
-          mark:      CodeGradX._str2num(jspj.marking.$.mark),
-          totalMark: CodeGradX._str2num(jspj.marking.$.totalMark),
+          mark:      ( markFactor * CodeGradX._str2num(jspj.marking.$.mark)),
+          totalmark: ( markFactor * CodeGradX._str2num(jspj.marking.$.totalmark)),
           archived:  CodeGradX._str2Date(jspj.marking.$.archived),
           started:   CodeGradX._str2Date(jspj.marking.$.started),
           ended:     CodeGradX._str2Date(jspj.marking.$.ended),
@@ -1667,6 +1693,9 @@ CodeGradX.ExercisesSet.prototype.getExerciseByIndex = function (index) {
 
 CodeGradX.Job = function (js) {
   _.assign(this, js);
+  var markFactor = CodeGradX.xml2html.default.markFactor;
+  this.mark *= markFactor;
+  this.totalmark *= markFactor;
 };
 
 /** Get the marking report of that Job. The marking report will be stored
@@ -1701,7 +1730,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     return when(job);
   });
   var promise2 = promise.then(function (response) {
-    // Fill archived, started, ended, finished, mark and totalMark
+    // Fill archived, started, ended, finished, mark and totalmark
     state.debug('getJobReport3', job);
     var markingRegExp = new RegExp("^(.|\n)*(<marking (.|\n)*?>)(.|\n)*$");
     var marking = response.entity.replace(markingRegExp, "$2");
@@ -1710,7 +1739,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     return CodeGradX.parsexml(marking).then(function (js) {
       //console.log(js);
       job.mark      = CodeGradX._str2num(js.marking.$.mark);
-      job.totalMark = CodeGradX._str2num(js.marking.$.totalMark);
+      job.totalmark = CodeGradX._str2num(js.marking.$.totalmark);
       job.archived  = CodeGradX._str2Date(js.marking.$.archived);
       job.started   = CodeGradX._str2Date(js.marking.$.started);
       job.ended     = CodeGradX._str2Date(js.marking.$.ended);
@@ -1751,7 +1780,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
 CodeGradX.xml2html = function (s, options) {
   options = _.assign({}, CodeGradX.xml2html.default, options);
   var result = '';
-  var mark, totalMark;
+  var mark, totalmark;
   var mode = 'default';
   var questionCounter = 0, sectionLevel = 0;
   var htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
@@ -1907,7 +1936,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
                       label:     jsjob.$.label,
                       problem:   CodeGradX._str2num(jsjob.$.problem),
                       mark:      CodeGradX._str2num(jsjob.marking.$.mark),
-                      totalMark: CodeGradX._str2num(jsjob.marking.$.totalMark),
+                      totalmark: CodeGradX._str2num(jsjob.marking.$.totalmark),
                       started:   CodeGradX._str2Date(jsjob.marking.$.started),
                       finished:  CodeGradX._str2Date(jsjob.marking.$.finished)
                   });

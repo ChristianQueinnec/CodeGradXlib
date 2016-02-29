@@ -165,7 +165,7 @@ describe('CodeGradX', function () {
     expect(state.currentUser).toBeDefined();
     counter = 0;
     state.currentUser.submitNewExercise(exerciseTGZFile1, {
-      step: 5,
+      step: 15,
       attempts: 30,
       progress: function (parameters) {
         counter = parameters.i;
