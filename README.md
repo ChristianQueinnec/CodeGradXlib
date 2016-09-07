@@ -27,7 +27,7 @@ npm install codegradxlib
 If you are CLI-inclined then
 
 ```javascript
-npm install CodeGradXagent
+npm install codegradxagent
 ```
 
 ## Terminology

@@ -1,38 +1,39 @@
-// Modify a state in order to use the servers of vmauthor.
+// Initialise the global state in order to use the servers of
+// the VMauthor-CodeGradX virtual machine.
 
 module.exports.initialize = function (state) {
   state.servers = {
     names: ['a', 'e', 'x', 's'],
-    domain: 'vmauthor.vld7net.fr',
+    domain: 'vmauthor.paracamplus.com',
     a: {
-      next: 1,
+      //next: 1,
       suffix: '/alive',
       0: {
-        host: 'avmauthor.vld7net.fr',
+        host: 'vmauthor.paracamplus.com/a',
         enabled: false
       }
     },
     e: {
-      next: 1,
+      //next: 1,
       suffix: '/alive',
       0: {
-        host: 'evmauthor.vld7net.fr',
+        host: 'vmauthor.paracamplus.com/e',
         enabled: false
       }
     },
     x: {
-      next: 1,
+      //next: 1,
       suffix: '/dbalive',
       0: {
-        host: 'xvmauthor.vld7net.fr',
+        host: 'vmauthor.paracamplus.com/x',
         enabled: false
       }
     },
     s: {
-      next: 1,
+      //next: 1,
       suffix: '/',
       0: {
-        host: 'svmauthor.vld7net.fr',
+        host: 'vmauthor.paracamplus.com/s',
         enabled: false
       }
     }

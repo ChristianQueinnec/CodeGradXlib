@@ -32,7 +32,7 @@ describe('CodeGradX', function () {
       expect(user.email).toBe('nobody@example.com');
       done();
     }, faildone);
-  });
+  }, 20*1000);
 
   it("modifies user's properties", function (done) {
     var state = CodeGradX.getCurrentState();
@@ -60,20 +60,20 @@ describe('CodeGradX', function () {
 
   var campaign1;
 
-  it("gets the 'free' campaign", function (done) {
+  it("gets the 'example' campaign", function (done) {
     var state = CodeGradX.getCurrentState();
     var faildone = make_faildone(done);
     expect(state.currentUser).toBeDefined();
     //console.log(state.currentUser);
-    state.currentUser.getCampaign('free').then(function (campaign) {
+    state.currentUser.getCampaign('example').then(function (campaign) {
       expect(campaign).toBeDefined();
-      expect(campaign.name).toBe('free');
+      expect(campaign.name).toBe('example');
       campaign1 = campaign;
       done();
     }, faildone);
   });
 
-  it("gets the exercises of the 'free' campaign", function (done) {
+  it("gets the exercises of the 'example' campaign", function (done) {
     var state = CodeGradX.getCurrentState();
     var faildone = make_faildone(done);
     expect(campaign1).toBeDefined();
@@ -91,7 +91,7 @@ describe('CodeGradX', function () {
     var state = CodeGradX.getCurrentState();
     var faildone = make_faildone(done);
     expect(campaign1).toBeDefined();
-    var exerciseName = "com.paracamplus.li205.function.1";
+    var exerciseName = "org.example.li205.function.1";
     var promise = campaign1.getExercise(exerciseName);
     promise.then(function (e) {
       expect(e).toBeDefined();

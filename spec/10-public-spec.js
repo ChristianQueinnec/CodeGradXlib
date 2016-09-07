@@ -20,7 +20,7 @@ describe('CodeGradX', function () {
     promise1.then(function (descriptions) {
       //console.log(state.servers.x);
       // At least one X server is available:
-      expect(descriptions.next).toBeGreaterThan(0);
+      expect(descriptions.next).toBeUndefined();
       var promise2 = state.sendAXServer('x', {
         path: '/direct/check',
         method: 'POST',

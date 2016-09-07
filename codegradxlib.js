@@ -235,7 +235,7 @@ CodeGradX.State = function (initializer) {
       }
     },
     x: {
-      next: 1,
+      //next: 1,  // no next means that all possible servers are listed here:
       suffix: '/dbalive',
       0: {
         host: 'x.paracamplus.com',
@@ -333,10 +333,11 @@ CodeGradX.State.prototype.gc = function () {
   `domain` information. After the check, the `enabled` key is set to
   a boolean telling wether the host is available or not.
 
-  Description are gathered in `descriptions` with two additional
-  keys: `suffix` is the path to add to the URL used to check the
-  availability of the server. `next` is the index of a potentially
-  available server of the same kind.
+  Description are gathered in `descriptions` with two additional keys:
+  `suffix` is the path to add to the URL used to check the
+  availability of the server. `next` if present is the index of a
+  potentially available server of the same kind. No `next` property
+  means that all possible servers are listed.
 
   @param {string} kind - the kind of server (a, e, x or s)
   @param {number} index - the number of the server.
@@ -392,7 +393,7 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
     these checks are concurrently run.
 
     If server ki (kind k, index i) emit an HTTPresponse, then
-    descriptions.next should be at least greater than i.
+    descriptions.next (if present) should be at least greater than i.
 
     @param {string} kind - the kind of server (a, e, x or s)
     @returns {Promise} yields Array[HTTPresponse]
@@ -403,15 +404,14 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   var state = this;
   state.debug('checkServers', kind);
   var descriptions = state.servers[kind];
-  if ( ! descriptions.next ) {
-      descriptions.next = 0;
-  }
   function incrementNext (response) {
-    if ( response.status.code < 300 ) {
-      descriptions.next++;
+    if ( descriptions.next ) {
+        if ( response.status.code < 300 ) {
+            descriptions.next++;
+        }
+        state.debug('incrementNext', response, descriptions.next);
     }
-    state.debug('incrementNext', response, descriptions.next);
-    return when(descriptions);
+    return when(descriptions);        
   }
   function dontIncrementNext (reason) {
     state.debug('dontIncrementNext', reason);
@@ -419,11 +419,14 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   }
   var promise, promises = [];
   var nextDone = false;
+  if ( ! descriptions.next ) {
+      nextDone = true;
+  }
   for ( var key in descriptions ) {
     if ( /^\d+$/.exec(key) ) {
       key = CodeGradX._str2num(key);
       promise = state.checkServer(kind, key);
-      if ( key === descriptions.next ) {
+      if ( descriptions.next && key === descriptions.next ) {
          // Try also the next potential server:
          promise = promise.then(incrementNext);
          nextDone = true;
@@ -564,6 +567,16 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   }
   var lastReason;
   function tryNext (reason) {
+    // Stop trying X servers as soon as one answers with a client error.
+    if ( kind === 'x' &&
+         _.isObject(reason) &&
+         _.has(reason, 'kind') &&
+         reason.kind === 'error' &&
+         _.has(reason, 'code') &&
+         reason.code === 400 ) {
+        lastReason = reason;
+        return when.reject(lastReason);
+    }
     if ( _.isError(reason) ) {
         lastReason = reason;
     }
@@ -830,13 +843,15 @@ CodeGradX.User = function (json) {
   } else if ( state.currentCookie ) {
       this.cookie = state.currentCookie;
   }
-  var campaigns = {};
-  json.campaigns.forEach(function (js) {
-    //console.log(js);
-    var campaign = new CodeGradX.Campaign(js);
-    campaigns[campaign.name] = campaign;
-  });
-  this._campaigns = campaigns;
+  if ( _.has(json, 'campaigns') ) {
+      var campaigns = {};
+      json.campaigns.forEach(function (js) {
+          //console.log(js);
+          var campaign = new CodeGradX.Campaign(js);
+          campaigns[campaign.name] = campaign;
+      });
+      this._campaigns = campaigns;
+  }
 };
 
 /** Modify some properties of the current user. These properties are
