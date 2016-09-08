@@ -31,7 +31,7 @@ module.exports.initialize = function (state) {
     },
     s: {
       //next: 1,
-      suffix: '/',
+      suffix: '/index.html',
       0: {
         host: 'vmauthor.paracamplus.com/s',
         enabled: false

@@ -106,7 +106,8 @@ describe('CodeGradX', function () {
 
   var code1 = "int min(int a, int b) { return a; }\n";
 
-  it("sends a string answer to exercise1 and waits for report", function (done) {
+  it("sends a string answer to exercise1 and waits for report", 
+     function (done) {
     var state = CodeGradX.getCurrentState();
     var faildone = make_faildone(done);
     expect(campaign1).toBeDefined();
@@ -175,7 +176,7 @@ describe('CodeGradX', function () {
     .then(function (exercise) {
       expect(exercise).toBeDefined();
       expect(exercise instanceof CodeGradX.Exercise).toBeTruthy();
-      expect(counter).toBeGreaterThan(1);
+      expect(counter).toBeGreaterThan(0);
       exercise2 = exercise;
       exercise.getExerciseReport().then(function (e3) {
           expect(e3).toBe(exercise2);
@@ -193,7 +194,7 @@ describe('CodeGradX', function () {
           }, faildone);
       }, faildone);
     }, faildone);
-  }, 150*1000); // 150 seconds
+  }, 100*1000); // 100 seconds
 
   var batchTGZfile = 'spec/oefgc.tgz';
 

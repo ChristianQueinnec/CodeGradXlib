@@ -120,7 +120,7 @@ CodeGradX._str2Date = function (str) {
 
 CodeGradX.Log = function () {
     this.items = [];
-    this.size = 20;
+    this.size = 50;
 };
 
 /** Log some facts. The facts (the arguments) will be concatenated
@@ -244,7 +244,7 @@ CodeGradX.State = function (initializer) {
     },
     s: {
       next: 1,
-      suffix: '/',
+      suffix: '/index.txt',
       0: {
         enabled: false
       }
@@ -575,6 +575,7 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
          _.has(reason, 'code') &&
          reason.code === 400 ) {
         lastReason = reason;
+        state.debug('tryNext3', 'stopX', reason);
         return when.reject(lastReason);
     }
     if ( _.isError(reason) ) {
@@ -684,7 +685,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     }
     return seeError;
   }
-  function trySending (description) {
+  function tryRequesting (description) {
     var tryoptions = _.assign({}, newoptions);
     tryoptions.path = 'http://' + description.host + options.path;
     if ( kind === 'e' ) {
@@ -692,7 +693,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
             withCredentials: true
         };
     }
-    state.debug("trySending", tryoptions.path);
+    state.debug("tryRequesting", tryoptions.path);
     return state.userAgent(tryoptions)
       .then(CodeGradX.checkStatusCode)
       .catch(mk_seeError(description));
@@ -709,12 +710,12 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
         return when.reject(new Error("no available server " + kind));
       } else {
         state.debug('sendESServer2',  adescriptions2);
-        var promises = _.map(adescriptions2, trySending);
+        var promises = _.map(adescriptions2, tryRequesting);
         return when.any(promises);
       }
     }).catch(allTried);
   } else {
-    var promises = _.map(adescriptions, trySending);
+    var promises = _.map(adescriptions, tryRequesting);
     return when.any(promises);
   }
 };
