@@ -13,7 +13,7 @@ doc/index.html : codegradxlib.js
 
 tests : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
 	@echo " tests require a running vmauthor..."
-	ping -c 3 xvmauthor.paracamplus.com
+	ping -c 3 xvmauthor.codegradx.org
 	jasmine 2>&1 | tee /tmp/spec.log
 	@echo "*** Report with         less /tmp/spec.log"
 

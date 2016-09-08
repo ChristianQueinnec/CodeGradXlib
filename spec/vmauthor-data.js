@@ -4,12 +4,12 @@
 module.exports.initialize = function (state) {
   state.servers = {
     names: ['a', 'e', 'x', 's'],
-    domain: 'vmauthor.paracamplus.com',
+    domain: 'vmauthor.codegradx.org',
     a: {
       //next: 1,
       suffix: '/alive',
       0: {
-        host: 'vmauthor.paracamplus.com/a',
+        host: 'vmauthor.codegradx.org/a',
         enabled: false
       }
     },
@@ -17,7 +17,7 @@ module.exports.initialize = function (state) {
       //next: 1,
       suffix: '/alive',
       0: {
-        host: 'vmauthor.paracamplus.com/e',
+        host: 'vmauthor.codegradx.org/e',
         enabled: false
       }
     },
@@ -25,7 +25,7 @@ module.exports.initialize = function (state) {
       //next: 1,
       suffix: '/dbalive',
       0: {
-        host: 'vmauthor.paracamplus.com/x',
+        host: 'vmauthor.codegradx.org/x',
         enabled: false
       }
     },
@@ -33,7 +33,7 @@ module.exports.initialize = function (state) {
       //next: 1,
       suffix: '/index.html',
       0: {
-        host: 'vmauthor.paracamplus.com/s',
+        host: 'vmauthor.codegradx.org/s',
         enabled: false
       }
     }
