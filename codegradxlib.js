@@ -1523,9 +1523,17 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
       exercise.nickname = js.identification.$.nickname;
       exercise.summary = js.identification.summary;
       exercise.pseudojobs = {};
-      exercise.tags = _.map(js.identification.tags.tag, function (jstag) {
-        return jstag.$.name;
-      });
+      // Caution: if there is only one tag then tags is 
+      // { '$': { name: 'js' } } If there is more than one tag, then tags is
+      // [ { '$': { name: 'js' } }, { '$': { name: 'closure' } } ]
+      var tags = js.identification.tags.tag;
+      if ( _.isArray(tags) ) {
+          exercise.tags = _.map(js.identification.tags.tag, function (jstag) {
+              return jstag.$.name;
+          });
+      } else {
+          exercise.tags = [ tags.name ];
+      }
       exercise.authorship = js.identification.authorship.author;
       if ( ! _.isArray(exercise.authorship) ) {
         exercise.authorship = [ exercise.authorship ];
