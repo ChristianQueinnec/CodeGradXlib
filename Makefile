@@ -2,6 +2,7 @@
 
 work : lint doc tests
 clean :
+	-rm *~
 	-rm README.log README.tex
 
 # ############## Working rules:
@@ -34,7 +35,7 @@ spec/oefgc.tgz : Makefile spec/oefgc/fw4ex.xml
 # Caution: npm takes the whole directory that is . and not the sole
 # content of CodeGradXlib.tgz 
 
-publish : 
+publish : clean
 	git status .
 	-git commit -m "NPM publication `date`" .
 	git push
