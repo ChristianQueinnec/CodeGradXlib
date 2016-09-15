@@ -120,7 +120,7 @@ CodeGradX._str2Date = function (str) {
 
 CodeGradX.Log = function () {
     this.items = [];
-    this.size = 50;
+    this.size = 90;
 };
 
 /** Log some facts. The facts (the arguments) will be concatenated
@@ -749,13 +749,14 @@ function (kind, parameters, options) {
     if ( finalResponse ) {
       return when(finalResponse);
     }
-    state.debug("retryNext", parameters);
+    state.debug("retryNext1", parameters);
     try {
       parameters.progress(parameters);
     } catch (exc) {
       // ignore problems raised by progress()!
     }
     if ( parameters.i++ < parameters.attempts ) {
+      state.debug("retryNext2", parameters.i, parameters.attempts);
       var promise = state.sendESServer(kind, options)
          .then(function (response) {
                 if ( response.status.code >= 300 ) {
@@ -961,8 +962,14 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
         });
         state.debug('submitNewExercise5', exercise.exerciseid);
         // Pre-fetch concurrently the exercise report: 
-        var otherPromise = exercise.getExerciseReport(parameters);
-        return when.any([when(exercise), otherPromise]);
+        var promise = when(exercise);
+        function ignore () {
+            state.debug("PrefetchEndIgnore");
+            return promise;
+        }
+        var otherPromise = exercise.getExerciseReport(parameters)
+          .catch(ignore);
+        return when.any([promise, otherPromise]);
       });
   }
   return CodeGradX.readFileContent(filename).then(function (content) {

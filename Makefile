@@ -10,9 +10,9 @@ clean :
 lint :
 	jshint codegradxlib.js spec/*.js
 
-doc : doc/index.html
-doc/index.html : codegradxlib.js
-	node_modules/.bin/jsdoc -c conf.json codegradxlib.js
+nsp+snyk : 
+	node_modules/.bin/nsp check
+	node_modules/.bin/snyk test codegradxlib
 
 tests : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
 	@echo " tests require a running vmauthor..."
@@ -35,7 +35,7 @@ spec/oefgc.tgz : Makefile spec/oefgc/fw4ex.xml
 # Caution: npm takes the whole directory that is . and not the sole
 # content of CodeGradXlib.tgz 
 
-publish : clean
+publish : lint nsp+snyk clean
 	git status .
 	-git commit -m "NPM publication `date`" .
 	git push
@@ -65,6 +65,10 @@ README.tex : README.md
 	pandoc -o README.tex -f markdown README.md 
 README.pdf : README.tex
 	pandoc -o README.pdf -f markdown README.md 
+
+doc : doc/index.html
+doc/index.html : codegradxlib.js
+	node_modules/.bin/jsdoc -c conf.json codegradxlib.js
 
 docco :
 	docco codegradxlib.js

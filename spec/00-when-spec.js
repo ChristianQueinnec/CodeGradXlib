@@ -51,6 +51,13 @@ describe("when", function () {
         var faildone = make_faildone(done);
         rest.wrap(mime)('http://example.org/')
         .then(function (response) {
+            // { request: { path: 'http://example.org/',
+            //              headers: { ... },
+            //              method: 'GET', ... }
+            //   status: { code: 200 },
+            //   headers: { ... },
+            //   entity: '...', ... }
+            //console.log(response);
             expect(response).toBeDefined();
             done();
         }, faildone);
@@ -225,5 +232,32 @@ describe("when", function () {
             faildone();
         });
     });
+
+    it("testAny1: ", function (done) {
+        // the two promises will be resolved but since a promise can
+        // only be resolved one, only one request.path is printed.
+        var faildone = make_faildone(done);
+        var promise1 = rest.wrap(mime)('http://example.org/');
+        promise1.then(function (response) {
+            console.log("promise1 resolved");
+            return response;
+        });
+        var promise2 = rest.wrap(mime)('http://www.example.org/');
+        promise2.then(function (response) {
+            console.log("promise2 resolved");
+            return response;
+        });
+        var answers = [];
+        when.any([promise1, promise2])
+            .then(function (response) {
+                expect(response).toBeDefined();
+                answers.push(response.request.path);
+                console.log(answers);
+                return when(true)
+                    .delay(2*1000)
+                    .then(done);
+            })
+            .catch(faildone);
+    }, 10*1000);
 
 });
