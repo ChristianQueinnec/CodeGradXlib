@@ -932,7 +932,9 @@ CodeGradX.User.prototype.getCampaign = function (name) {
   }
 };
 
-/** submit a new Exercise
+/** submit a new Exercise and return it as soon as submitted successfully.
+    However fetching the ExerciseReport is started with the `parameters`
+    repetition parameters.
 
     @param {string} filename - tgz file containing the exercise
     @param {Object} parameters - repetition parameters
@@ -957,7 +959,10 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
           exerciseid: js.exercise.$.exerciseid,
           XMLsubmission: response.entity
         });
-        return exercise.getExerciseReport(parameters);
+        state.debug('submitNewExercise5', exercise.exerciseid);
+        // Pre-fetch concurrently the exercise report: 
+        var otherPromise = exercise.getExerciseReport(parameters);
+        return when.any([when(exercise), otherPromise]);
       });
   }
   return CodeGradX.readFileContent(filename).then(function (content) {
@@ -1512,7 +1517,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
   if ( exercise.finishedjobs ) {
       return when(exercise);
   }
-  function processResponse  (response) {
+  function processResponse (response) {
     state.debug("getExerciseReport2", response);
     //console.log(response);
     exercise.XMLauthorReport = response.entity;
