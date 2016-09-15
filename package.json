@@ -28,7 +28,7 @@
     "jasmine": "^2.3.2",
     "jshint": "^2.8",
     "nsp": "^2.6",
-    "snyk" "^1.19"
+    "snyk": "^1.19"
   },
   "author": {
     "name": "Christian Queinnec",
