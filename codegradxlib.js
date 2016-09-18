@@ -742,21 +742,21 @@ function (kind, parameters, options) {
   var state = this;
   var finalResponse;
   state.debug('sendRepeatedlyESServer', kind, parameters, options);
-  parameters = _.assign({ i: 0 },
+  var parms = _.assign({ i: 0 },
     CodeGradX.State.prototype.sendRepeatedlyESServer.default,
     parameters);
   function retryNext () {
     if ( finalResponse ) {
       return when(finalResponse);
     }
-    state.debug("retryNext1", parameters);
+    state.debug("retryNext1", parms);
     try {
-      parameters.progress(parameters);
+      parms.progress(parms);
     } catch (exc) {
       // ignore problems raised by progress()!
     }
-    if ( parameters.i++ < parameters.attempts ) {
-      state.debug("retryNext2", parameters.i, parameters.attempts);
+    if ( parms.i++ < parms.attempts ) {
+      state.debug("retryNext2", parms.i, parms.attempts);
       var promise = state.sendESServer(kind, options)
          .then(function (response) {
                 if ( response.status.code >= 300 ) {
@@ -766,7 +766,7 @@ function (kind, parameters, options) {
                     return when(response);
                 }
       });
-      var dt = parameters.step * 1000;
+      var dt = parms.step * 1000;
       var delayedPromise = when(true).delay(dt).then(retryNext);
       var promises = [promise, delayedPromise];
       return when.any(promises);
@@ -961,15 +961,7 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
           XMLsubmission: response.entity
         });
         state.debug('submitNewExercise5', exercise.exerciseid);
-        // Pre-fetch concurrently the exercise report: 
-        var promise = when(exercise);
-        function ignore () {
-            state.debug("PrefetchEndIgnore");
-            return promise;
-        }
-        var otherPromise = exercise.getExerciseReport(parameters)
-          .catch(ignore);
-        return when.any([promise, otherPromise]);
+        return when(exercise);
       });
   }
   return CodeGradX.readFileContent(filename).then(function (content) {
@@ -1528,13 +1520,16 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
     state.debug("getExerciseReport2", response);
     //console.log(response);
     exercise.XMLauthorReport = response.entity;
+    function catchXMLerror (reason) {
+        state.debug("catchXMLerror", reason);
+        return when.reject(reason);
+    }
     return CodeGradX.parsexml(response.entity).then(function (js) {
       state.debug("getExerciseReport3", js);
       js = js.fw4ex.exerciseAuthorReport;
       exercise.name = js.identification.$.name;
       exercise.nickname = js.identification.$.nickname;
       exercise.summary = js.identification.summary;
-      exercise.pseudojobs = {};
       // Caution: if there is only one tag then tags is 
       // { '$': { name: 'js' } } If there is more than one tag, then tags is
       // [ { '$': { name: 'js' } }, { '$': { name: 'closure' } } ]
@@ -1552,6 +1547,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
       }
       exercise.totaljobs    = CodeGradX._str2num(js.pseudojobs.$.totaljobs);
       exercise.finishedjobs = CodeGradX._str2num(js.pseudojobs.$.finishedjobs);
+      exercise.pseudojobs = {};
       function processPseudoJob (jspj) {
         var name = jspj.submission.$.name;
         var markFactor = CodeGradX.xml2html.default.markFactor;
@@ -1571,17 +1567,19 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
         });
         exercise.pseudojobs[name] = job;
       }
-      js.pseudojobs.pseudojob.forEach(processPseudoJob);
+      var pseudojobs = js.pseudojobs.pseudojob;
+      if ( _.isArray(pseudojobs) ) {
+          js.pseudojobs.pseudojob.forEach(processPseudoJob);
+      } else {
+          processPseudoJob(pseudojobs); 
+      }
       //console.log(exercise); // DEBUG
       if ( js.$.safecookie ) {
         exercise.safecookie = js.$.safecookie;
-        return when(exercise);
-      } else {
-        var msg = 'Problem'; // TMEP
-        var error = new Error(msg);
-        return when.reject(error);
       }
-    });
+      return when(exercise);
+    })
+          .catch(catchXMLerror);
   }
   return state.sendRepeatedlyESServer('s', parameters, {
     path: (exercise.location + '/' + exercise.exerciseid + '.xml'),
