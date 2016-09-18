@@ -1545,9 +1545,9 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
       if ( ! _.isArray(exercise.authorship) ) {
         exercise.authorship = [ exercise.authorship ];
       }
+      exercise.pseudojobs = {};
       exercise.totaljobs    = CodeGradX._str2num(js.pseudojobs.$.totaljobs);
       exercise.finishedjobs = CodeGradX._str2num(js.pseudojobs.$.finishedjobs);
-      exercise.pseudojobs = {};
       function processPseudoJob (jspj) {
         var name = jspj.submission.$.name;
         var markFactor = CodeGradX.xml2html.default.markFactor;
@@ -1569,7 +1569,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
       }
       var pseudojobs = js.pseudojobs.pseudojob;
       if ( _.isArray(pseudojobs) ) {
-          js.pseudojobs.pseudojob.forEach(processPseudoJob);
+          pseudojobs.forEach(processPseudoJob);
       } else {
           processPseudoJob(pseudojobs); 
       }
