@@ -1570,8 +1570,10 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
       var pseudojobs = js.pseudojobs.pseudojob;
       if ( _.isArray(pseudojobs) ) {
           pseudojobs.forEach(processPseudoJob);
+      } else if ( pseudojobs ) {
+          processPseudoJob(pseudojobs);
       } else {
-          processPseudoJob(pseudojobs); 
+          // nothing! exercise.finishedjobs is probably 0!
       }
       //console.log(exercise); // DEBUG
       if ( js.$.safecookie ) {
