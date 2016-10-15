@@ -532,7 +532,7 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   function regenerateNewOptions (options) {
       var newoptions = _.assign({}, options);
       newoptions.headers = newoptions.headers || {};
-      if ( _checkIsNode() && state.currentCookie ) {
+      if ( isNode() && state.currentCookie ) {
           newoptions.headers.Cookie = state.currentCookie;
       }
       return newoptions;
@@ -657,7 +657,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   state.debug('sendESServer1', kind, options);
   var newoptions = _.assign({}, options);
   newoptions.headers = _.assign({}, options.headers);
-  if ( _checkIsNode() && state.currentCookie ) {
+  if ( isNode() && state.currentCookie ) {
       newoptions.headers.Cookie = state.currentCookie;
   }
   function getActiveServers () {
@@ -972,7 +972,7 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
         "Content-Disposition": ("inline; filename=" + basefilename),
         "Accept": 'text/xml'
     };
-    if ( _checkIsNode() ) {
+    if ( isNode() ) {
         headers["Content-Length"] = content.length;
     }
     return state.sendESServer('e', {
@@ -1085,13 +1085,25 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
   if ( campaign.exercisesSet ) {
     return when(campaign.exercisesSet);
   }
-  return state.sendESServer('e', {
+  var request = {
+    method: 'GET',
+    path: campaign.home_url + "/exercises.json",
+    headers: {
+      Accept: "application/json"
+    }
+  };
+  var p1 = state.userAgent(request).then(function (exercises) {
+      state.debug('getExercisesSet3', exercises);
+      return when(exercises);
+  });
+  var p2 = state.sendESServer('e', {
     path: ('/path/' + (campaign.exercisesname || campaign.name)),
     method: 'GET',
     headers: {
       Accept: "application/json"
     }
-  }).then(function (response) {
+  });
+    return when.any([p1, p2]).then(function (response) {
     state.debug('getExercisesSet2', response);
     campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
     return when(campaign.exercisesSet);
@@ -1340,7 +1352,7 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
       "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
       "Accept": 'text/xml'
   };
-    if ( _checkIsNode() ) {
+    if ( isNode() ) {
         headers["Content-Length"] = content.length;
     }
   return state.sendAXServer('a', {
@@ -1400,7 +1412,7 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
         "Content-Disposition": ("inline; filename=" + basefilename),
         "Accept": 'text/xml'
     };
-    if ( _checkIsNode() ) {
+    if ( isNode() ) {
         headers["Content-Length"] = content.length;
     }
     return state.sendAXServer('a', {
@@ -1471,7 +1483,7 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
         "Content-Disposition": ("inline; filename=" + basefilename),
         "Accept": 'text/xml'
     };
-    if ( _checkIsNode() ) {
+    if ( isNode() ) {
         headers["Content-Length"] = content.length;
     }
     return state.sendAXServer('a', {

@@ -47,8 +47,11 @@ password, you must [register](http://codegradx.org/register).
 Authentication returns a User object.
 
 The User object lists the Campaigns the User may access. A Campaign is
-a Javascript object offering a set of Exercises (an ExercisesSet),
-to a group of students during a certain period of time.
+a Javascript object offering a set of Exercises (an ExercisesSet), to
+a group of students during a certain period of time. You may then
+choose one campaign among the available campaigns. Once a campaign is
+choosen, the tree of associated exercises can be obtained from that
+campaign and from that tree, one may choose a particular exercise.
 
 To an Exercise is associated a stem (an XML document ruled by a
 [RelaxNG grammar](http://paracamplus.com/CodeGradX/Resources/fw4exRngDoc.pdf))
