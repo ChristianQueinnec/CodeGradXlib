@@ -19,22 +19,27 @@ var CodeGradX = require('codegradxlib');
 
 new CodeGradX.State(postInitializer);
 
+
 CodeGradX.getCurrentState().
   // ask for user's login and password:
   getAuthenticatedUser(login, password).
     then(function (user) {
-       // let the user choose one campaign among user.getCampaigns():
+       // let the user choose one campaign among user.getCampaigns()
+       // let us say that we choose campaign 'free':
        user.getCampaign('free').
          then(function (campaign) {
            // let the user choose one exercise among campaign.getExercisesSet()
            campaign.getExercise('some.exercise.name').
              then(function (exercise) {
-               // display stem of exercise and get user's answer:
-               exercise.sendFileAnswer("filename.c").
-                 then(function (job) {
-                   job.getReport().
+               exercise.getDescription().
+                 then(function (description) {
+                   // display stem of exercise and get user's answer:
+                   exercise.sendFileAnswer("some.filename").
                      then(function (job) {
-                       // display job.report
+                       // wait for the marking report:
+                       job.getReport().
+                         then(function (job) {
+                           // display job.report
 ```
 
 More details on the protocols and formats used to interact with the
@@ -1103,7 +1108,7 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
       Accept: "application/json"
     }
   });
-    return when.any([p1, p2]).then(function (response) {
+  return when.any([p1, p2]).then(function (response) {
     state.debug('getExercisesSet2', response);
     campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
     return when(campaign.exercisesSet);
