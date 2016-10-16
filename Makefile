@@ -35,7 +35,7 @@ spec/oefgc.tgz : Makefile spec/oefgc/fw4ex.xml
 # Caution: npm takes the whole directory that is . and not the sole
 # content of CodeGradXlib.tgz 
 
-publish : lint nsp+snyk clean
+publish : lint nsp+snyk bower.json clean
 	git status .
 	-git commit -m "NPM publication `date`" .
 	git push
@@ -58,6 +58,14 @@ REMOTE	=	www.paracamplus.com
 install : CodeGradXlib.tgz
 	rsync -avu CodeGradXlib.tgz \
 		${REMOTE}:/var/www/www.paracamplus.com/Resources/Javascript/
+
+# ############## bower
+
+bower.json : package.json
+	node npm2bower.js
+
+bower.registration :
+	node_modules/.bin/bower register codegradxlib https://github.com/ChristianQueinnec/CodeGradXlib.git
 
 # ############## Various experiments (not all finished)
 
