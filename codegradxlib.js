@@ -490,19 +490,24 @@ CodeGradX.checkStatusCode = function (response) {
   var state = CodeGradX.getCurrentState();
   state.debug('checkStatusCode1', response);
   //console.log(response);
+  var reasonRegExp = new RegExp("^(.|\n)*<reason>((.|\n)*)</reason>(.|\n)*$");
   function extractFW4EXerrorMessage (response) {
-    if ( /text\/xml/.exec(response.headers['Content-Type']) ) {
+      var contentType = response.headers['Content-Type'];
+    if ( /text\/xml/.exec(contentType) ) {
       //console.log(response.entity);
-      var reasonRegExp = new RegExp("^(.|\n)*<reason>((.|\n)*)</reason>(.|\n)*$");
       var reason = response.entity.replace(reasonRegExp, ": $2");
       return reason;
+    } else if ( /application\/json/.exec(contentType) ) {
+      var reason = response.entity.reason;
+      return reason;
+    } else {
+      return '';
     }
-    return '';
   }
   if ( response.status &&
        response.status.code &&
        response.status.code >= 300 ) {
-      var msg = "Bad HTTP code " + response.status.code +
+      var msg = "Bad HTTP code " + response.status.code + ' ' +
         extractFW4EXerrorMessage(response);
       state.debug('checkStatusCode2', msg);
       //console.log(response);
