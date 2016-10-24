@@ -492,13 +492,14 @@ CodeGradX.checkStatusCode = function (response) {
   //console.log(response);
   var reasonRegExp = new RegExp("^(.|\n)*<reason>((.|\n)*)</reason>(.|\n)*$");
   function extractFW4EXerrorMessage (response) {
-      var contentType = response.headers['Content-Type'];
+    var reason;
+    var contentType = response.headers['Content-Type'];
     if ( /text\/xml/.exec(contentType) ) {
       //console.log(response.entity);
-      var reason = response.entity.replace(reasonRegExp, ": $2");
+      reason = response.entity.replace(reasonRegExp, ": $2");
       return reason;
     } else if ( /application\/json/.exec(contentType) ) {
-      var reason = response.entity.reason;
+      reason = response.entity.reason;
       return reason;
     } else {
       return '';
