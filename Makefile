@@ -15,9 +15,10 @@ nsp+snyk :
 	node_modules/.bin/snyk test codegradxlib
 
 tests : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
+	jasmine spec/[0-8]*.js 2>&1 | tee /tmp/spec.log
 	@echo " tests require a running vmauthor..."
 	ping -c 3 xvmauthor.codegradx.org
-	jasmine 2>&1 | tee /tmp/spec.log
+	jasmine spec/9*.js 2>&1 | tee -a /tmp/spec.log
 	@echo "*** Report with         less /tmp/spec.log"
 
 spec/org.example.fw4ex.grading.check.tgz : spec/fw4ex.xml

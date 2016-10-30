@@ -40,6 +40,7 @@ describe('CodeGradX', function () {
       },
       x: {
         next: 1,
+        protocol: 'https',
         suffix: '/dbalive',
         0: {
         }

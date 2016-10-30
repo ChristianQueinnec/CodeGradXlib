@@ -242,6 +242,7 @@ CodeGradX.State = function (initializer) {
     x: {
       //next: 1,  // no next means that all possible servers are listed here:
       suffix: '/dbalive',
+      protocol: 'https',
       0: {
         host: 'x.paracamplus.com',
         enabled: false
@@ -364,6 +365,8 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   var description = descriptions[index];
   var host = description.host || (kind + index + state.servers.domain);
   description.host = host;
+  description.protocol = description.protocol || descriptions.protocol;
+  description.protocol = description.protocol || 'http';
   // Don't use that host while being checked:
   description.enabled = false;
   delete description.lastError;
@@ -378,7 +381,7 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
     description.lastError = reason;
     return when.reject(reason);
   }
-  var url = "http://" + host + descriptions.suffix;
+  var url = description.protocol + "://" + host + descriptions.suffix;
   state.debug('checkServer2', kind, index, url);
   var request = {
       path: url
@@ -597,7 +600,8 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
       var description = _.first(adescriptions);
       adescriptions = _.rest(adescriptions);
       newoptions = regenerateNewOptions(options);
-      newoptions.path = 'http://' + description.host + options.path;
+      newoptions.path = description.protocol + '://' +
+            description.host + options.path;
       newoptions.mixin = {
           withCredentials: true
       };

@@ -33,7 +33,7 @@ describe('CodeGradX', function () {
     expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
     state.currentUser.getCampaign('insta2-2016oct').then(function (campaign) {
         expect(campaign).toBeDefined();
-        console.log(campaign);//
+        //console.log(campaign);//
         campaign.getExercise('org.codegradx.js.gfilter.1')
             .then(function (exercise) {
                 expect(exercise).toBeDefined();

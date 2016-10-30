@@ -24,6 +24,7 @@ module.exports.initialize = function (state) {
     x: {
       //next: 1,
       suffix: '/dbalive',
+      protocol: 'http',
       0: {
         host: 'vmauthor.codegradx.org/x',
         enabled: false
