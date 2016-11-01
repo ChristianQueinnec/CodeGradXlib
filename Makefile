@@ -12,7 +12,7 @@ lint :
 
 nsp+snyk : 
 	node_modules/.bin/nsp check
-	node_modules/.bin/snyk test codegradxlib
+	-node_modules/.bin/snyk test codegradxlib
 
 tests : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
 	jasmine spec/[0-8]*.js 2>&1 | tee /tmp/spec.log
