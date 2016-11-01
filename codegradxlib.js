@@ -569,7 +569,8 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
                 return s.replace(/;.*$/, '');
             });
             cookies = _.filter(cookies, function (s) {
-                return /^(u=)?U/.exec(s);
+                s = s.replace(/^u=/, '');
+                return /^U/.exec(s);
             });
             return (state.currentCookie = cookies);
         }
