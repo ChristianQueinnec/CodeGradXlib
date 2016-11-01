@@ -1881,7 +1881,7 @@ CodeGradX.xml2html = function (s, options) {
         result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
       } else if ( tagname.match(/^mark$/) ) {
         var markOrig = CodeGradX._str2num(node.attributes.value);
-        var mark = markOrig * options.markFactor;
+        var mark = Math.round(markOrig * options.markFactor);
         result += '<span' + attributes + ' class="fw4ex_mark">' + 
               mark + '<!-- ' + markOrig;
       } else if ( tagname.match(/^section$/) ) {
