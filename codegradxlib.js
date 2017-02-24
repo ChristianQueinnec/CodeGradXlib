@@ -278,7 +278,7 @@ CodeGradX.State = function (initializer) {
       jobs: {} 
   };
   if ( _checkIfHTTPS() ) {
-      let protocol = 'https';
+      var protocol = 'https';
       this.servers.protocol = protocol;
       this.servers.a.protocol = this.servers.a.protocol || protocol;
       this.servers.e.protocol = this.servers.e.protocol || protocol;
