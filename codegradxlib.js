@@ -718,7 +718,8 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   }
   function tryRequesting (description) {
     var tryoptions = _.assign({}, newoptions);
-    tryoptions.path = 'http://' + description.host + options.path;
+    tryoptions.path = description.protocol + '://' +
+          description.host + options.path;
     if ( kind === 'e' ) {
         tryoptions.mixin = {
             withCredentials: true

@@ -62,6 +62,20 @@ install : CodeGradXlib.tgz
 	rsync -avu CodeGradXlib.tgz \
 		${REMOTE}:/var/www/www.paracamplus.com/Resources/Javascript/
 
+propagate :
+	npm install -g codegradxlib
+	cd ../CodeGradXagent    ; npm install -S codegradxlib
+	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
+	cd ../CodeGradXenroll   ; npm install -S codegradxlib
+	cd ../CodeGradXmarker   ; npm install -S codegradxlib
+	cd ../../Servers/p/Paracamplus-*/;    npm install -S codegradxlib
+	cd ../../Servers/p/Paracamplus-*/;    npm install -S codegradxenroll
+	cd ../../Servers/np/Paracamplus-*/;   npm install -S codegradxlib
+	cd ../../Servers/np/Paracamplus-*/;   npm install -S codegradxenroll
+	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxlib
+	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxenroll
+	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxmarker
+
 # ############## bower
 
 bower.json : package.json
