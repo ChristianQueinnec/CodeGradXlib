@@ -10,8 +10,10 @@ clean :
 lint :
 	jshint codegradxlib.js spec/*.js
 
-nsp+snyk : 
+nsp+snyk :
+	npm link nsp
 	node_modules/.bin/nsp check
+	npm link snyk
 	-node_modules/.bin/snyk test codegradxlib
 
 tests : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
