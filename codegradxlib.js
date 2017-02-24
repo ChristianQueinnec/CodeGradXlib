@@ -92,6 +92,18 @@ function _checkIsNode () {
 /* Are we running under Node.js */
 var isNode = _.memoize(_checkIsNode);
 
+function _checkIfHTTPS () {
+    /*jshint -W054 */
+    var code = "try {if (this===window) {return window.document.documentURI}}catch(e){return false;}";
+    var f = new Function(code);
+    var uri = f();
+    if ( uri ) {
+        // We are within a browser
+        return uri.match(/^https:/);
+    }
+    return false;
+}    
+
 CodeGradX._str2num = function (str) {
   if (!isNaN(str)) {
     str = str % 1 === 0 ? parseInt(str, 10) : parseFloat(str);
@@ -265,6 +277,9 @@ CodeGradX.State = function (initializer) {
   state.cache = {
       jobs: {} 
   };
+  if ( _checkIfHTTPS() ) {
+      this.servers.protocol = 'https';
+  }
   if ( _.isFunction(initializer) ) {
     state = initializer.call(state, state);
   }

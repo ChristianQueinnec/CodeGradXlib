@@ -34,7 +34,7 @@ describe('CodeGradX', function () {
     state.currentUser.getCampaign('insta2-2016oct').then(function (campaign) {
         expect(campaign).toBeDefined();
         //console.log(campaign);//
-        campaign.getExercise('org.codegradx.js.gfilter.1')
+        campaign.getExercise('org.codegradx.js.min3.3')
             .then(function (exercise) {
                 expect(exercise).toBeDefined();
                 campaign.getExercisesSet()
