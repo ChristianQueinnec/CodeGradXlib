@@ -1898,7 +1898,8 @@ CodeGradX.xml2html = function (s, options) {
       if ( ! mode.match(/ignore/) ) {
           var htmltext = '';
           var ch;
-          for ( ch in text.split('') ) {
+          var letters = text.split('');
+          for ( ch in letters ) {
               if ( special[ch] ) {
                   htmltext += special[ch];
               } else {
