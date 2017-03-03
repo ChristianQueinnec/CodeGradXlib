@@ -1607,7 +1607,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
           pathdir:   jspj.$.location,
           duration:  CodeGradX._str2num(jspj.$.duration),
           mark:      ( markFactor * CodeGradX._str2num(jspj.marking.$.mark)),
-          totalmark: ( markFactor * CodeGradX._str2num(jspj.marking.$.totalmark)),
+          totalMark: ( markFactor * CodeGradX._str2num(jspj.marking.$.totalMark)),
           archived:  CodeGradX._str2Date(jspj.marking.$.archived),
           started:   CodeGradX._str2Date(jspj.marking.$.started),
           ended:     CodeGradX._str2Date(jspj.marking.$.ended),
@@ -1779,8 +1779,8 @@ CodeGradX.ExercisesSet.prototype.getExerciseByIndex = function (index) {
 CodeGradX.Job = function (js) {
   _.assign(this, js);
   var markFactor = CodeGradX.xml2html.default.markFactor;
-  this.mark *= markFactor;
-  this.totalmark *= markFactor;
+  this.mark = NaN;
+  this.totalMark *= NaN;
 };
 
 /** Get the marking report of that Job. The marking report will be stored
@@ -1815,7 +1815,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     return when(job);
   });
   var promise2 = promise.then(function (response) {
-    // Fill archived, started, ended, finished, mark and totalmark
+    // Fill archived, started, ended, finished, mark and totalMark
     state.debug('getJobReport3', job);
     var markingRegExp = new RegExp("^(.|\n)*(<marking (.|\n)*?>)(.|\n)*$");
     var marking = response.entity.replace(markingRegExp, "$2");
@@ -1824,7 +1824,9 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     return CodeGradX.parsexml(marking).then(function (js) {
       //console.log(js);
       job.mark      = CodeGradX._str2num(js.marking.$.mark);
-      job.totalmark = CodeGradX._str2num(js.marking.$.totalmark);
+      job.mark      *= CodeGradX.xml2html.default.markFactor;
+      job.totalMark = CodeGradX._str2num(js.marking.$.totalMark);
+      job.totalMark *= CodeGradX.xml2html.default.markFactor;
       job.archived  = CodeGradX._str2Date(js.marking.$.archived);
       job.started   = CodeGradX._str2Date(js.marking.$.started);
       job.ended     = CodeGradX._str2Date(js.marking.$.ended);
@@ -1865,7 +1867,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
 CodeGradX.xml2html = function (s, options) {
   options = _.assign({}, CodeGradX.xml2html.default, options);
   var result = '';
-  var mark, totalmark;
+  var mark, totalMark;
   var mode = 'default';
   var questionCounter = 0, sectionLevel = 0;
   var htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
@@ -1885,10 +1887,25 @@ CodeGradX.xml2html = function (s, options) {
   parser.onerror = function (e) {
       throw e;
   };
+  let special = {
+      "'": "&apos;",
+      '"': "&quot;",
+      '<': "&lt;",
+      '>': "&gt;",
+      '&': "&amp;"
+  };
   parser.ontext= function (text) {
-    if ( ! mode.match(/ignore/) ) {
-      result += text;
-    }
+      if ( ! mode.match(/ignore/) ) {
+          let htmltext = '';
+          for ( ch of text ) {
+              if ( special[ch] ) {
+                  htmltext += special[ch];
+              } else {
+                  htmltext += ch;
+              }
+          }
+          result += htmltext;
+      }
   };
   parser.onopentag = function (node) {
       var tagname = node.name;
@@ -2021,7 +2038,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
                       label:     jsjob.$.label,
                       problem:   CodeGradX._str2num(jsjob.$.problem),
                       mark:      CodeGradX._str2num(jsjob.marking.$.mark),
-                      totalmark: CodeGradX._str2num(jsjob.marking.$.totalmark),
+                      totalMark: CodeGradX._str2num(jsjob.marking.$.totalMark),
                       started:   CodeGradX._str2Date(jsjob.marking.$.started),
                       finished:  CodeGradX._str2Date(jsjob.marking.$.finished)
                   });
