@@ -1887,7 +1887,7 @@ CodeGradX.xml2html = function (s, options) {
   parser.onerror = function (e) {
       throw e;
   };
-  let special = {
+  var special = {
       "'": "&apos;",
       '"': "&quot;",
       '<': "&lt;",
@@ -1896,8 +1896,9 @@ CodeGradX.xml2html = function (s, options) {
   };
   parser.ontext= function (text) {
       if ( ! mode.match(/ignore/) ) {
-          let htmltext = '';
-          for ( ch of text ) {
+          var htmltext = '';
+          var ch;
+          for ( ch in text.split('') ) {
               if ( special[ch] ) {
                   htmltext += special[ch];
               } else {
