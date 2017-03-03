@@ -76,6 +76,9 @@ propagate :
 	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxlib
 	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxenroll
 	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxmarker
+	cd ../../Servers/w.ncc/Paracamplus-*/; npm install -S codegradxlib
+	cd ../../Servers/w.ncc/Paracamplus-*/; npm install -S codegradxenroll
+	cd ../../Servers/w.ncc/Paracamplus-*/; npm install -S codegradxmarker
 
 # ############## bower
 

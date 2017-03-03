@@ -1897,9 +1897,9 @@ CodeGradX.xml2html = function (s, options) {
   parser.ontext= function (text) {
       if ( ! mode.match(/ignore/) ) {
           var htmltext = '';
-          var ch;
           var letters = text.split('');
-          for ( ch in letters ) {
+          for ( var i=0 ; i<letters.length ; i++ ) {
+              var ch = letters[i];
               if ( special[ch] ) {
                   htmltext += special[ch];
               } else {
