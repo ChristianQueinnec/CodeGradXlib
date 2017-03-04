@@ -1611,9 +1611,13 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
           archived:  CodeGradX._str2Date(jspj.marking.$.archived),
           started:   CodeGradX._str2Date(jspj.marking.$.started),
           ended:     CodeGradX._str2Date(jspj.marking.$.ended),
-          finished:  CodeGradX._str2Date(jspj.marking.$.finished)
+          finished:  CodeGradX._str2Date(jspj.marking.$.finished),
+          problem:   false  
           // partial marks TOBEDONE
         });
+        if ( jspj.$.problem ) {
+            job.problem = true;
+        }
         exercise.pseudojobs[name] = job;
       }
       var pseudojobs = js.pseudojobs.pseudojob;
@@ -1860,6 +1864,44 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   });
 };
 
+/** Get the problem report of that Job if it exists. The marking
+    report will be stored in the `XMLproblemReport` property. If no
+    problem report exists, the returned promise is rejected.
+
+  @param {Object} parameters - for repetition see sendRepeatedlyESServer.default
+  @returns {Promise} yields {Job}
+
+  */
+
+CodeGradX.Job.prototype.getProblemReport = function (parameters) {
+    parameters = parameters || {};
+    var job = this;
+    var state = CodeGradX.getCurrentState();
+    state.debug('getJobProblemReport1', job);
+    if ( ! job.problem ) {
+        return when.reject("No problem report");
+    }
+    if ( job.XMLproblemReport ) {
+        return when(job);
+    }
+    var path = job.pathdir + '/' + job.jobid + '_.xml';
+    var promise = state.sendRepeatedlyESServer('s', parameters, {
+        path: path,
+        method: 'GET',
+        headers: {
+            "Accept": "text/xml"
+        }
+    });
+    var promise1 = promise.then(function (response) {
+        //state.log.show();
+        //console.log(response);
+        state.debug('getJobProblemReport2', job);
+        job.XMLproblemReport = response.entity;
+        return when(job);
+    });
+    return promise1;
+};
+
 /** Conversion of texts (stems, reports) from XML to HTML.
     This function may be modified to accommodate your own desires.
 */
@@ -2038,12 +2080,15 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
                       jobid:     jsjob.$.jobid,
                       pathdir:   jsjob.$.location,
                       label:     jsjob.$.label,
-                      problem:   CodeGradX._str2num(jsjob.$.problem),
+                      problem:   false,
                       mark:      CodeGradX._str2num(jsjob.marking.$.mark),
                       totalMark: CodeGradX._str2num(jsjob.marking.$.totalMark),
                       started:   CodeGradX._str2Date(jsjob.marking.$.started),
                       finished:  CodeGradX._str2Date(jsjob.marking.$.finished)
                   });
+                  if ( jsjob.$.problem ) {
+                      job.problem = true;
+                  }
                   job.duration = (job.finished.getTime() - 
                                   job.started.getTime() )/1000; // seconds
                   state.cache.jobs[job.jobid] = job;
