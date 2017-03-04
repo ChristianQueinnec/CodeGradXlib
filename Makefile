@@ -1,6 +1,6 @@
 # CodeGradXlib
 
-work : lint doc tests
+work : lint tests
 clean :
 	-rm *~
 	-rm README.log README.tex

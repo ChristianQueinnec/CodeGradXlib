@@ -84,7 +84,7 @@ worthless to change the default setting.
 
 Then you must authenticate with respect to the CodeGradX
 infrastructure with a login and a password. To get this login and
-password, you must [register](http://codegradx.org/register).
+password, you must [register](http://p.paracamplus.com/).
 The authentication process returns a User object.
 
 The User object lists the Campaigns the User may access. A Campaign is
@@ -116,7 +116,10 @@ converter (named `CodeGradX.xml2html`) is included in the library.
 Users that are also potential authors of Exercises may submit a new exercise
 that is, a tar-gzipped file with a precise structure., An Exercise is then
 returned from which an author's report may be obtained telling whether the
-Exercise was deployed or not.
+Exercise was deployed or not. Grading reports must be valid XML document
+with respect to the grammar mentioned above. If the new exercise produces
+invalid document or if the grading scripts are erroneous a problem report
+can also be obtained from the job: see the `getProblemReport` method.
 
 Users may gather students' answers in a big tar gzipped file and submit
 all these answers against one Exercise in a Batch. A Batch object is

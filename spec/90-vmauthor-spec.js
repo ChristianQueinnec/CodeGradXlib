@@ -8,6 +8,7 @@ var vmauthor = require('./vmauthor-data.js');
 var vmauthData = require('./vmauth-data.json');
 
 describe('CodeGradX', function () {
+  CodeGradX.xml2html.default.markFactor = 1;
 
   function make_faildone (done) {
       return function faildone (reason) {
