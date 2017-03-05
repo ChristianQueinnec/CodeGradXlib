@@ -970,6 +970,44 @@ CodeGradX.User.prototype.getCampaign = function (name) {
   }
 };
 
+/** Fetch all the jobs submitted by the user.
+
+        @returns {Promise<Jobs>} yields {Array[Job]}
+
+ */
+
+CodeGradX.User.prototype.getAllJobs = function () {
+    var state = CodeGradX.getCurrentState();
+    var user = this;
+    state.debug('getAllJobs1', user);
+    return state.sendAXServer('x', {
+        path:   '/history/jobs',
+        method: 'GET',
+        headers: {
+            Accept: "application/json"
+        }
+    }).then(function (response) {
+        state.debug('getAllJobs2');
+        //console.log(response);
+        function normalizeUUID (uuid) {
+            var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
+            return uuid.replace(uuidRegexp, "$1-$2-$3-$4-$5");
+        }
+        function js2job (js) {
+            var markFactor = CodeGradX.xml2html.default.markFactor;
+            var job = new CodeGradX.Job(js);
+            job.jobid = normalizeUUID(js.uuid);
+            job.mark *= markFactor;
+            job.totalMark *= markFactor;
+            job.pathdir = '/s' + 
+                js.uuid.replace(/(.)/g, "/$1");
+            return job;
+        };
+        state.jobs = _.map(response.entity.jobs, js2job);
+        return when(state.jobs);
+    });
+};
+
 /** submit a new Exercise and return it as soon as submitted successfully.
     However fetching the ExerciseReport is started with the `parameters`
     repetition parameters.
@@ -1097,14 +1135,14 @@ CodeGradX.Campaign.prototype.getJobs = function () {
         var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
         return uuid.replace(uuidRegexp, "$1-$2-$3-$4-$5");
     }
-    state.jobs = _.map(response.entity.jobs, 
-                       function (js) {
-                           var job = new CodeGradX.Job(js);
-                           job.jobid = normalizeUUID(js.uuid);
-                           job.pathdir = '/s' + 
-                               js.uuid.replace(/(.)/g, "/$1");
-                           return job;
-                       });
+    function js2job (js) {
+        var job = new CodeGradX.Job(js);
+        job.jobid = normalizeUUID(js.uuid);
+        job.pathdir = '/s' + 
+            js.uuid.replace(/(.)/g, "/$1");
+        return job;
+    };
+    state.jobs = _.map(response.entity.jobs, js2job);
     return when(state.jobs);
   });
 };
@@ -1782,9 +1820,6 @@ CodeGradX.ExercisesSet.prototype.getExerciseByIndex = function (index) {
 
 CodeGradX.Job = function (js) {
   _.assign(this, js);
-  var markFactor = CodeGradX.xml2html.default.markFactor;
-  this.mark = NaN;
-  this.totalMark *= NaN;
 };
 
 /** Get the marking report of that Job. The marking report will be stored
