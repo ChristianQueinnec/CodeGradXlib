@@ -1002,7 +1002,7 @@ CodeGradX.User.prototype.getAllJobs = function () {
             job.pathdir = '/s' + 
                 js.uuid.replace(/(.)/g, "/$1");
             return job;
-        };
+        }
         state.jobs = _.map(response.entity.jobs, js2job);
         return when(state.jobs);
     });
@@ -1141,7 +1141,7 @@ CodeGradX.Campaign.prototype.getJobs = function () {
         job.pathdir = '/s' + 
             js.uuid.replace(/(.)/g, "/$1");
         return job;
-    };
+    }
     state.jobs = _.map(response.entity.jobs, js2job);
     return when(state.jobs);
   });
