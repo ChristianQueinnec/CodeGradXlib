@@ -1237,6 +1237,7 @@ CodeGradX.Campaign.prototype.getExercise = function (name) {
     @property {XMLstring} XMLstem - raw XML stem
     @property {string} stem - default HTML translation of the XML stem
     @property {Object} expectations - files expected in student's answer
+    @property {Object} equipment - files to be given to the student
 
     This field may be present if there is a single file in expectations:
 
@@ -1317,7 +1318,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     return when(response);
   });
   var promise4 = promise.then(function (response) {
-    // If only one question expecting one file, retrieve its name:
+    // If only one question expecting only one file, retrieve its name:
     state.debug('getDescription5');
     var expectationsRegExp =
           new RegExp("<expectations>(.|\n)*</expectations>", "g");
@@ -1436,6 +1437,56 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
     headers: headers,
     entity: content
   }).then(processResponse);
+};
+
+/** Send the content of a file selected by an input:file widget in the
+ * browser. Returns a Job on which you may invoke the `getReport` method.
+
+      @param {DOM} input type=file DOM element
+      @returns {Promise<Job>} yields {Job}
+*/
+
+CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
+    var exercise = this;
+    var state = CodeGradX.getCurrentState();
+    state.debug('sendZipFileAnswer1', FW4EX.currentZipFileName);
+    if ( ! exercise.safecookie ) {
+        return when.reject("Non deployed exercise " + exercise.name);
+    }
+    function processResponse (response) {
+        //console.log(response);
+        state.debug('sendZipFileAnswer2', response);
+        return CodeGradX.parsexml(response.entity).then(function (js) {
+            //console.log(js);
+            state.debug('sendZipFileAnswer3', js);
+            js = js.fw4ex.jobSubmittedReport;
+            exercise.uuid = js.exercise.$.exerciseid;
+            var job = new CodeGradX.Job({
+                exercise: exercise,
+                content: FW4EX.currentZipFileName,
+                responseXML: response.entity,
+                response: js,
+                personid: CodeGradX._str2num(js.person.$.personid),
+                archived: CodeGradX._str2Date(js.job.$.archived),
+                jobid:    js.job.$.jobid,
+                pathdir:  js.$.location
+            });
+            return when(job);
+        });
+    }
+    var basefilename = FW4EX.currentZipFileName.replace(new RegExp("^.*/"), '');
+    var headers = {
+        "Content-Type": "multipart/form-data",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Accept": 'text/xml'
+    };
+    var fd = new FormData(form);
+    return state.sendAXServer('a', {
+        path: ('/exercise/' + exercise.safecookie + '/job'),
+        method: "POST",
+        headers: headers,
+        entity: fd
+    }).then(processResponse);
 };
 
 /** Send the content of a file as the proposed solution to an Exercise.
