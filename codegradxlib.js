@@ -1442,8 +1442,12 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
 /** Send the content of a file selected by an input:file widget in the
  * browser. Returns a Job on which you may invoke the `getReport` method.
 
-      @param {DOM} input type=file DOM element
+      @param {DOM} form DOM element
       @returns {Promise<Job>} yields {Job}
+
+The form DOM element must contain an <input type='file' name='content'>
+element.
+
 */
 
 CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
