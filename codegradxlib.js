@@ -406,6 +406,19 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   var request = {
       path: url
   };
+  if ( state.currentCookie ) {
+      if ( isNode() ) {
+          if ( ! request.headers ) {
+              request.headers = {};
+          }
+          request.headers.Cookie = state.currentCookie;
+      } else {
+          if ( ! document.cookie.indexOf(state.currentCookie) ) {
+              document.cookie = state.currentCookie + ";path='/';";
+              request.headers['X-FW4EX-Cookie'] = state.currentCookie;
+          }
+      }
+  }
   if ( kind !== 's' ) {
       request.mixin = {
           withCredentials: true
@@ -566,8 +579,15 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   function regenerateNewOptions (options) {
       var newoptions = _.assign({}, options);
       newoptions.headers = newoptions.headers || {};
-      if ( isNode() && state.currentCookie ) {
-          newoptions.headers.Cookie = state.currentCookie;
+      if ( state.currentCookie ) {
+          if ( isNode() ) {
+              newoptions.headers.Cookie = state.currentCookie;
+          } else {
+              if ( ! document.cookie.indexOf(state.currentCookie) ) {
+                  document.cookie = state.currentCookie + ";path='/';";
+                  newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
+              }
+          }
       }
       return newoptions;
   }
@@ -693,8 +713,15 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   state.debug('sendESServer1', kind, options);
   var newoptions = _.assign({}, options);
   newoptions.headers = _.assign({}, options.headers);
-  if ( isNode() && state.currentCookie ) {
-      newoptions.headers.Cookie = state.currentCookie;
+  if ( state.currentCookie ) {
+      if ( isNode() ) {
+          newoptions.headers.Cookie = state.currentCookie;
+      } else {
+          if ( ! document.cookie.indexOf(state.currentCookie) ) {
+              document.cookie = state.currentCookie + ";path='/';";
+              newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
+          }
+      }
   }
   function getActiveServers () {
     state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
@@ -1317,11 +1344,17 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     exercise.stem = CodeGradX.xml2html(content);
     return when(response);
   });
+  var promise5 = promise.then(function (response) {
+      // extract equipment
+      state.debug("getDescription5", response);
+      exercise.equipment = extractEquipment(response.entity);
+      return when(response);
+  });
   var promise4 = promise.then(function (response) {
     // If only one question expecting only one file, retrieve its name:
     state.debug('getDescription5');
     var expectationsRegExp =
-          new RegExp("<expectations>(.|\n)*</expectations>", "g");
+          new RegExp("<expectations>(.|\n)*?</expectations>", "g");
     function concat (s1, s2) {
       return s1 + s2;
     }
@@ -1339,10 +1372,28 @@ CodeGradX.Exercise.prototype.getDescription = function () {
       return when(response);
     });
   });
-  return when.join(promise2, promise3, promise4).then(function (values) {
-    return promise1;
+  return when.join(promise2, promise3, promise4, promise5)
+        .then(function (values) {
+            return promise1;
   });
 };
+
+function extractEquipment (s) {
+    var equipmentRegExp = new RegExp("^(.|\n)*(<equipment>(.|\n)*?</equipment>)(.|\n)*$");
+    var content = s.replace(equipmentRegExp, "$2");
+    var result = [];
+    try {
+        var parser = new xml2js.Parser({
+            explicitArray: false,
+            trim: true
+        });
+        parser.parseString(xml, function (err, result) {
+
+        });
+    } catch (e) {
+    }
+    return result;
+}
 
 /** Promisify an XML to Javascript converter.
 
