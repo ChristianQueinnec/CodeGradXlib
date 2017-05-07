@@ -92,7 +92,7 @@ function _checkIsNode () {
 /* Are we running under Node.js */
 var isNode = _.memoize(_checkIsNode);
 
-function _checkIfHTTPS () {
+FW4EX.checkIfHTTPS = function () {
     /*jshint -W054 */
     var code = "try {if (this===window) {return window.document.documentURI}}catch(e){return false;}";
     var f = new Function(code);
@@ -102,7 +102,7 @@ function _checkIfHTTPS () {
         return uri.match(/^https:/);
     }
     return false;
-}    
+};
 
 CodeGradX._str2num = function (str) {
   if (!isNaN(str)) {
@@ -277,7 +277,7 @@ CodeGradX.State = function (initializer) {
   state.cache = {
       jobs: {} 
   };
-  if ( _checkIfHTTPS() ) {
+  if ( FW4EX.checkIfHTTPS() ) {
       var protocol = 'https';
       this.servers.protocol = protocol;
       this.servers.a.protocol = this.servers.a.protocol || protocol;
@@ -386,7 +386,9 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   var host = description.host || (kind + index + state.servers.domain);
   description.host = host;
   description.protocol = description.protocol || descriptions.protocol;
-  description.protocol = description.protocol || 'http';
+  description.protocol = description.protocol ||
+        // Guess the protocol to make 'Upgrade Insecure Request' happy:
+        FW4EX.checkIfHTTPS() ? 'https' : 'http';
   // Don't use that host while being checked:
   description.enabled = false;
   delete description.lastError;
