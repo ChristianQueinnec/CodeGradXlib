@@ -263,6 +263,8 @@ CodeGradX.State = function (initializer) {
     s: {
       next: 1,
       suffix: '/index.txt',
+      // reports are not confidential:
+      protocol: 'http',
       0: {
         enabled: false
       }
