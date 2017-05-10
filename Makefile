@@ -48,7 +48,7 @@ publish : lint nsp+snyk bower.json clean
 	cp -pf tmp/CodeGradXlib/package.json .
 	rm -rf tmp
 	npm install -g codegradxlib
-#	m propagate
+	m propagate
 
 CodeGradXlib.tgz :
 	-rm -rf tmp

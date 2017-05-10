@@ -1410,7 +1410,7 @@ CodeGradX.Exercise.prototype.getEquipmentFile = function (file) {
         console.log(reason);
         return when.reject(reason);
     });
-}
+};
 
 /** Convert an XML fragment describing directories and files into
     pathnames. For instance,
@@ -1435,11 +1435,13 @@ function extractEquipment (exercise, s) {
     var content = s.replace(equipmentRegExp, "$2");
     function flatten (o, dir) {
         if ( _.isArray(o) ) {
-            return [].concat.call(null, o.map((o) => flatten(o, dir)));
+            return [].concat.call(null, o.map(function (o) {
+                return flatten(o, dir);
+            }));
         } else if ( o.file ) {
             return [dir + '/' + o.file.$.basename];
         } else if ( o.directory ) {
-            let newdir = dir + '/' + o.directory.$.basename;
+            var newdir = dir + '/' + o.directory.$.basename;
             return flatten(o.directory, newdir);
         }
     }
