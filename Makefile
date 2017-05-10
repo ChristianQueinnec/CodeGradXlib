@@ -47,6 +47,7 @@ publish : lint nsp+snyk bower.json clean
 	cd tmp/CodeGradXlib/ && npm version patch && npm publish
 	cp -pf tmp/CodeGradXlib/package.json .
 	rm -rf tmp
+	npm install -g codegradxlib
 #	m propagate
 
 CodeGradXlib.tgz :
@@ -64,24 +65,16 @@ install : CodeGradXlib.tgz
 		${REMOTE}:/var/www/www.paracamplus.com/Resources/Javascript/
 
 propagate :
-	npm install -g codegradxlib
 	cd ../CodeGradXagent    ; npm install -S codegradxlib
-	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
+	cd ../CodeGradXvmauthor ; npm install -S codegradxagent
 	cd ../CodeGradXenroll   ; npm install -S codegradxlib
+	cd ../CodeGradXmarker   ; npm install -S yasmini
 	cd ../CodeGradXmarker   ; npm install -S codegradxlib
-	cd ../../Servers/p/Paracamplus-*/;    npm install -S codegradxlib
-	cd ../../Servers/p/Paracamplus-*/;    npm install -S codegradxenroll
-	cd ../../Servers/np/Paracamplus-*/;   npm install -S codegradxlib
-	cd ../../Servers/np/Paracamplus-*/;   npm install -S codegradxenroll
-	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxlib
-	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxenroll
-	cd ../../Servers/w.js/Paracamplus-*/; npm install -S codegradxmarker
-	cd ../../Servers/w.cc/Paracamplus-*/; npm install -S codegradxlib
-	cd ../../Servers/w.cc/Paracamplus-*/; npm install -S codegradxenroll
-	cd ../../Servers/w.cc/Paracamplus-*/; npm install -S codegradxmarker
-	cd ../../Servers/w.ncc/Paracamplus-*/; npm install -S codegradxlib
-	cd ../../Servers/w.ncc/Paracamplus-*/; npm install -S codegradxenroll
-	cd ../../Servers/w.ncc/Paracamplus-*/; npm install -S codegradxmarker
+	cd ../../Servers/p/Paracamplus-*/;     m refresh.codegradx
+	cd ../../Servers/np/Paracamplus-*/;    m refresh.codegradx
+	cd ../../Servers/w.js/Paracamplus-*/;  m refresh.codegradx
+	cd ../../Servers/w.cc/Paracamplus-*/;  m refresh.codegradx
+	cd ../../Servers/w.ncc/Paracamplus-*/; m refresh.codegradx
 
 # ############## bower
 

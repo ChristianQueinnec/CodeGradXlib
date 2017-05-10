@@ -1313,6 +1313,8 @@ CodeGradX.Exercise.prototype.getDescription = function () {
   var promise1 = promise.then(function (response) {
     state.debug('getDescription2', response);
     //console.log(response);
+    exercise.server = response.url.replace(
+        new RegExp('^(https?://[^/]+)/.*$'), "$1");
     exercise._XMLdescription = response.entity;
     function parseXML (description) {
       state.debug('getDescription2b', description);
@@ -1351,7 +1353,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
   var promise5 = promise.then(function (response) {
       // extract equipment
       state.debug("getDescription5", response);
-      exercise.equipment = extractEquipment(response.entity);
+      extractEquipment(exercise, response.entity);
       return when(response);
   });
   var promise4 = promise.then(function (response) {
@@ -1382,21 +1384,79 @@ CodeGradX.Exercise.prototype.getDescription = function () {
   });
 };
 
-function extractEquipment (s) {
-    var equipmentRegExp = new RegExp("^(.|\n)*(<equipment>(.|\n)*?</equipment>)(.|\n)*$");
-    var content = s.replace(equipmentRegExp, "$2");
-    var result = [];
-    try {
-        var parser = new xml2js.Parser({
-            explicitArray: false,
-            trim: true
-        });
-        parser.parseString(xml, function (err, result) {
+/** Get an equipment file that is a file needed by the students
+    and stored in the exercise.
+    
+    @param {string} file - the name of the file
+    @returns {Promise<>} 
 
-        });
-    } catch (e) {
+*/
+
+CodeGradX.Exercise.prototype.getEquipmentFile = function (file) {
+    var exercise = this;
+    var state = CodeGradX.getCurrentState();
+    state.debug('getEquipmentFile1', exercise, file);
+    if ( ! exercise.safecookie ) {
+        return when.reject("Non deployed exercise " + exercise.name);
     }
-    return result;
+    var promise = state.sendESServer('e', {
+        path: ('/exercisecontent/' + exercise.safecookie + '/path' + file),
+        method: 'GET',
+        headers: {
+            Accept: "*/*"
+        }
+    });
+    return promise.catch(function (reason) {
+        console.log(reason);
+        return when.reject(reason);
+    });
+}
+
+/** Convert an XML fragment describing directories and files into
+    pathnames. For instance,
+
+    <equipment>
+      <file basename='foo'/>
+      <directory basename='bar'>
+        <file basename='hux'/>
+        <file basename='wek'/>
+      </directory>
+    </equipment>
+
+   will be converted into 
+    
+    [ '/foo', '/bar/hux', '/bar/wek']
+
+*/
+
+function extractEquipment (exercise, s) {
+    var equipmentRegExp = new RegExp(
+        "^(.|\n)*(<equipment>\s*(.|\n)*?\s*</equipment>)(.|\n)*$");
+    var content = s.replace(equipmentRegExp, "$2");
+    function flatten (o, dir) {
+        if ( _.isArray(o) ) {
+            return [].concat.call(null, o.map((o) => flatten(o, dir)));
+        } else if ( o.file ) {
+            return [dir + '/' + o.file.$.basename];
+        } else if ( o.directory ) {
+            let newdir = dir + '/' + o.directory.$.basename;
+            return flatten(o.directory, newdir);
+        }
+    }
+    exercise.equipment = [];
+    if ( content.length > 0 ) {
+        try {
+            var parser = new xml2js.Parser({
+                explicitArray: false,
+                trim: true
+            });
+            parser.parseString(content, function (err, result) {
+                exercise.equipment = flatten(result.equipment, '');
+            });
+        } catch (e) {
+        }
+    }
+    return exercise;
 }
 
 /** Promisify an XML to Javascript converter.
