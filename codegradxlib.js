@@ -1367,7 +1367,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     }
     var files = _.reduce(response.entity.match(expectationsRegExp), concat);
     if ( files ) {
-        var expectations = `<div>${files}</div>`;
+        var expectations = '<div>' + files + '</div>';
         return CodeGradX.parsexml(expectations).then(function (result) {
             state.debug('getDescription5a');
             if ( _.isArray(result.div.expectations.file) ) {
