@@ -284,11 +284,11 @@ CodeGradX.State = function (initializer) {
   }
   if ( CodeGradX.checkIfHTTPS() ) {
       var protocol = 'https';
-      this.servers.protocol = protocol;
-      this.servers.a.protocol = this.servers.a.protocol || protocol;
-      this.servers.e.protocol = this.servers.e.protocol || protocol;
-      this.servers.s.protocol = this.servers.s.protocol || protocol;
-      this.servers.x.protocol = this.servers.x.protocol || protocol;
+      state.servers.protocol = protocol;
+      state.servers.a.protocol = state.servers.a.protocol || protocol;
+      state.servers.e.protocol = state.servers.e.protocol || protocol;
+      state.servers.s.protocol = state.servers.s.protocol || protocol;
+      state.servers.x.protocol = state.servers.x.protocol || protocol;
   }
   // Make the state global
   CodeGradX.getCurrentState = function () {

@@ -66,6 +66,7 @@ install : CodeGradXlib.tgz
 
 propagate :
 	cd ../CodeGradXagent    ; npm install -S codegradxlib
+	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
 	cd ../CodeGradXvmauthor ; npm install -S codegradxagent
 	cd ../CodeGradXenroll   ; npm install -S codegradxlib
 	cd ../CodeGradXmarker   ; npm install -S yasmini
