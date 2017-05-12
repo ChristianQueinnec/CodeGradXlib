@@ -1365,21 +1365,27 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     function concat (s1, s2) {
         return s1 + s2;
     }
-    var expectations =
-        '<div>' +
-        _.reduce(response.entity.match(expectationsRegExp), concat) +
-        '</div>';
-    return CodeGradX.parsexml(expectations).then(function (result) {
-        state.debug('getDescription5a');
-        if ( _.isArray(result.div.expectations.file) ) {
-            // to be done. Maybe ? Why ?
-        } else {
-            //console.log(result.div.expectations);
-            exercise.expectations = result.div.expectations;
-            exercise.inlineFileName = result.div.expectations.file.$.basename;
-        }
+    var files = _.reduce(response.entity.match(expectationsRegExp), concat);
+    if ( files ) {
+        var expectations = `<div>${files}</div>`;
+        return CodeGradX.parsexml(expectations).then(function (result) {
+            state.debug('getDescription5a');
+            if ( _.isArray(result.div.expectations.file) ) {
+                // to be done. Maybe ? Why ?
+            } else {
+                //console.log(result.div.expectations);
+                exercise.expectations = result.div.expectations;
+                exercise.inlineFileName = result.div.expectations.file.$.basename;
+            }
+            return when(response);
+        }).catch(function (reason) {
+            exercise.expectations = [];
+            return when(response);
+        });
+    } else {
+        exercise.expectations = [];
         return when(response);
-    });
+    }
   });
   return when.join(promise2, promise3, promise4, promise5)
         .then(function (values) {
