@@ -279,6 +279,9 @@ CodeGradX.State = function (initializer) {
   state.cache = {
       jobs: {} 
   };
+  if ( _.isFunction(initializer) ) {
+    state = initializer.call(state, state);
+  }
   if ( CodeGradX.checkIfHTTPS() ) {
       var protocol = 'https';
       this.servers.protocol = protocol;
@@ -286,9 +289,6 @@ CodeGradX.State = function (initializer) {
       this.servers.e.protocol = this.servers.e.protocol || protocol;
       this.servers.s.protocol = this.servers.s.protocol || protocol;
       this.servers.x.protocol = this.servers.x.protocol || protocol;
-  }
-  if ( _.isFunction(initializer) ) {
-    state = initializer.call(state, state);
   }
   // Make the state global
   CodeGradX.getCurrentState = function () {
