@@ -1258,6 +1258,7 @@ CodeGradX.Campaign.prototype.getExercise = function (name) {
     @property {string} safecookie - long crypted identifier
     @property {string} summary - single sentence qualifying the Exercise
     @property {Array<string>} tags - Array of tags categorizing the Exercise.
+    @property {string} server - base URL of the server that served the exercise
 
     The `getDescription()` method completes the description of an Exercise
     with the following fields:
@@ -1360,22 +1361,24 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     // If only one question expecting only one file, retrieve its name:
     state.debug('getDescription5');
     var expectationsRegExp =
-          new RegExp("<expectations>(.|\n)*?</expectations>", "g");
+        new RegExp("<expectations>(.|\n*?)</expectations>", "g");
     function concat (s1, s2) {
-      return s1 + s2;
+        return s1 + s2;
     }
     var expectations =
-    '<div>' +
-    _.reduce(response.entity.match(expectationsRegExp), concat) +
-    '</div>';
+        '<div>' +
+        _.reduce(response.entity.match(expectationsRegExp), concat) +
+        '</div>';
     return CodeGradX.parsexml(expectations).then(function (result) {
-      state.debug('getDescription5a');
-      if ( result.div.expectations ) {
-        //console.log(result.div.expectations);
-        exercise.expectations = result.div.expectations;
-        exercise.inlineFileName = result.div.expectations.file.$.basename;
-      }
-      return when(response);
+        state.debug('getDescription5a');
+        if ( _.isArray(result.div.expectations.file) ) {
+            // to be done. Maybe ? Why ?
+        } else {
+            //console.log(result.div.expectations);
+            exercise.expectations = result.div.expectations;
+            exercise.inlineFileName = result.div.expectations.file.$.basename;
+        }
+        return when(response);
     });
   });
   return when.join(promise2, promise3, promise4, promise5)
@@ -1415,6 +1418,27 @@ CodeGradX.Exercise.prototype.getEquipmentFile = function (file) {
 /** Convert an XML fragment describing directories and files into
     pathnames. For instance,
 
+    <expectations>
+      <file basename='foo'/>
+      <directory basename='bar'>
+        <file basename='hux'/>
+        <file basename='wek'/>
+      </directory>
+    </expectations>
+
+   will be converted into 
+    
+    [ '/foo', '/bar/hux', '/bar/wek']
+
+*/
+
+function extractExpectations (exercice, s) {
+    return exercise;
+}
+
+/** Convert an XML fragment describing directories and files into
+    pathnames. For instance,
+
     <equipment>
       <file basename='foo'/>
       <directory basename='bar'>
@@ -1439,7 +1463,11 @@ function extractEquipment (exercise, s) {
                 return flatten(o, dir);
             }));
         } else if ( o.file ) {
-            return [dir + '/' + o.file.$.basename];
+            if ( o.file.$.hidden ) {
+                return [];
+            } else {
+                return [dir + '/' + o.file.$.basename];
+            }
         } else if ( o.directory ) {
             var newdir = dir + '/' + o.directory.$.basename;
             return flatten(o.directory, newdir);
