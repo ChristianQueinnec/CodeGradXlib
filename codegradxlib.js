@@ -1361,12 +1361,13 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     // If only one question expecting only one file, retrieve its name:
     state.debug('getDescription5');
     var expectationsRegExp =
-        new RegExp("<expectations>(.|\n*?)</expectations>", "g");
+        new RegExp("<expectations>((.|\n)*?)</expectations>", "g");
     function concat (s1, s2) {
         return s1 + s2;
     }
-    var files = _.reduce(response.entity.match(expectationsRegExp), concat);
-    if ( files ) {
+    var expectationss = response.entity.match(expectationsRegExp);
+    if ( expectationss ) {
+        var files = _.reduce(expectationss, concat);
         var expectations = '<div>' + files + '</div>';
         return CodeGradX.parsexml(expectations).then(function (result) {
             state.debug('getDescription5a');
