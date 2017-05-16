@@ -1851,17 +1851,24 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
           jobid:     jspj.$.jobid,
           pathdir:   jspj.$.location,
           duration:  CodeGradX._str2num(jspj.$.duration),
-          mark:      ( markFactor * CodeGradX._str2num(jspj.marking.$.mark)),
-          totalMark: ( markFactor * CodeGradX._str2num(jspj.marking.$.totalMark)),
-          archived:  CodeGradX._str2Date(jspj.marking.$.archived),
-          started:   CodeGradX._str2Date(jspj.marking.$.started),
-          ended:     CodeGradX._str2Date(jspj.marking.$.ended),
-          finished:  CodeGradX._str2Date(jspj.marking.$.finished),
           problem:   false  
           // partial marks TOBEDONE
         });
+        if ( jspj.marking ) {
+            job.mark = markFactor *
+                CodeGradX._str2num(jspj.marking.$.mark);
+            job.totalMark = markFactor *
+                CodeGradX._str2num(jspj.marking.$.totalMark);
+            job.archived = CodeGradX._str2Date(jspj.marking.$.archived);
+            job.started = CodeGradX._str2Date(jspj.marking.$.started);
+            job.ended = CodeGradX._str2Date(jspj.marking.$.ended);
+            job.finished = CodeGradX._str2Date(jspj.marking.$.finished);
+        }
         if ( jspj.$.problem ) {
             job.problem = true;
+            if ( jspj.report ) {
+                job.problem = jspj.report;
+            }
         }
         exercise.pseudojobs[name] = job;
       }
