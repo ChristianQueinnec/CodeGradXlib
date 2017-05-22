@@ -16,12 +16,21 @@ nsp+snyk :
 	npm link snyk
 	-node_modules/.bin/snyk test codegradxlib
 
-tests : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
-	jasmine spec/[0-8]*.js 2>&1 | tee /tmp/spec.log
+tests : test.with.real.servers test.with.vmauthor
+
+test.with.real.servers :
+	jasmine spec/[0-7]*.js 2>&1 | tee /tmp/spec.log
+
+test.with.vmauthor : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
 	@echo " tests require a running vmauthor..."
 	ping -c 3 xvmauthor.codegradx.org
+	export NODE_TLS_REJECT_UNAUTHORIZED=0 ;\
 	jasmine spec/9*.js 2>&1 | tee -a /tmp/spec.log
 	@echo "*** Report with         less /tmp/spec.log"
+
+test.batch.with.real.servers : spec/org.example.fw4ex.grading.check.tgz
+test.batch.with.real.servers : spec/oefgc.tgz
+	jasmine spec/8*.js 2>&1 | tee /tmp/spec.log
 
 spec/org.example.fw4ex.grading.check.tgz : spec/fw4ex.xml
 	cd spec/ && tar czf org.example.fw4ex.grading.check.tgz ./fw4ex.xml
@@ -66,8 +75,8 @@ install : CodeGradXlib.tgz
 
 propagate :
 	cd ../CodeGradXagent    ; npm install -S codegradxlib
-	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
 	cd ../CodeGradXvmauthor ; npm install -S codegradxagent
+	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
 	cd ../CodeGradXenroll   ; npm install -S codegradxlib
 	cd ../CodeGradXmarker   ; npm install -S yasmini
 	cd ../CodeGradXmarker   ; npm install -S codegradxlib
