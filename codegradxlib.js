@@ -411,6 +411,7 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
       path: url
   };
   if ( state.currentCookie ) {
+      request.headers['X-FW4EX-Cookie'] = state.currentCookie;
       if ( isNode() ) {
           if ( ! request.headers ) {
               request.headers = {};
@@ -419,7 +420,6 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
       } else {
           if ( ! document.cookie.indexOf(state.currentCookie) ) {
               document.cookie = state.currentCookie + ";path='/';";
-              request.headers['X-FW4EX-Cookie'] = state.currentCookie;
           }
       }
   }
@@ -584,12 +584,12 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
       var newoptions = _.assign({}, options);
       newoptions.headers = newoptions.headers || {};
       if ( state.currentCookie ) {
+          newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
           if ( isNode() ) {
               newoptions.headers.Cookie = state.currentCookie;
           } else {
               if ( ! document.cookie.indexOf(state.currentCookie) ) {
                   document.cookie = state.currentCookie + ";path='/';";
-                  newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
               }
           }
       }
@@ -718,12 +718,12 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   var newoptions = _.assign({}, options);
   newoptions.headers = _.assign({}, options.headers);
   if ( state.currentCookie ) {
+      newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
       if ( isNode() ) {
           newoptions.headers.Cookie = state.currentCookie;
       } else {
           if ( ! document.cookie.indexOf(state.currentCookie) ) {
               document.cookie = state.currentCookie + ";path='/';";
-              newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
           }
       }
   }
