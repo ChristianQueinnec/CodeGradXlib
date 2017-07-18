@@ -411,11 +411,11 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
       path: url
   };
   if ( state.currentCookie ) {
+      if ( ! request.headers ) {
+          request.headers = {};
+      }
       request.headers['X-FW4EX-Cookie'] = state.currentCookie;
       if ( isNode() ) {
-          if ( ! request.headers ) {
-              request.headers = {};
-          }
           request.headers.Cookie = state.currentCookie;
       } else {
           if ( ! document.cookie.indexOf(state.currentCookie) ) {
