@@ -1,6 +1,6 @@
 {
   "name": "codegradxlib",
-  "version": "1.0.56",
+  "version": "1.0.57",
   "description": "Javascript Library to interact with the CodeGradX infrastructure. Runs on Node.js or within browsers",
   "keywords": [
     "CodeGradX",
@@ -26,6 +26,7 @@
     "xml2js": "^0.4.17"
   },
   "devDependencies": {
+    "gulp": "^3.9.1",
     "jasmine": "^2.3.2",
     "jshint": "^2.8",
     "nsp": "^2.6",

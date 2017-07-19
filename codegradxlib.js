@@ -414,7 +414,9 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
       if ( ! request.headers ) {
           request.headers = {};
       }
-      request.headers['X-FW4EX-Cookie'] = state.currentCookie;
+      if ( kind !== 's' ) {
+          request.headers['X-FW4EX-Cookie'] = state.currentCookie;
+      }
       if ( isNode() ) {
           request.headers.Cookie = state.currentCookie;
       } else {
@@ -584,7 +586,7 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
       var newoptions = _.assign({}, options);
       newoptions.headers = newoptions.headers || {};
       if ( state.currentCookie ) {
-          newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
+          //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
           if ( isNode() ) {
               newoptions.headers.Cookie = state.currentCookie;
           } else {
@@ -718,7 +720,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   var newoptions = _.assign({}, options);
   newoptions.headers = _.assign({}, options.headers);
   if ( state.currentCookie ) {
-      newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
+      //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
       if ( isNode() ) {
           newoptions.headers.Cookie = state.currentCookie;
       } else {
