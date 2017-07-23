@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-07-23 18:35:50 queinnec"
+// Time-stamp: "2017-07-23 18:40:46 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1433,7 +1433,9 @@ function extractIdentification (exercise, s) {
         var summary = content.replace(summaryRegExp, "$2");
         exercise.summary = CodeGradX.xml2html(summary);
         if ( _.isArray(result.tags.tag) ) {
-            exercise.tags = result.tags.tag.map(tag => tag.$.name);
+            exercise.tags = result.tags.tag.map(function (tag) {
+                return tag.$.name;
+            });
         } else {
             exercise.tags = [result.tags.tag.$.name];
         }
