@@ -1,6 +1,7 @@
-/**
+// CodeGradXlib
+// Time-stamp: "2017-07-23 18:35:50 queinnec"
 
-Javascript Library to interact with the CodeGradX infrastructure.
+/** Javascript Library to interact with the CodeGradX infrastructure.
 
 ## Installation
 
@@ -57,7 +58,7 @@ CodeGradX infrastructure can be found in the documentation of
 // - name differently methods returning a Promise from others
 
 
-function CodeGradX () {}
+var CodeGradX = {};
 
   /** Export the `CodeGradX` object */
 module.exports = CodeGradX;
@@ -1297,103 +1298,87 @@ CodeGradX.Exercise = function (json) {
        */
 
 CodeGradX.Exercise.prototype.getDescription = function () {
-  var exercise = this;
-  var state = CodeGradX.getCurrentState();
-  state.debug('getDescription1', exercise);
-  if ( exercise._description ) {
-    return when(exercise._description);
-  }
-  if ( ! exercise.safecookie ) {
-    return when.reject("Non deployed exercise " + exercise.name);
-  }
-  var promise = state.sendESServer('e', {
-    path: ('/exercisecontent/' + exercise.safecookie + '/content'),
-    method: 'GET',
-    headers: {
-      Accept: "text/xml"
+    var exercise = this;
+    var state = CodeGradX.getCurrentState();
+    state.debug('getDescription1', exercise);
+    if ( exercise._description ) {
+        return when(exercise._description);
     }
-  });
-  var promise1 = promise.then(function (response) {
-    state.debug('getDescription2', response);
-    //console.log(response);
-    exercise.server = response.url.replace(
-        new RegExp('^(https?://[^/]+)/.*$'), "$1");
-    exercise._XMLdescription = response.entity;
-    function parseXML (description) {
-      state.debug('getDescription2b', description);
-      exercise._description = description;
-      //description._exercise = exercise;
-      return when(description);
+    if ( ! exercise.safecookie ) {
+        return when.reject("Non deployed exercise " + exercise.name);
     }
-    return CodeGradX.parsexml(exercise._XMLdescription).then(parseXML);
-  });
-  var promise2 = promise.then(function (response) {
-    // Extract authors
-    state.debug("getDescription3", response);
-    var authorshipRegExp = new RegExp("^(.|\n)*(<authorship>(.|\n)*</authorship>)(.|\n)*$");
-    var authorship = response.entity.replace(authorshipRegExp, "$2");
-    return CodeGradX.parsexml(authorship).then(function (result) {
-      state.debug("getDescription3a", result);
-      //console.log(result); //
-      var authors = result.authorship;
-      if ( _.isArray(authors) ) {
-        exercise.authorship = _.map(authors, 'author');
-      } else {
-        exercise.authorship = [ authors.author ];
-      }
-      return when(response);
+    var promise = state.sendESServer('e', {
+        path: ('/exercisecontent/' + exercise.safecookie + '/content'),
+        method: 'GET',
+        headers: {
+            Accept: "text/xml"
+        }
     });
-  });
-  var promise3 = promise.then(function (response) {
-    // Extract stem
-    state.debug("getDescription4", response);
-    var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*</content>)(.|\n)*$");
-    var content = response.entity.replace(contentRegExp, "$2");
-    exercise.XMLcontent = content;
-    exercise.stem = CodeGradX.xml2html(content);
-    return when(response);
-  });
-  var promise5 = promise.then(function (response) {
-      // extract equipment
-      state.debug("getDescription5", response);
-      extractEquipment(exercise, response.entity);
-      return when(response);
-  });
-  var promise4 = promise.then(function (response) {
-    // If only one question expecting only one file, retrieve its name:
-    state.debug('getDescription5');
-    var expectationsRegExp =
-        new RegExp("<expectations>((.|\n)*?)</expectations>", "g");
-    function concat (s1, s2) {
-        return s1 + s2;
-    }
-    var expectationss = response.entity.match(expectationsRegExp);
-    if ( expectationss ) {
-        var files = _.reduce(expectationss, concat);
-        var expectations = '<div>' + files + '</div>';
-        return CodeGradX.parsexml(expectations).then(function (result) {
-            state.debug('getDescription5a');
-            if ( _.isArray(result.div.expectations.file) ) {
-                // to be done. Maybe ? Why ?
-            } else {
-                //console.log(result.div.expectations);
-                exercise.expectations = result.div.expectations;
-                exercise.inlineFileName = result.div.expectations.file.$.basename;
-            }
-            return when(response);
-        }).catch(function (reason) {
+    // Parse the HTTP response, translate the XML into a Javascript object
+    // and provide it to the sequel:
+    var promise1 = promise.then(function (response) {
+        state.debug('getDescription2', response);
+        //console.log(response);
+        exercise.server = response.url.replace(
+            new RegExp('^(https?://[^/]+)/.*$'), "$1");
+        exercise._XMLdescription = response.entity;
+        function parseXML (description) {
+            state.debug('getDescription2b', description);
+            exercise._description = description;
+            //description._exercise = exercise;
+            return when(description);
+        }
+        return CodeGradX.parsexml(exercise._XMLdescription).then(parseXML);
+    });
+    var promise3 = promise.then(function (response) {
+        // Extract stem
+        state.debug("getDescription4", response);
+        var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*</content>)(.|\n)*$");
+        var content = response.entity.replace(contentRegExp, "$2");
+        exercise.XMLcontent = content;
+        exercise.stem = CodeGradX.xml2html(content);
+        // extract equipment:
+        state.debug("getDescription5", exercise);
+        extractEquipment(exercise, response.entity);
+        // extract identity and authorship:
+        state.debug("getDescription6", exercise);
+        return extractIdentification(exercise, response.entity);
+    });
+    var promise4 = promise.then(function (response) {
+        // If only one question expecting only one file, retrieve its name:
+        state.debug('getDescription5');
+        var expectationsRegExp =
+            new RegExp("<expectations>((.|\n)*?)</expectations>", "g");
+        function concat (s1, s2) {
+            return s1 + s2;
+        }
+        var expectationss = response.entity.match(expectationsRegExp);
+        if ( expectationss ) {
+            var files = _.reduce(expectationss, concat);
+            var expectations = '<div>' + files + '</div>';
+            return CodeGradX.parsexml(expectations).then(function (result) {
+                state.debug('getDescription5a');
+                if ( _.isArray(result.div.expectations.file) ) {
+                    // to be done. Maybe ? Why ?
+                } else {
+                    //console.log(result.div.expectations);
+                    exercise.expectations = result.div.expectations;
+                    exercise.inlineFileName = result.div.expectations.file.$.basename;
+                }
+                return when(response);
+            }).catch(function (reason) {
+                exercise.expectations = [];
+                return when(response);
+            });
+        } else {
             exercise.expectations = [];
             return when(response);
-        });
-    } else {
-        exercise.expectations = [];
-        return when(response);
-    }
-  });
-  return when.join(promise2, promise3, promise4, promise5)
+        }
+    });
+    return when.join(promise3, promise4)
         .then(function (values) {
             return promise1;
-  });
+        });
 };
 
 /** Get an equipment file that is a file needed by the students
@@ -1423,6 +1408,45 @@ CodeGradX.Exercise.prototype.getEquipmentFile = function (file) {
         return when.reject(reason);
     });
 };
+
+/** Convert an XML fragment describing the identification of an
+    exercise and stuff the Exercise instance.
+
+    <identification name="" date="" nickname="">
+      <summary></summary>
+      <tags></tags>
+      <authorship></authorship>
+    </identification>
+
+*/
+
+function extractIdentification (exercise, s) {
+    var identificationRegExp = new RegExp("^(.|\n)*(<identification (.|\n)*</identification>)(.|\n)*$");
+    var summaryRegExp = new RegExp("^(.|\n)*(<summary.*?>(.|\n)*</summary>)(.|\n)*$");
+    var content = s.replace(identificationRegExp, "$2");
+    return CodeGradX.parsexml(content).then(function (result) {
+        result = result.identification;
+        // extract identification:
+        exercise.name = result.$.name;
+        exercise.nickname = result.$.nickname;
+        exercise.date = result.$.date;
+        var summary = content.replace(summaryRegExp, "$2");
+        exercise.summary = CodeGradX.xml2html(summary);
+        if ( _.isArray(result.tags.tag) ) {
+            exercise.tags = result.tags.tag.map(tag => tag.$.name);
+        } else {
+            exercise.tags = [result.tags.tag.$.name];
+        }
+        // extract authors
+        var authors = result.authorship;
+        if ( _.isArray(authors) ) {
+            exercise.authorship = _.map(authors, 'author');
+        } else {
+            exercise.authorship = [ authors.author ];
+        }
+        return when(exercise);
+    });
+}
 
 /** Convert an XML fragment describing directories and files into
     pathnames. For instance,
@@ -1716,12 +1740,16 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
 
       */
 
+if ( process.env.ENV === 'browser' ) {
+    
 CodeGradX.readFileContent = function (filename) {
   return nodefn.call(require('fs').readFile, filename, 'binary')
   .then(function (filecontent) {
     return when(new Buffer(filecontent, 'binary'));
   });
 };
+
+}
 
 /** Send a batch of files that is, multiple answers to be marked
     against an Exercise.
