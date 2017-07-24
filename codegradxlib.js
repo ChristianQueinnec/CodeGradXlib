@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-07-23 18:40:46 queinnec"
+// Time-stamp: "2017-07-24 19:42:46 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -648,7 +648,8 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
       var description = _.first(adescriptions);
       adescriptions = _.rest(adescriptions);
       newoptions = regenerateNewOptions(options);
-      newoptions.path = description.protocol + '://' +
+      newoptions.protocol = newoptions.protocol || description.protocol;
+      newoptions.path = newoptions.protocol + '://' +
             description.host + options.path;
       newoptions.mixin = {
           withCredentials: true
@@ -1212,10 +1213,17 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
       Accept: "application/json"
     }
   });
-  return when.any([p1, p2]).then(function (response) {
-    state.debug('getExercisesSet2', response);
-    campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
-    return when(campaign.exercisesSet);
+  var p3 = state.sendAXServer('x', {
+    path: ('/exercises/' + (campaign.exercisesname || campaign.name)),
+    method: 'GET',
+    headers: {
+      Accept: "application/json"
+    }
+  });
+    return when.any([p1, p2, p3]).then(function (response) {
+        state.debug('getExercisesSet2', response);
+        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
+        return when(campaign.exercisesSet);
   });
 };
 
@@ -1977,6 +1985,35 @@ CodeGradX.ExercisesSet = function (json) {
     _.assign(this, json);
     this.exercises = _.map(json.exercises, processItem);
   }
+};
+
+/** Fetch a precise ExercisesSet. This is mainly used to update the
+    current set of exercises. Attention, this is not a method but a
+    static function!
+
+    @param {String} path - URI of the exercises.json file
+    @returns {Promise<ExercisesSet>} yields ExercisesSet
+
+*/
+
+CodeGradX.ExercisesSet.getExercisesSet = function (name) {
+    var state = CodeGradX.getCurrentState();
+    state.debug('UgetExercisesSet1', name);
+    var p3 = state.sendAXServer('x', {
+        path: ('/exercisesset/path/' + name),
+        method: 'GET',
+        headers: {
+            Accept: "application/json"
+        }
+    });
+    return p3.then(function (response) {
+        state.debug('UgetExercisesSet2', response);
+        var exercisesSet = new CodeGradX.ExercisesSet(response.entity);
+        return when(exercisesSet);
+    }).catch(function (reason) {
+        state.debug('UgetExercisesSet3', reason);
+        return when(undefined);
+    });
 };
 
 /** Find an exercise by its name in an ExercisesSet that is,
