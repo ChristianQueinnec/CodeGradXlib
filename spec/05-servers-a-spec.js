@@ -26,6 +26,7 @@ describe('CodeGradX', function () {
     state.servers = {
       domain: '.localdomain',
       names: ['a', 'e', 'x', 's'],
+      protocol: 'http',
       a: {
         next: 1,
         suffix: '/alive',
@@ -68,10 +69,12 @@ describe('CodeGradX', function () {
         var item = history[i];
         history.splice(i, 1);
         if ( item.status > 0 ) {
-          return when({
-            status: { code: item.status },
-            headers: {}
-          }).delay(100 * Math.random());
+          var js = {
+              status: { code: item.status },
+              headers: {}
+          };
+          state.debug("fakeUserAgent response " + item.status);
+          return when(js).delay(100 * Math.random());
         } else {
           return when.reject("Non responding server " + options.path);
         }
@@ -80,6 +83,7 @@ describe('CodeGradX', function () {
         return when.reject("Unexpected URL " + options.path);
       }
     };
+    CodeGradX.getCurrentState().log = new CodeGradX.Log();
     return fakeUserAgent;
   }
 
@@ -330,15 +334,15 @@ describe('CodeGradX', function () {
         status: 0
       },
       // checkServers('a') again: a0 still ko
-      { path: 'http://a0.localdomain/alive',
+      { path: 'https://a0.localdomain/alive',
         status: 402
       },
       // checkServers('a') again, a1 now ok
-      { path: 'http://a1.localdomain/alive',
+      { path: 'https://a1.localdomain/alive',
         status: 202
       },
       // 2nd request again: ok
-      { path: 'http://a1.localdomain/bar',
+      { path: 'https://a1.localdomain/bar',
         status: 203
       }
     ]);
@@ -389,15 +393,15 @@ describe('CodeGradX', function () {
         status: 402
       },
       // checkServers('a') again, a1 now ok
-      { path: 'http://a1.localdomain/alive',
+      { path: 'https://a1.localdomain/alive',
         status: 202
       },
       // 2nd request again, now towards a1: ok
-      { path: 'http://a1.localdomain/bar',
+      { path: 'https://a1.localdomain/bar',
         status: 203
       },
       // 3rd request again: ko
-      { path: 'http://a1.localdomain/hux',
+      { path: 'https://a1.localdomain/hux',
         status: 0
       },
       // checkServers('a') again: a0 still ko

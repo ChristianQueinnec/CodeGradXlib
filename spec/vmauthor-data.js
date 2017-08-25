@@ -1,15 +1,19 @@
 // Initialise the global state in order to use the servers of
 // the VMauthor-CodeGradX virtual machine.
 
+var vmauthor = 'vmauthor.codegradx.org';
+var vmauthor = '192.168.122.205';
+var vmauthor = 'vmauthor';
+
 module.exports.initialize = function (state) {
   state.servers = {
     names: ['a', 'e', 'x', 's'],
-    domain: 'vmauthor.codegradx.org',
+    domain: vmauthor,
     a: {
       //next: 1,
       suffix: '/alive',
       0: {
-        host: 'vmauthor.codegradx.org/a',
+        host: vmauthor + '/a',
         enabled: false
       }
     },
@@ -17,7 +21,7 @@ module.exports.initialize = function (state) {
       //next: 1,
       suffix: '/alive',
       0: {
-        host: 'vmauthor.codegradx.org/e',
+        host: vmauthor + '/e',
         enabled: false
       }
     },
@@ -26,7 +30,7 @@ module.exports.initialize = function (state) {
       suffix: '/dbalive',
       protocol: 'http',
       0: {
-        host: 'vmauthor.codegradx.org/x',
+        host: vmauthor + '/x',
         enabled: false
       }
     },
@@ -34,7 +38,7 @@ module.exports.initialize = function (state) {
       //next: 1,
       suffix: '/index.html',
       0: {
-        host: 'vmauthor.codegradx.org/s',
+        host: vmauthor + '/s',
         enabled: false
       }
     }

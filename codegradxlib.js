@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-07-24 19:42:46 queinnec"
+// Time-stamp: "2017-08-25 10:45:30 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -227,6 +227,7 @@ CodeGradX.State = function (initializer) {
   this.servers = {
     // The domain to be suffixed to short hostnames:
     domain: '.paracamplus.com',
+    // possible domains are [ '.paracamplus.com', '.codegradx.org' ],  
     // the shortnames of the four kinds of servers:
     names: ['a', 'e', 'x', 's'],
     // Description of the A servers:
@@ -1043,6 +1044,39 @@ CodeGradX.User.prototype.getAllJobs = function () {
     });
 };
 
+/** get the list of exercises a user tried in a given campaign, get
+    also the list of badges (or certificates) won during that
+    campaign. It enriches the current user with new properties
+    results and badges.
+
+    @param {Campaign} campaign - Campaign
+    @return {Promise<User>} yielding the User 
+    @property {array[string]} user.badges - urls of badges
+    @property {number} user.results[].mark - gotten mark
+    @property {string} user.results[].name - exercise long name
+    @property {string} user.results[].nickname - exercise nickname
+
+ */
+
+CodeGradX.User.prototype.getProgress = function (campaign) {
+    var state = CodeGradX.getCurrentState();
+    var user = this;
+    state.debug('getProgress1', user);
+    return state.sendAXServer('x', {
+        path:   ('/skill/progress/' + campaign.name),
+        method: 'GET',
+        headers: {
+            Accept: "application/json"
+        }
+    }).then(function (response) {
+        state.debug('getProgress2', response);
+        //console.log(response);
+        user.results = response.entity.results;
+        user.badges = response.entity.badges;
+        return when(user);
+    });
+};
+
 /** submit a new Exercise and return it as soon as submitted successfully.
     However fetching the ExerciseReport is started with the `parameters`
     repetition parameters.
@@ -1135,7 +1169,7 @@ CodeGradX.Campaign.prototype.getSkills = function () {
   var campaign = this;
   state.debug('getSkills1', campaign);
   return state.sendAXServer('x', {
-    path: ('/skill/' + campaign.name),
+    path: ('/skill/campaign/' + campaign.name),
     method: 'GET',
     headers: {
       Accept: "application/json"
@@ -1189,42 +1223,67 @@ CodeGradX.Campaign.prototype.getJobs = function () {
     */
 
 CodeGradX.Campaign.prototype.getExercisesSet = function () {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
-  state.debug('getExercisesSet1', campaign);
-  if ( campaign.exercisesSet ) {
-    return when(campaign.exercisesSet);
-  }
-  var request = {
-    method: 'GET',
-    path: campaign.home_url + "/exercises.json",
-    headers: {
-      Accept: "application/json"
+    var state = CodeGradX.getCurrentState();
+    var campaign = this;
+    state.debug('getExercisesSet1', campaign);
+    if ( campaign.exercisesSet ) {
+        return when(campaign.exercisesSet);
     }
-  };
-  var p1 = state.userAgent(request).then(function (exercises) {
-      state.debug('getExercisesSet3', exercises);
-      return when(exercises);
-  });
-  var p2 = state.sendESServer('e', {
-    path: ('/path/' + (campaign.exercisesname || campaign.name)),
-    method: 'GET',
-    headers: {
-      Accept: "application/json"
+    var promises = [];
+    var request1 = {
+        method: 'GET',
+        path: campaign.home_url + "/exercises.json",
+        headers: {
+            Accept: "application/json"
+        }
+    };
+    try {
+        var p1 = state.userAgent(request1).then(function (exercises) {
+            state.debug('getExercisesSet3', exercises);
+            return when(exercises);
+        });
+        promises.push(p1);
+    } catch (e) {
+        // Probably: bad host name!
     }
-  });
-  var p3 = state.sendAXServer('x', {
-    path: ('/exercises/' + (campaign.exercisesname || campaign.name)),
-    method: 'GET',
-    headers: {
-      Accept: "application/json"
+    var httpsurl = campaign.home_url.replace(/^http:/, 'https:');
+    var request4 = {
+        method: 'GET',
+        path: httpsurl + "/exercises.json",
+        headers: {
+            Accept: "application/json"
+        }
+    };
+    try {
+        var p4 = state.userAgent(request4).then(function (exercises) {
+            state.debug('getExercisesSet4', exercises);
+            return when(exercises);
+        });
+        promises.push(p4);
+    } catch (e) {
+        // Probably: bad host name!
     }
-  });
-    return when.any([p1, p2, p3]).then(function (response) {
+    var p2 = state.sendESServer('e', {
+        path: ('/path/' + (campaign.exercisesname || campaign.name)),
+        method: 'GET',
+        headers: {
+            Accept: "application/json"
+        }
+    });
+    promises.push(p2);
+    var p3 = state.sendAXServer('x', {
+        path: ('/exercisesset/path/' + (campaign.exercisesname || campaign.name)),
+        method: 'GET',
+        headers: {
+            Accept: "application/json"
+        }
+    });
+    promises.push(p3);
+    return when.any(promises).then(function (response) {
         state.debug('getExercisesSet2', response);
         campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
         return when(campaign.exercisesSet);
-  });
+    });
 };
 
 /** Get a specific Exercise with its name within the tree of
@@ -1750,16 +1809,12 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
 
       */
 
-if ( process.env.ENV === 'browser' ) {
-    
 CodeGradX.readFileContent = function (filename) {
   return nodefn.call(require('fs').readFile, filename, 'binary')
   .then(function (filecontent) {
     return when(new Buffer(filecontent, 'binary'));
   });
 };
-
-}
 
 /** Send a batch of files that is, multiple answers to be marked
     against an Exercise.
@@ -1974,7 +2029,11 @@ CodeGradX.ExercisesSet = function (json) {
     if ( json.exercises ) {
       return new CodeGradX.ExercisesSet(json);
     } else {
-      return new CodeGradX.Exercise(json);
+      if ( json.name && json.nickname ) {
+          return new CodeGradX.Exercise(json);
+      } else {
+          throw new Error("Not an exercise " + JSON.stringify(json));
+      }
     }
   }
   if ( _.isArray(json) ) {

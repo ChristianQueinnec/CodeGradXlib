@@ -1,4 +1,4 @@
-// Jasmine test to check history
+// Jasmine test to check progress
 // requires file ./auth-data.json with login and password (not under git!)
 
 var CodeGradX = require('../codegradxlib.js');
@@ -45,41 +45,23 @@ describe('CodeGradX', function () {
     }, faildone);
   });
 
-  it("should get history", function (done) {
-    var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
-    expect(campaign0 instanceof CodeGradX.Campaign).toBeTruthy();
-    campaign0.getJobs().then(function (jobs) {
-      //console.log(jobs);
-      expect(jobs.length).toBeGreaterThan(2);
-      done();
-    }, faildone);
+  it("should get progress", function (done) {
+      var state = CodeGradX.getCurrentState();
+      function faildone (reason) {
+          state.debug(reason).show();
+          fail(reason);
+          done();
+      }
+      expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
+      state.currentUser.getProgress(campaign0).then(function (user) {
+          expect(user.results.length).toBeGreaterThan(0);
+          //console.log(user.results);//DEBUG
+          expect(user.results[0].name).toBe('com.paracamplus.li205.function.1');
+          expect(user.results[0].nickname).toBe('min');
+          expect(user.results[0].mark).toBe(1);
+          expect(user.badges.length).toBe(0);
+          done();
+      }, faildone);
   }, 10*1000); // 10 seconds
-
-  it("should get skills", function (done) {
-    var state = CodeGradX.getCurrentState();
-    function faildone (reason) {
-      state.debug(reason).show();
-      fail(reason);
-      done();
-    }
-    expect(campaign0 instanceof CodeGradX.Campaign).toBeTruthy();
-    campaign0.getSkills().then(function (js) {
-      //console.log(js);
-      expect(js).toBeDefined();
-      expect(js.you).toBeDefined();
-      expect(js.you.skill).toBeDefined();
-      expect(js.you.skill).toBe(62);
-      expect(_.isObject(js.others)).toBeTruthy();
-      expect(js.others).toBeDefined();
-      expect(js.others[1]).toBe(7);
-      expect(js.others[2]).toBe(6);
-      done();
-    }, faildone);
-  }, 30*1000); // 15 seconds
-
+    
 });

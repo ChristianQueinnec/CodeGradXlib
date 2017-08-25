@@ -36,7 +36,7 @@ describe('CodeGradX', function () {
       expect(state.currentCookie).toBeDefined();
       expect(state.currentCookie.length).toBeGreaterThan(0);
       state.currentUser = new CodeGradX.User(response.entity);
-      expect(state.currentUser.lastname).toBe('Nemo');
+      expect(state.currentUser.lastname).toBe('one');
       expect(CodeGradX.getCurrentState()).toBe(state);
       state.sendAXServer('x', {
         path: '/',
@@ -62,7 +62,7 @@ describe('CodeGradX', function () {
     .then(function (user) {
       //console.log(user);
       expect(user).toBeDefined();
-      expect(user.lastname).toBe('Nemo');
+      expect(user.lastname).toBe('one');
       expect(user).toBe(state.currentUser);
       done();
     }, faildone);
