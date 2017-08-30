@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-08-29 23:13:05 queinnec"
+// Time-stamp: "2017-08-30 17:29:56 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -229,13 +229,14 @@ CodeGradX.State = function (initializer) {
     domain: '.codegradx.org',
     // the shortnames of the four kinds of servers:
     names: ['a', 'e', 'x', 's'],
+    // default protocol:
+    protocol: 'https',
     // Description of the A servers:
     a: {
       // Use that URI to check whether the server is available or not:
       suffix: '/alive',
       // next a server to check:
       next: 5,  
-      protocol: 'https',
       0: {
         // a full hostname supersedes the default FQDN:
         host: 'a4.codegradx.org',
@@ -257,7 +258,6 @@ CodeGradX.State = function (initializer) {
     e: {
       next: 3,
       suffix: '/alive',
-      protocol: 'https',
       0: {
         host: 'e2.codegradx.org',
         enabled: false
@@ -274,7 +274,6 @@ CodeGradX.State = function (initializer) {
     x: {
       // no next means that all possible servers are listed here:
       suffix: '/dbalive',
-      protocol: 'https',
       0: {
         host: 'x4.codegradx.org',
         enabled: false
@@ -295,14 +294,8 @@ CodeGradX.State = function (initializer) {
     s: {
       next: 1,
       suffix: '/index.txt',
-      // reports are not confidential:
-      protocol: 'http',
       0: {
         host: 's0.codegradx.org',
-        enabled: false
-      },
-      1: {
-        host: 's1.codegradx.org',
         enabled: false
       }
     }
@@ -319,14 +312,21 @@ CodeGradX.State = function (initializer) {
   if ( _.isFunction(initializer) ) {
     state = initializer.call(state, state);
   }
+  var protocol = 'http';
   if ( CodeGradX.checkIfHTTPS() ) {
-      var protocol = 'https';
-      state.servers.protocol = protocol;
-      state.servers.a.protocol = state.servers.a.protocol || protocol;
-      state.servers.e.protocol = state.servers.e.protocol || protocol;
-      state.servers.s.protocol = state.servers.s.protocol || protocol;
-      state.servers.x.protocol = state.servers.x.protocol || protocol;
+      // Make 'Upgrade Insecure Request' happy:
+      // and avoid "Blocked: mixed-content'
+      protocol = 'https';
   }
+  state.servers.protocol = state.servers.protocol || protocol;
+  state.servers.a.protocol = state.servers.a.protocol ||
+        state.servers.protocol;
+  state.servers.e.protocol = state.servers.e.protocol ||
+        state.servers.protocol;
+  state.servers.s.protocol = state.servers.s.protocol ||
+        state.servers.protocol;
+  state.servers.x.protocol = state.servers.x.protocol ||
+        state.servers.protocol;
   // Make the state global
   CodeGradX.getCurrentState = function () {
     return state;
@@ -425,9 +425,6 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
   var host = description.host || (kind + index + state.servers.domain);
   description.host = host;
   description.protocol = description.protocol || descriptions.protocol;
-  description.protocol = description.protocol ||
-        // Guess the protocol to make 'Upgrade Insecure Request' happy:
-        CodeGradX.checkIfHTTPS() ? 'https' : 'http';
   // Don't use that host while being checked:
   description.enabled = false;
   delete description.lastError;

@@ -183,30 +183,30 @@ describe('CodeGradX', function () {
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
-        status: 200
+        status: 202
       },
       // implicit via checkServer('a', 1)
       { path: 'http://a1.localdomain/alive',
         status: 0
       },
       { path: 'http://a0.localdomain/foo',
-        status: 201
+        status: 203
       },
       { path: 'http://a0.localdomain/bar',
-        status: 202
+        status: 204
       }
     ]);
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
     }).then(function (response) {
-      expect(response.status.code).toBe(201);
+      expect(response.status.code).toBe(203);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeFalsy();
       state.sendAXServer('a', {
         path: '/bar'
       }).then(function (response2) {
-        expect(response2.status.code).toBe(202);
+        expect(response2.status.code).toBe(204);
         expect(state.servers.a[0].enabled).toBeTruthy();
         expect(state.servers.a[1].enabled).toBeFalsy();
         done();
@@ -223,30 +223,30 @@ describe('CodeGradX', function () {
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
-        status: 200
+        status: 205
       },
       // implicit via checkServer('a', 1)
       { path: 'http://a1.localdomain/alive',
-        status: 200
+        status: 206
       },
       { path: 'http://a0.localdomain/foo',
-        status: 201
+        status: 207
       },
       { path: 'http://a0.localdomain/bar',
-        status: 202
+        status: 208
       }
     ]);
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
     }).then(function (response) {
-      expect(response.status.code).toBe(201);
+      expect(response.status.code).toBe(207);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeTruthy();
       state.sendAXServer('a', {
         path: '/bar'
       }).then(function (response2) {
-        expect(response2.status.code).toBe(202);
+        expect(response2.status.code).toBe(208);
         expect(state.servers.a[0].enabled).toBeTruthy();
         expect(state.servers.a[1].enabled).toBeTruthy();
         done();
@@ -264,15 +264,15 @@ describe('CodeGradX', function () {
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
-        status: 200
+        status: 209
       },
       // implicit via checkServer('a', 1)
       { path: 'http://a1.localdomain/alive',
-        status: 200
+        status: 210
       },
       // 1st request: ok
       { path: 'http://a0.localdomain/foo',
-        status: 201
+        status: 211
       },
       // 2nd request: ko since a0 subitly failed!
       { path: 'http://a0.localdomain/bar',
@@ -284,24 +284,24 @@ describe('CodeGradX', function () {
       },
       // checkServers('a') again, a1 now ok
       { path: 'http://a1.localdomain/alive',
-        status: 202
+        status: 212
       },
       // 2nd request again: ok
       { path: 'http://a1.localdomain/bar',
-        status: 203
+        status: 213
       }
     ]);
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
     }).then(function (response) {
-      expect(response.status.code).toBe(201);
+      expect(response.status.code).toBe(211);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeTruthy();
       state.sendAXServer('a', {
         path: '/bar'
       }).then(function (response2) {
-        expect(response2.status.code).toBe(203);
+        expect(response2.status.code).toBe(213);
         expect(state.servers.a[1].enabled).toBeTruthy();
         expect(state.servers.a[0].enabled).toBeFalsy();
         done();
@@ -319,7 +319,7 @@ describe('CodeGradX', function () {
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
-        status: 200
+        status: 214
       },
       // implicit via checkServer('a', 1)
       { path: 'http://a1.localdomain/alive',
@@ -327,36 +327,36 @@ describe('CodeGradX', function () {
       },
       // 1st request: ok
       { path: 'http://a0.localdomain/foo',
-        status: 201
+        status: 215
       },
       // 2nd request: ko since a0 subitly failed!
       { path: 'http://a0.localdomain/bar',
         status: 0
       },
       // checkServers('a') again: a0 still ko
-      { path: 'https://a0.localdomain/alive',
-        status: 402
+      { path: 'http://a0.localdomain/alive',
+        status: 404
       },
       // checkServers('a') again, a1 now ok
-      { path: 'https://a1.localdomain/alive',
-        status: 202
+      { path: 'http://a1.localdomain/alive',
+        status: 216
       },
       // 2nd request again: ok
-      { path: 'https://a1.localdomain/bar',
-        status: 203
+      { path: 'http://a1.localdomain/bar',
+        status: 217
       }
     ]);
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
     }).then(function (response) {
-      expect(response.status.code).toBe(201);
+      expect(response.status.code).toBe(215);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeFalsy();
       state.sendAXServer('a', {
         path: '/bar'
       }).then(function (response2) {
-        expect(response2.status.code).toBe(203);
+        expect(response2.status.code).toBe(217);
         expect(state.servers.a[1].enabled).toBeTruthy();
         expect(state.servers.a[0].enabled).toBeFalsy();
         done();
@@ -374,7 +374,7 @@ describe('CodeGradX', function () {
     state.userAgent = make_fakeUserAgent([
       // implicit via checkServer('a', 0)
       { path: 'http://a0.localdomain/alive',
-        status: 200
+        status: 218
       },
       // implicit via checkServer('a', 1)
       { path: 'http://a1.localdomain/alive',
@@ -382,7 +382,7 @@ describe('CodeGradX', function () {
       },
       // 1st request: ok
       { path: 'http://a0.localdomain/foo',
-        status: 201
+        status: 219
       },
       // 2nd request: ko since a0 subitly failed!
       { path: 'http://a0.localdomain/bar',
@@ -390,18 +390,18 @@ describe('CodeGradX', function () {
       },
       // checkServers('a') again: a0 still ko
       { path: 'http://a0.localdomain/alive',
-        status: 402
+        status: 405
       },
       // checkServers('a') again, a1 now ok
-      { path: 'https://a1.localdomain/alive',
-        status: 202
+      { path: 'http://a1.localdomain/alive',
+        status: 220
       },
       // 2nd request again, now towards a1: ok
-      { path: 'https://a1.localdomain/bar',
-        status: 203
+      { path: 'http://a1.localdomain/bar',
+        status: 221
       },
       // 3rd request again: ko
-      { path: 'https://a1.localdomain/hux',
+      { path: 'http://a1.localdomain/hux',
         status: 0
       },
       // checkServers('a') again: a0 still ko
@@ -410,14 +410,14 @@ describe('CodeGradX', function () {
       },
       // checkServers('a') again, a1 still ko
       { path: 'http://a1.localdomain/alive',
-        status: 404
+        status: 406
       }
     ]);
     expect(state).toBeDefined();
     state.sendAXServer('a', {
       path: '/foo'
     }).then(function (response) {
-      expect(response.status.code).toBe(201);
+      expect(response.status.code).toBe(219);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeFalsy();
       return state.sendAXServer('a', {
