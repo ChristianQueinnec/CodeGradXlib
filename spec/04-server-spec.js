@@ -15,7 +15,10 @@ describe('CodeGradX', function () {
   });
 
   it('should check running server A0', function (done) {
-    function faildone (reason) {
+   function faildone (reason) {
+      var state = CodeGradX.getCurrentState();
+      state.debug('faildone', reason).show();
+      //console.log(reason);
       fail(reason);
       done();
     }
@@ -78,7 +81,6 @@ describe('CodeGradX', function () {
       expect(descriptions).toBe(state.servers.a);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeTruthy();
-      expect(state.servers.a.next).toBe(2);
       done();
     }, faildone);
   });
@@ -117,15 +119,12 @@ describe('CodeGradX', function () {
       expect(responses.length).toBe(4);
       expect(state.servers.a[0].enabled).toBeTruthy();
       expect(state.servers.a[1].enabled).toBeTruthy();
-      expect(state.servers.a.next).toBe(2);
       expect(state.servers.e[0].enabled).toBeTruthy();
       expect(state.servers.e[1].enabled).toBeTruthy();
-      expect(state.servers.e.next).toBe(2);
       expect(state.servers.x[0].enabled).toBeTruthy();
       expect(state.servers.x.next).toBeUndefined();
       expect(state.servers.s[0].enabled).toBeTruthy();
       expect(state.servers.s[1].enabled).toBeTruthy();
-      expect(state.servers.s.next).toBe(2);
       done();
     }, faildone);
   }, 10*1000); // 10 seconds);

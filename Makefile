@@ -16,7 +16,7 @@ nsp+snyk :
 	npm link snyk
 	-node_modules/.bin/snyk test codegradxlib
 
-tests : test.with.real.servers test.with.vmauthor
+tests : lint test.with.real.servers test.with.vmauthor
 
 test.with.real.servers :
 	jasmine spec/[0-7]*.js 2>&1 | tee /tmp/spec.log

@@ -84,7 +84,7 @@ worthless to change the default setting.
 
 Then you must authenticate with respect to the CodeGradX
 infrastructure with a login and a password. To get this login and
-password, you must [register](http://p.paracamplus.com/).
+password, you must [register](http://p.codegradx.org/).
 The authentication process returns a User object.
 
 The User object lists the Campaigns the User may access. A Campaign is

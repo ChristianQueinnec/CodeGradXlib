@@ -258,8 +258,8 @@ function _str2Date (str) {
         job.getReport().then(function (j2) {
             expect(j2).toBe(j);
             done();
-        });
-      });
+        }, faildone);
+      }, faildone);
     }, faildone);
   }, 50*1000); // 50 seconds
 

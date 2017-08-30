@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-08-25 10:45:30 queinnec"
+// Time-stamp: "2017-08-29 23:13:05 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -226,39 +226,69 @@ CodeGradX.State = function (initializer) {
   // State of servers:
   this.servers = {
     // The domain to be suffixed to short hostnames:
-    domain: '.paracamplus.com',
-    // possible domains are [ '.paracamplus.com', '.codegradx.org' ],  
+    domain: '.codegradx.org',
     // the shortnames of the four kinds of servers:
     names: ['a', 'e', 'x', 's'],
     // Description of the A servers:
     a: {
-      // a0 and a1 are listed, 2 is the number of the next possible A server
-      next: 2,
       // Use that URI to check whether the server is available or not:
       suffix: '/alive',
+      // next a server to check:
+      next: 5,  
+      protocol: 'https',
       0: {
         // a full hostname supersedes the default FQDN:
-        host: 'a0.paracamplus.com',
+        host: 'a4.codegradx.org',
         enabled: false
       },
       1: {
-        // the default FQDN is a1.paracamplus.com
+        host: 'a2.codegradx.org',
         enabled: false
-      }
+      },
+      2: {
+        host: 'a0.codegradx.org',
+        enabled: false
+      },
+      3: {
+        host: 'a1.codegradx.org',
+        enabled: false
+      },
     },
     e: {
-      next: 1,
+      next: 3,
       suffix: '/alive',
+      protocol: 'https',
       0: {
+        host: 'e2.codegradx.org',
+        enabled: false
+      },
+      1: {
+        host: 'e0.codegradx.org',
+        enabled: false
+      },
+      2: {
+        host: 'e1.codegradx.org',
         enabled: false
       }
     },
     x: {
-      //next: 1,  // no next means that all possible servers are listed here:
+      // no next means that all possible servers are listed here:
       suffix: '/dbalive',
       protocol: 'https',
       0: {
-        host: 'x.paracamplus.com',
+        host: 'x4.codegradx.org',
+        enabled: false
+      },
+      1: {
+        host: 'x2.codegradx.org',
+        enabled: false
+      },
+      2: {
+        host: 'x0.codegradx.org',
+        enabled: false
+      },
+      3: {
+        host: 'x1.codegradx.org',
         enabled: false
       }
     },
@@ -268,6 +298,11 @@ CodeGradX.State = function (initializer) {
       // reports are not confidential:
       protocol: 'http',
       0: {
+        host: 's0.codegradx.org',
+        enabled: false
+      },
+      1: {
+        host: 's1.codegradx.org',
         enabled: false
       }
     }
