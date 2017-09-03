@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-08-30 17:29:56 queinnec"
+// Time-stamp: "2017-09-03 17:54:48 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -247,10 +247,6 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       2: {
-        host: 'a0.codegradx.org',
-        enabled: false
-      },
-      3: {
         host: 'a1.codegradx.org',
         enabled: false
       },
@@ -263,10 +259,6 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       1: {
-        host: 'e0.codegradx.org',
-        enabled: false
-      },
-      2: {
         host: 'e1.codegradx.org',
         enabled: false
       }
@@ -283,19 +275,30 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       2: {
-        host: 'x0.codegradx.org',
-        enabled: false
-      },
-      3: {
         host: 'x1.codegradx.org',
         enabled: false
       }
     },
     s: {
-      next: 1,
       suffix: '/index.txt',
       0: {
         host: 's0.codegradx.org',
+        enabled: false
+      },
+      1: {
+        host: 's1.codegradx.org',
+        enabled: false
+      },
+      2: {
+        host: 's2.codegradx.org',
+        enabled: false
+      },
+      3: {
+        host: 's4.codegradx.org',
+        enabled: false
+      },
+      4: {
+        host: 's3.codegradx.org',
         enabled: false
       }
     }
@@ -512,12 +515,14 @@ CodeGradX.State.prototype.checkServers = function (kind) {
          promise = promise.then(incrementNext);
          nextDone = true;
       }
-      promise = promise.catch(dontIncrementNext);
+      promise = promise.timeout(1000)
+            .catch(dontIncrementNext);
       promises.push(promise);
     }
   }
   if ( ! nextDone ) {
       promise = state.checkServer(kind, descriptions.next)
+          .timeout(1000)
           .then(incrementNext)
           .catch(dontIncrementNext);
       promises.push(promise);
@@ -529,6 +534,8 @@ CodeGradX.State.prototype.checkServers = function (kind) {
     });
     return when(descriptions);
   }
+  // Don't wait for all promises to be settled, return as soon as one
+  // is successful. Meanwhile the other promises will update descriptions.
   return when.settle(promises)
         .then(returnDescriptions)
         .catch(returnDescriptions);

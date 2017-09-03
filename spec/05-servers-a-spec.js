@@ -423,7 +423,7 @@ describe('CodeGradX', function () {
       return state.sendAXServer('a', {
         path: '/bar'
       }).then(function (response2) {
-        expect(response2.status.code).toBe(203);
+        expect(response2.status.code).toBe(221);
         expect(state.servers.a[1].enabled).toBeTruthy();
         expect(state.servers.a[0].enabled).toBeFalsy();
         return state.sendAXServer('a', {
