@@ -85,6 +85,7 @@ propagate :
 	cd ../../Servers/w.js/Paracamplus-*/;  m refresh.codegradx
 	cd ../../Servers/w.cc/Paracamplus-*/;  m refresh.codegradx
 	cd ../../Servers/w.ncc/Paracamplus-*/; m refresh.codegradx
+	grep '"codegradxlib":' ../CodeGradX*/package.json
 
 # ############## bower
 

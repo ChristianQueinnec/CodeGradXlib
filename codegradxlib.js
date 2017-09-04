@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-03 17:54:48 queinnec"
+// Time-stamp: "2017-09-04 16:29:42 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -695,7 +695,14 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
           withCredentials: true
       };
       state.debug('tryNext2', newoptions.path);
-      return state.userAgent(newoptions)
+      var promise;
+      try {
+          promise = state.userAgent(newoptions);
+      } catch (e) {
+          state.debug('tryNext2Error', e);
+          promise = when.reject(e);
+      }
+      return promise
             .catch(mk_invalidate(description))
             .then(CodeGradX.checkStatusCode)
             .then(updateCurrentCookie)
@@ -806,7 +813,14 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
         };
     }
     state.debug("tryRequesting", tryoptions.path);
-    return state.userAgent(tryoptions)
+    var promise;
+    try {
+        promise = state.userAgent(tryoptions);
+    } catch (e) {
+        state.debug("tryRequestingError", e);
+        promise = when.reject(e);
+    }
+    return promise
       .then(CodeGradX.checkStatusCode)
       .catch(mk_seeError(description));
   }
@@ -1284,6 +1298,7 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
         promises.push(p1);
     } catch (e) {
         // Probably: bad host name!
+        state.debug("getExercisesSet3Error", e);
     }
     var httpsurl = campaign.home_url.replace(/^http:/, 'https:');
     var request4 = {
@@ -1301,6 +1316,7 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
         promises.push(p4);
     } catch (e) {
         // Probably: bad host name!
+        state.debug("getExercisesSet4Error", e);
     }
     var p2 = state.sendESServer('e', {
         path: ('/path/' + (campaign.exercisesname || campaign.name)),
@@ -1347,6 +1363,148 @@ CodeGradX.Campaign.prototype.getExercise = function (name) {
   });
 };
 
+/** Upload a new description of a new ExercisesSet for the current
+ * campaign. You need to be a teacher of this campaign.
+
+      @param {string} filename - Yaml file
+      @returns {Promise} yields {ExercisesSet}
+
+    NOTA: The present implementation depends on Node.js, it uses the
+    `fs` module to read the file to send. It has to be rewritten if
+    run in a browser.
+ */
+
+CodeGradX.Campaign.prototype.uploadExercisesSet = function (filename) {
+    var state = CodeGradX.getCurrentState();
+    var campaign = this;
+    state.debug('uploadExercisesSet1', campaign);
+    function processResponse (response) {
+        //console.log(response);
+        state.debug('uploadExercisesSet2', response);
+        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
+        return when(campaign.exercisesSet);
+    }           
+    return CodeGradX.readFileContent(filename).then(function (content) {
+        content += '\n';
+        var basefilename = filename.replace(new RegExp("^.*/"), '');
+        var headers = {
+            'Accept': 'application/octet-stream',
+            'Content-Type': 'text/plain',
+            'Content-Disposition': ("inline; filename=" + basefilename)
+        };
+        if ( isNode() ) {
+            headers["Content-Length"] = content.length;
+        }
+        state.debug('uploadExercisesSet6', JSON.stringify(headers));
+        return state.sendAXServer('x', {
+            path: ('/exercisesset/yml2json/' + campaign.exercisesname),
+            method: "POST",
+            headers: headers,
+            entity: content
+        }).then(processResponse);
+    });
+};
+
+CodeGradX.Campaign.prototype.XXXuploadExercisesSet = function (filename) {
+    var state = CodeGradX.getCurrentState();
+    var campaign = this;
+    var FormData = require('form-data');
+    var fd = new FormData();
+    state.debug('uploadExercisesSet1', campaign);
+    function processResponse (response) {
+        //console.log(response);
+        state.debug('uploadExercisesSet2', response);
+        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
+        return when(campaign.exercisesSet);
+    }
+    function formDataToString (fd) {
+        return new Promise(function (resolve, reject) {
+            var stream = new require('stream').Writable();
+            var chunks = [];
+            stream.write = function (chunk) {
+                state.debug('uploadExercisesSet3 write');
+                chunks.push(chunk.toString());
+            };
+            stream.on('error', reject);
+            stream.end = function () {
+                state.debug('uploadExercisesSet4 end');
+                resolve(chunks.join(''));
+            };
+            stream.on('end', stream.end);
+            fd.pipe(stream);
+        });
+    }               
+    return CodeGradX.readFileContent(filename).then(function (content) {
+        var basefilename = filename.replace(new RegExp("^.*/"), '');
+        fd.append('content', content);
+        return formDataToString(fd)
+            .then(function (body) {
+                state.debug('uploadExercisesSet5', body);
+                var boundary = fd.getBoundary().replace(/^-*/, '');
+                var headers = {
+                    'Accept': 'text/xml',
+                    'Content-Type': ('multipart/form-data; ' +
+                                     'boundary=' + boundary)
+                };
+                state.debug('uploadExercisesSet6', JSON.stringify(headers));
+                return state.sendAXServer('x', {
+                    path: ('/exercisesset/yml2json/' + campaign.exercisesname),
+                    method: "POST",
+                    headers: headers,
+                    entity: new Buffer(body, 'utf8')
+                }).then(processResponse);
+            });
+    });
+};
+
+CodeGradX.Campaign.prototype.YYuploadExercisesSet = function (filename) {
+    var state = CodeGradX.getCurrentState();
+    var campaign = this;
+    var FormData = require('form-data');
+    var fd = new FormData();
+    state.debug('uploadExercisesSet1', campaign);
+    function processResponse (response) {
+        //console.log(response);
+        state.debug('uploadExercisesSet2', response);
+        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
+        return when(campaign.exercisesSet);
+    }
+    function formDataToString (fd) {
+        return new Promise(function (resolve, reject) {
+            var stream = new require('stream').Writable();
+            var chunks = [];
+            stream.write = function (chunk) {
+                state.debug('uploadExercisesSet3 write');
+                chunks.push(chunk.toString());
+            };
+            stream.on('error', reject);
+            stream.end = function () {
+                state.debug('uploadExercisesSet4 end');
+                resolve(chunks.join(''));
+            };
+            stream.on('end', stream.end);
+            fd.pipe(stream);
+        });
+    }
+    return CodeGradX.readFileContent(filename).then(function (content) {
+        var basefilename = filename.replace(new RegExp("^.*/"), '');
+        fd.append('content', content);
+        var headers = {
+            'Accept': 'text/xml',
+            'Content-Type': 'multipart/form-data',
+            'Content-Disposition': ("inline; filename=" + basefilename)
+        };
+        state.debug('uploadExercisesSet6', JSON.stringify(headers));
+        return state.sendAXServer('x', {
+            path: ('/exercisesset/yml2json/' + campaign.exercisesname),
+            method: "POST",
+            headers: headers,
+            entity: fd 
+        }).then(processResponse);
+    });
+};
+
+    
 // **************** Exercise ***************************
 
 /** Exercise. When extracted from a Campaign, an Exercise looks like:
@@ -1732,7 +1890,7 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
       @returns {Promise<Job>} yields {Job}
 
 The form DOM element must contain an <input type='file' name='content'>
-element.
+element. This code only runs in a browser providing the FormData class.
 
 */
 

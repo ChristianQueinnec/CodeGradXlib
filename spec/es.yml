@@ -1,0 +1,11 @@
+---
+exercises:
+    prologue: |
+      New set of exercises in Javascript.
+      This is a multi-line text.
+    1:
+      title: closures
+      prologue: make heavy use of closures
+      1: org.codegradx.js.min3.3
+      2: org.codegradx.js.min4.2
+      epilogue: Arrived here ? Good!
