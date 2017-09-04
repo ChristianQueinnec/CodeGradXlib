@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-04 16:29:42 queinnec"
+// Time-stamp: "2017-09-04 16:46:30 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1405,106 +1405,7 @@ CodeGradX.Campaign.prototype.uploadExercisesSet = function (filename) {
     });
 };
 
-CodeGradX.Campaign.prototype.XXXuploadExercisesSet = function (filename) {
-    var state = CodeGradX.getCurrentState();
-    var campaign = this;
-    var FormData = require('form-data');
-    var fd = new FormData();
-    state.debug('uploadExercisesSet1', campaign);
-    function processResponse (response) {
-        //console.log(response);
-        state.debug('uploadExercisesSet2', response);
-        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
-        return when(campaign.exercisesSet);
-    }
-    function formDataToString (fd) {
-        return new Promise(function (resolve, reject) {
-            var stream = new require('stream').Writable();
-            var chunks = [];
-            stream.write = function (chunk) {
-                state.debug('uploadExercisesSet3 write');
-                chunks.push(chunk.toString());
-            };
-            stream.on('error', reject);
-            stream.end = function () {
-                state.debug('uploadExercisesSet4 end');
-                resolve(chunks.join(''));
-            };
-            stream.on('end', stream.end);
-            fd.pipe(stream);
-        });
-    }               
-    return CodeGradX.readFileContent(filename).then(function (content) {
-        var basefilename = filename.replace(new RegExp("^.*/"), '');
-        fd.append('content', content);
-        return formDataToString(fd)
-            .then(function (body) {
-                state.debug('uploadExercisesSet5', body);
-                var boundary = fd.getBoundary().replace(/^-*/, '');
-                var headers = {
-                    'Accept': 'text/xml',
-                    'Content-Type': ('multipart/form-data; ' +
-                                     'boundary=' + boundary)
-                };
-                state.debug('uploadExercisesSet6', JSON.stringify(headers));
-                return state.sendAXServer('x', {
-                    path: ('/exercisesset/yml2json/' + campaign.exercisesname),
-                    method: "POST",
-                    headers: headers,
-                    entity: new Buffer(body, 'utf8')
-                }).then(processResponse);
-            });
-    });
-};
 
-CodeGradX.Campaign.prototype.YYuploadExercisesSet = function (filename) {
-    var state = CodeGradX.getCurrentState();
-    var campaign = this;
-    var FormData = require('form-data');
-    var fd = new FormData();
-    state.debug('uploadExercisesSet1', campaign);
-    function processResponse (response) {
-        //console.log(response);
-        state.debug('uploadExercisesSet2', response);
-        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
-        return when(campaign.exercisesSet);
-    }
-    function formDataToString (fd) {
-        return new Promise(function (resolve, reject) {
-            var stream = new require('stream').Writable();
-            var chunks = [];
-            stream.write = function (chunk) {
-                state.debug('uploadExercisesSet3 write');
-                chunks.push(chunk.toString());
-            };
-            stream.on('error', reject);
-            stream.end = function () {
-                state.debug('uploadExercisesSet4 end');
-                resolve(chunks.join(''));
-            };
-            stream.on('end', stream.end);
-            fd.pipe(stream);
-        });
-    }
-    return CodeGradX.readFileContent(filename).then(function (content) {
-        var basefilename = filename.replace(new RegExp("^.*/"), '');
-        fd.append('content', content);
-        var headers = {
-            'Accept': 'text/xml',
-            'Content-Type': 'multipart/form-data',
-            'Content-Disposition': ("inline; filename=" + basefilename)
-        };
-        state.debug('uploadExercisesSet6', JSON.stringify(headers));
-        return state.sendAXServer('x', {
-            path: ('/exercisesset/yml2json/' + campaign.exercisesname),
-            method: "POST",
-            headers: headers,
-            entity: fd 
-        }).then(processResponse);
-    });
-};
-
-    
 // **************** Exercise ***************************
 
 /** Exercise. When extracted from a Campaign, an Exercise looks like:
