@@ -2,8 +2,8 @@
 // the VMauthor-CodeGradX virtual machine.
 
 var vmauthor = 'vmauthor.codegradx.org';
-var vmauthor = '192.168.122.205';
-var vmauthor = 'vmauthor';
+//var vmauthor = '192.168.122.205';
+//var vmauthor = 'vmauthor';
 
 module.exports.initialize = function (state) {
   state.servers = {
