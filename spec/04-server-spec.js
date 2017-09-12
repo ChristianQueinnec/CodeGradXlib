@@ -125,7 +125,7 @@ describe('CodeGradX', function () {
       expect(state.servers.x[0].enabled).toBeTruthy();
       expect(state.servers.x.next).toBeUndefined();
       expect(state.servers.s[0].enabled).toBeTruthy();
-      expect(state.servers.s[2].enabled).toBeTruthy();
+      expect(state.servers.s[1].enabled).toBeTruthy();
       done();
     }, faildone);
   }, 10*1000); // 10 seconds);

@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-04 16:46:30 queinnec"
+// Time-stamp: "2017-09-12 15:44:21 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -282,23 +282,23 @@ CodeGradX.State = function (initializer) {
     s: {
       suffix: '/index.txt',
       0: {
-        host: 's0.codegradx.org',
-        enabled: false
-      },
-      1: {
-        host: 's1.codegradx.org',
-        enabled: false
-      },
-      2: {
-        host: 's2.codegradx.org',
-        enabled: false
-      },
-      3: {
         host: 's4.codegradx.org',
         enabled: false
       },
-      4: {
+      1: {
+        host: 's2.codegradx.org',
+        enabled: false
+      },
+      2: {
         host: 's3.codegradx.org',
+        enabled: false
+      },
+      3: {
+        host: 's1.codegradx.org',
+        enabled: false
+      },
+      4: {
+        host: 's0.codegradx.org',
         enabled: false
       }
     }
@@ -515,7 +515,7 @@ CodeGradX.State.prototype.checkServers = function (kind) {
          promise = promise.then(incrementNext);
          nextDone = true;
       }
-      promise = promise.timeout(1000)
+      promise = promise.timeout(CodeGradX.State.maxWait)
             .catch(dontIncrementNext);
       promises.push(promise);
     }
@@ -540,6 +540,7 @@ CodeGradX.State.prototype.checkServers = function (kind) {
         .then(returnDescriptions)
         .catch(returnDescriptions);
 };
+CodeGradX.State.maxWait = 1000; // 1 second
 
 /** Check all possible servers of all kinds (a, e, x or s) that is,
     update the state for all of those servers. If correctly programmed
@@ -953,7 +954,8 @@ function (login, password) {
     @property {number} personid
     @property {string} pseudo
     @property {Array<string>} authorprefixes
-    @property {Hashtable<Campaign>} _campaigns - Hashtable of Campaign
+    @property {Hashtable<Campaign>} _campaigns - Hashtable of current Campaigns
+    @property {Hashtable<Campaign>} _all_campaigns - Hashtable of all Campaigns
 
     Campaigns may be obtained via `getCampaign()` or `getCampaigns()`.
 
@@ -1017,31 +1019,76 @@ CodeGradX.User.prototype.modify = function (fields) {
 
 /** Get the campaigns where the current user is enrolled.
 
-      @param {bool} now - get only active campaigns.
+      @param {bool} now - if true get only active campaigns.
       @returns {Promise<Hashtable<Campaign>>} yielding a Hashtable of Campaigns
                 indexed by their name.
+
+   The current user maintains in _campaigns the active campaigns and in
+   _all_campaigns all past or current campaigns.
 
     */
 
 CodeGradX.User.prototype.getCampaigns = function (now) {
-  if ( now ) {
-    var dnow = new Date();
-    var activeCampaigns = {};
-    _.forEach(this._campaigns, function (campaign) {
-      if ( (campaign.starttime <= dnow) &&
-           ( dnow <= campaign.endtime ) ) {
-        //console.log("gotten " + campaign.name);
-        activeCampaigns[campaign.name] = campaign;
-      }
-    });
-    return when(activeCampaigns);
-  } else {
-    return when(this._campaigns);
-  }
+    function filterActive (campaigns) {
+        var dnow = new Date();
+        var activeCampaigns = {};
+        _.forEach(campaigns, function (campaign) {
+            if ( (campaign.starttime <= dnow) &&
+                 ( dnow <= campaign.endtime ) ) {
+                //console.log("gotten " + campaign.name);
+                activeCampaigns[campaign.name] = campaign;
+            }
+        });
+        return activeCampaigns;
+    }
+    if ( now ) {
+        if ( this._campaigns ) {
+            // return current campaigns
+            return when(this._campaigns);
+        } else if ( this._all_campaigns ) {
+            this._campaigns = filterActive(this._all_campaigns);
+            return when(this._campaigns);
+        }
+    }
+    if ( this._all_campaigns ) {
+        if ( now ) {
+            this._campaigns = filterActive(this._all_campaigns);
+            return when(this._campaigns);
+        } else {
+            return when(this._all_campaigns);
+        }
+    } else {
+        var state = CodeGradX.getCurrentState();
+        state.debug('getAllCampaigns1');
+        return state.sendAXServer('x', {
+            path: '/campaigns/',
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        }).then(function (response) {
+            state.debug('getAllCampaigns2', response);
+            var campaigns = {};
+            response.entity.forEach(function (js) {
+                //console.log(js);
+                var campaign = new CodeGradX.Campaign(js);
+                campaigns[campaign.name] = campaign;
+            });
+            this._all_campaigns = campaigns;
+            this._campaigns = filterActive(this._all_campaigns);
+            if ( now ) {
+                return when(this._campaigns);
+            } else {
+                return when(this._all_campaigns);
+            }
+        });
+    }
 };
 
 /** Return a specific Campaign.
-    It looks for a named campaign among the campaigns the user is part of.
+    It looks for a named campaign among the campaigns the user is part of whether
+    past or current.
 
         @param {String} name - name of the Campaign to find
         @returns {Promise<Campaign>} yields {Campaign}
@@ -1051,15 +1098,26 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
 CodeGradX.User.prototype.getCampaign = function (name) {
   var state = CodeGradX.getCurrentState();
   state.debug('getCampaign', name);
-  var campaign = this._campaigns[name];
-  if ( campaign ) {
-    return when(campaign);
+  if ( this._campaigns && this._campaigns[name] ) {
+      return when(this._campaigns[name]);
+  } else if ( this._all_campaigns && this._all_campaigns[name] ) {
+      return when(this._all_campaigns[name]);
   } else {
-    return when.reject(new Error("No such campaign " + name));
+      return this.getCampaigns()
+          .then(function (campaigns) {
+              if ( this._campaigns && this._campaigns[name] ) {
+                  return when(this._campaigns[name]);
+              } else if ( this._all_campaigns && this._all_campaigns[name] ) {
+                  return when(this._all_campaigns[name]);
+              } else {
+                  return when.reject(new Error("No such campaign " + name));
+              }
+          });
   }
 };
 
-/** Fetch all the jobs submitted by the user.
+/** Fetch all the jobs submitted by the user (independently of the
+    current campaign).
 
         @returns {Promise<Jobs>} yields {Array[Job]}
 
@@ -1269,7 +1327,9 @@ CodeGradX.Campaign.prototype.getJobs = function () {
   });
 };
 
-/** Get the (tree-shaped) set of exercises of a campaign.
+/** Get the (tree-shaped) set of exercises of a campaign. This
+    mechanism is used to get an updated list of exercises. First, look
+    in an X server then on the site associated to the campaign.
 
       @return {Promise} yields {ExercisesSet}
 
@@ -1282,50 +1342,12 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
     if ( campaign.exercisesSet ) {
         return when(campaign.exercisesSet);
     }
-    var promises = [];
-    var request1 = {
-        method: 'GET',
-        path: campaign.home_url + "/exercises.json",
-        headers: {
-            Accept: "application/json"
-        }
-    };
-    try {
-        var p1 = state.userAgent(request1).then(function (exercises) {
-            state.debug('getExercisesSet3', exercises);
-            return when(exercises);
-        });
-        promises.push(p1);
-    } catch (e) {
-        // Probably: bad host name!
-        state.debug("getExercisesSet3Error", e);
+    function processResponse (response) {
+        state.debug('getExercisesSet1', response);
+        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
+        return when(campaign.exercisesSet);
     }
-    var httpsurl = campaign.home_url.replace(/^http:/, 'https:');
-    var request4 = {
-        method: 'GET',
-        path: httpsurl + "/exercises.json",
-        headers: {
-            Accept: "application/json"
-        }
-    };
-    try {
-        var p4 = state.userAgent(request4).then(function (exercises) {
-            state.debug('getExercisesSet4', exercises);
-            return when(exercises);
-        });
-        promises.push(p4);
-    } catch (e) {
-        // Probably: bad host name!
-        state.debug("getExercisesSet4Error", e);
-    }
-    var p2 = state.sendESServer('e', {
-        path: ('/path/' + (campaign.exercisesname || campaign.name)),
-        method: 'GET',
-        headers: {
-            Accept: "application/json"
-        }
-    });
-    promises.push(p2);
+    
     var p3 = state.sendAXServer('x', {
         path: ('/exercisesset/path/' + (campaign.exercisesname || campaign.name)),
         method: 'GET',
@@ -1333,11 +1355,22 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
             Accept: "application/json"
         }
     });
-    promises.push(p3);
-    return when.any(promises).then(function (response) {
-        state.debug('getExercisesSet2', response);
-        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
-        return when(campaign.exercisesSet);
+    return p3.then(processResponse).catch(function (reason) {
+        try {
+            state.debug("getExercisesSet2Error", reason);
+            var request1 = {
+                method: 'GET',
+                path: campaign.home_url + "/exercises.json",
+                headers: {
+                    Accept: "application/json"
+                }
+            };
+            return state.userAgent(request1)
+                .then(processResponse);
+        } catch (e) {
+            // Probably: bad host name!
+            state.debug("getExercisesSet3Error", e);
+        }
     });
 };
 

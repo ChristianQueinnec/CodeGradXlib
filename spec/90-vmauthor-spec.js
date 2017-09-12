@@ -7,6 +7,8 @@ var CodeGradX = require('../codegradxlib.js');
 var vmauthor = require('./vmauthor-data.js');
 var vmauthData = require('./vmauth-data.json');
 
+CodeGradX.State.maxWait = 5000; // 5 seconds
+
 describe('CodeGradX', function () {
   CodeGradX.xml2html.default.markFactor = 1;
 
@@ -78,7 +80,7 @@ describe('CodeGradX', function () {
     var state = CodeGradX.getCurrentState();
     var faildone = make_faildone(done);
     expect(campaign1).toBeDefined();
-    //state.log.show();
+    //state.log.show();//
     campaign1.getExercisesSet().then(function (es) {
       expect(es).toBeDefined();
       expect(campaign1.exercisesSet).toBe(es);

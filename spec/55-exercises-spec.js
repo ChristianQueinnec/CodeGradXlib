@@ -27,15 +27,18 @@ describe('CodeGradX', function () {
             }).catch(faildone);
     }, 6*1000); // 6 seconds
 
+    var campaignName = 'insta2-2016oct';
+    var exerciseName = 'org.codegradx.js.min3.3';
+
     it("should get one campaign", function (done) {
         var state = CodeGradX.getCurrentState();
         var faildone = make_faildone(done);
         expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
-        state.currentUser.getCampaign('insta2-2016oct')
+        state.currentUser.getCampaign(campaignName)
             .then(function (campaign) {
                 expect(campaign).toBeDefined();
                 //console.log(campaign);//
-                campaign.getExercise('org.codegradx.js.min3.3')
+                campaign.getExercise(exerciseName)
                     .then(function (exercise) {
                         expect(exercise).toBeDefined();
                         campaign.getExercisesSet()
@@ -51,7 +54,7 @@ describe('CodeGradX', function () {
     it("fail upload a new ExercisesSet" , function (done) {
         var state = CodeGradX.getCurrentState();
         var faildone = make_faildone(done);
-        state.currentUser.getCampaign('insta2-2016oct')
+        state.currentUser.getCampaign(campaignName)
             .then(function (campaign) {
                 expect(campaign).toBeDefined();
                 //console.log(campaign);//
@@ -78,7 +81,7 @@ describe('CodeGradX', function () {
     it("succeed upload a new ExercisesSet" , function (done) {
         var state = CodeGradX.getCurrentState();
         var faildone = make_faildone(done);
-        state.currentUser.getCampaign('insta2-2016oct')
+        state.currentUser.getCampaign(campaignName)
             .then(function (campaign) {
                 expect(campaign).toBeDefined();
                 //console.log(campaign);//
@@ -98,6 +101,20 @@ describe('CodeGradX', function () {
             }).catch(faildone);
     });
 
+    it("fetch that new ExercisesSet", function (done) {
+        var state = CodeGradX.getCurrentState();
+        var faildone = make_faildone(done);
+        delete state.currentUser._campaigns;
+        delete state.currentUser._all_campaigns;
+        state.currentUser.getCampaign(campaignName)
+            .then(function (campaign) {
+                expect(campaign).toBeDefined();
+                return campaign.getExercise(exerciseName)
+                    .then(function (exercise) {
+                        expect(exercise).toBeDefined();
+                        done();
+                    }).catch(faildone);
+            }).catch(faildone);
+    });
+
 });
-    
- 

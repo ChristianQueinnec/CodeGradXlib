@@ -63,7 +63,7 @@ function _str2Date (str) {
     done();
   });
 
-  var campaign1;  // the 'free' campaign
+  var campaign1;  // the 'free' current campaign
 
   it("should get campaign 'free'", function (done) {
     var state = CodeGradX.getCurrentState();
@@ -91,7 +91,7 @@ function _str2Date (str) {
     }, faildone);
   });
 
-  var campaign2; // the 'insta2-2016oct' campaign
+  var campaign2; // the 'insta2-2016oct' past campaign
 
   it("should get all campaigns", function (done) {
     var state = CodeGradX.getCurrentState();
@@ -107,10 +107,12 @@ function _str2Date (str) {
       // the `free` campaign is active:
       //console.log(campaign1.exercisesSet, 'one');//
       state.currentUser.getCampaigns(true).then(function (campaigns2) {
-        expect(campaigns2.free).toBe(campaign1);
-        done();
-      }, faildone);
-    }, faildone);
+          expect(campaigns2.free).toBe(campaign1);
+          expect(Object.getOwnPropertyNames(campaigns2).length)
+              .toBeLessThan(Object.getOwnPropertyNames(campaigns).length);
+          done();
+      }).catch(faildone);
+    }).catch(faildone);
   });
 
   // Javascript test
