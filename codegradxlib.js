@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-12 15:44:21 queinnec"
+// Time-stamp: "2017-09-20 09:00:17 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -255,10 +255,14 @@ CodeGradX.State = function (initializer) {
       next: 3,
       suffix: '/alive',
       0: {
-        host: 'e2.codegradx.org',
+        host: 'e4.codegradx.org',
         enabled: false
       },
       1: {
+        host: 'e2.codegradx.org',
+        enabled: false
+      },
+      2: {
         host: 'e1.codegradx.org',
         enabled: false
       }
@@ -272,10 +276,6 @@ CodeGradX.State = function (initializer) {
       },
       1: {
         host: 'x2.codegradx.org',
-        enabled: false
-      },
-      2: {
-        host: 'x1.codegradx.org',
         enabled: false
       }
     },
@@ -1242,8 +1242,8 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
 // **************** Campaign *********************************
 
 /** A campaign describes a set of exercises for a given group of
-    students and a given group of teachers for a period of time. These
-    groups of persons are not public.
+    students and a given group of teachers for a given period of time.
+    These groups of persons are not public.
 
       @constructor
       @property {string} name
@@ -1264,6 +1264,96 @@ CodeGradX.Campaign = function (json) {
   //console.log(this);
 };
 
+/** Get the list of all students enrolled in the current campaign.
+    
+    @return {Promise<Array[Object]>} - yield an array of students
+    @property {string} student.lastname
+    @property {string} student.firstname
+    @property {string} student.pseudo
+    @property {string} student.email
+    @property {bool} student.confirmedemail
+    @property {number} student.confirmedua
+    @property {start} student.start - creation date
+
+ */
+
+CodeGradX.Campaign.prototype.getStudents = function () {
+  var state = CodeGradX.getCurrentState();
+  var campaign = this;
+  state.debug('getStudents1', campaign);
+  return state.sendAXServer('x', {
+    path: ('/campaign/students/' + campaign.name),      
+    method: 'GET',
+    headers: {
+      Accept: "application/json"
+    }
+  }).then(function (response) {
+    state.debug('getStudents2');
+    //console.log(response);
+    campaign.students = response.entity;
+    return when(state.students);
+  });
+};
+
+/** Get the list of all teachers enrolled in the current campaign.
+    
+    @return {Promise<Array[Object]>} - yield an array of teachers
+    @property {string} teacher.lastname
+    @property {string} teacher.firstname
+    @property {string} teacher.pseudo
+    @property {string} teacher.email
+    @property {bool} teacher.confirmedemail
+    @property {number} teacher.confirmedua
+
+ */
+
+CodeGradX.Campaign.prototype.getTeachers = function () {
+  var state = CodeGradX.getCurrentState();
+  var campaign = this;
+  state.debug('getTeachers1', campaign);
+  return state.sendAXServer('x', {
+    path: ('/campaign/teachers/' + campaign.name),      
+    method: 'GET',
+    headers: {
+      Accept: "application/json"
+    }
+  }).then(function (response) {
+    state.debug('getTeachers2');
+    //console.log(response);
+    campaign.teachers = response.entity;
+    return when(state.teachers);
+  });
+};
+
+/** Get the list of all exercises available in the current campaign.
+    
+    
+    @return {Promise<Array[Object]>} - yield an array of exercises
+    @property {string} exercise.nickname
+    @property {string} exercise.name
+    @property {string} exercise.UUID
+    @property {date}   exercise.start
+
+ */
+
+CodeGradX.Campaign.prototype.getExercises = function () {
+  var state = CodeGradX.getCurrentState();
+  var campaign = this;
+  state.debug('getExercises1', campaign);
+  return state.sendAXServer('x', {
+    path: ('/campaign/exercises/' + campaign.name),      
+    method: 'GET',
+    headers: {
+      Accept: "application/json"
+    }
+  }).then(function (response) {
+    state.debug('getExercises2');
+    //console.log(response);
+    campaign.exercises = response.entity;
+    return when(state.exercises);
+  });
+};
+
 /** Get the skills of the students enrolled in the current campaign.
 
     @return {Promise} yields {Object}
@@ -1280,7 +1370,8 @@ CodeGradX.Campaign.prototype.getSkills = function () {
   var campaign = this;
   state.debug('getSkills1', campaign);
   return state.sendAXServer('x', {
-    path: ('/skill/campaign/' + campaign.name),
+    //path: ('/skill/campaign/' + campaign.name),
+    path: ('/statistics/myPosition/' + campaign.name),      
     method: 'GET',
     headers: {
       Accept: "application/json"
@@ -1400,7 +1491,7 @@ CodeGradX.Campaign.prototype.getExercise = function (name) {
  * campaign. You need to be a teacher of this campaign.
 
       @param {string} filename - Yaml file
-      @returns {Promise} yields {ExercisesSet}
+      @returns {Promise<ExercisesSet>} yields {ExercisesSet}
 
     NOTA: The present implementation depends on Node.js, it uses the
     `fs` module to read the file to send. It has to be rewritten if
@@ -1416,7 +1507,7 @@ CodeGradX.Campaign.prototype.uploadExercisesSet = function (filename) {
         state.debug('uploadExercisesSet2', response);
         campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
         return when(campaign.exercisesSet);
-    }           
+    }      
     return CodeGradX.readFileContent(filename).then(function (content) {
         content += '\n';
         var basefilename = filename.replace(new RegExp("^.*/"), '');
@@ -1438,6 +1529,42 @@ CodeGradX.Campaign.prototype.uploadExercisesSet = function (filename) {
     });
 };
 
+/** Send the content of a file selected by an input:file widget in the
+ * browser. 
+
+      @param {DOM} form DOM element
+      @returns {Promise<ExercisesSet>} yields {ExercisesSet}
+
+The form DOM element must contain an <input type='file' name='content'>
+element. This code only runs in a browser providing the FormData class.
+
+*/
+
+CodeGradX.Campaign.prototype.uploadExercisesSetFromDOM = function (form) {
+    var state = CodeGradX.getCurrentState();
+    var campaign = this;
+    state.debug('uploadExercisesSetFromDOM1', FW4EX.currentExercisesSetFileName);
+    function processResponse (response) {
+        //console.log(response);
+        state.debug('uploadExercisesSetFromDOM2', response);
+        campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
+        return when(campaign.exercisesSet);
+    }
+    var basefilename = FW4EX.currentExercisesSetFileName
+        .replace(new RegExp("^.*/"), '');
+    var headers = {
+        "Content-Type": "multipart/form-data",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Accept": 'text/xml'
+    };
+    var fd = new FormData(form);
+    return state.sendAXServer('x', {
+        path: ('/exercisesset/yml2json/' + campaign.exercisesname),
+        method: "POST",
+        headers: headers,
+        entity: fd
+    }).then(processResponse);
+};
 
 // **************** Exercise ***************************
 
