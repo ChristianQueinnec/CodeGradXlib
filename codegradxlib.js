@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-22 16:27:09 queinnec"
+// Time-stamp: "2017-09-22 19:26:29 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1124,7 +1124,7 @@ CodeGradX.User.prototype.getCampaign = function (name) {
 */
 
 CodeGradX.User.prototype.getCurrentCampaign = function () {
-    let user = this;
+    var user = this;
     if ( FW4EX.currentCampaignName ) {
         return user.getCampaign(FW4EX.currentCampaignName)
             .then(function (campaign) {
@@ -1141,12 +1141,12 @@ CodeGradX.User.prototype.getCurrentCampaign = function () {
                 } else if ( FW4EX.currentCampaign ) {
                     return when(FW4EX.currentCampaign);
                 } else {
-                    let msg = "Cannot determine current campaign";
+                    var msg = "Cannot determine current campaign";
                     return when.reject(new Error(msg));
                 }
             });
     }
-}
+};
 
 /** Fetch all the jobs submitted by the user (independently of the
     current campaign).
@@ -2528,8 +2528,9 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
       // sort reasons and extract only waitedTooMuch if present:
       function tooLongWaiting (reasons) {
           if ( _.isArray(reasons) ) {
-              for ( let r of reasons ) {
-                  let result = tooLongWaiting(r);
+              for ( var i = 0 ; i<reasons.length ; i++ ) {
+                  var r = reasons[i];
+                  var result = tooLongWaiting(r);
                   if ( result ) {
                       return result;
                   }
