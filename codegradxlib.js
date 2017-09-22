@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-20 09:00:17 queinnec"
+// Time-stamp: "2017-09-22 16:27:09 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -374,6 +374,7 @@ CodeGradX.getCurrentUser = function (force) {
         return when(state.currentUser);
     });
 };
+ 
 
 /** Helper function, add a fact to the log held in the current state
   {@see CodeGradX.Log.debug} documentation.
@@ -983,7 +984,7 @@ CodeGradX.User = function (json) {
       this._campaigns = campaigns;
   }
 };
-
+  
 /** Modify some properties of the current user. These properties are
 
       @param {object} fields
@@ -1086,9 +1087,8 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
     }
 };
 
-/** Return a specific Campaign.
-    It looks for a named campaign among the campaigns the user is part of whether
-    past or current.
+/** Return a specific Campaign. It looks for a named campaign among
+    the campaigns the user is part of whether past or current.
 
         @param {String} name - name of the Campaign to find
         @returns {Promise<Campaign>} yields {Campaign}
@@ -1115,6 +1115,38 @@ CodeGradX.User.prototype.getCampaign = function (name) {
           });
   }
 };
+
+/** Get current campaign if FW4EX.currentCampaignName is defined or
+    if there is a single active campaign associated to the user.
+
+    @return {Promise<Campaign>} yields {Campaign}
+
+*/
+
+CodeGradX.User.prototype.getCurrentCampaign = function () {
+    let user = this;
+    if ( FW4EX.currentCampaignName ) {
+        return user.getCampaign(FW4EX.currentCampaignName)
+            .then(function (campaign) {
+                FW4EX.currentCampaign = campaign;
+                return when(campaign);
+            });
+    } else {
+        return user.getCampaigns(true)
+            .then(function (campaigns) {
+                if ( campaigns.length == 1 ) {
+                    FW4EX.currentCampaignName = campaigns[0].name;
+                    FW4EX.currentCampaign = campaigns[0];
+                    return when(campaigns[0]);
+                } else if ( FW4EX.currentCampaign ) {
+                    return when(FW4EX.currentCampaign);
+                } else {
+                    let msg = "Cannot determine current campaign";
+                    return when.reject(new Error(msg));
+                }
+            });
+    }
+}
 
 /** Fetch all the jobs submitted by the user (independently of the
     current campaign).
@@ -1282,7 +1314,7 @@ CodeGradX.Campaign.prototype.getStudents = function () {
   var campaign = this;
   state.debug('getStudents1', campaign);
   return state.sendAXServer('x', {
-    path: ('/campaign/students/' + campaign.name),      
+    path: ('/campaign/listStudents/' + campaign.name),      
     method: 'GET',
     headers: {
       Accept: "application/json"
@@ -1290,8 +1322,10 @@ CodeGradX.Campaign.prototype.getStudents = function () {
   }).then(function (response) {
     state.debug('getStudents2');
     //console.log(response);
-    campaign.students = response.entity;
-    return when(state.students);
+    campaign.students = response.entity.students.map(function (student) {
+        return new CodeGradX.User(student);
+    });
+    return when(campaign.students);
   });
 };
 
@@ -1312,7 +1346,7 @@ CodeGradX.Campaign.prototype.getTeachers = function () {
   var campaign = this;
   state.debug('getTeachers1', campaign);
   return state.sendAXServer('x', {
-    path: ('/campaign/teachers/' + campaign.name),      
+    path: ('/campaign/listTeachers/' + campaign.name),      
     method: 'GET',
     headers: {
       Accept: "application/json"
@@ -1320,13 +1354,14 @@ CodeGradX.Campaign.prototype.getTeachers = function () {
   }).then(function (response) {
     state.debug('getTeachers2');
     //console.log(response);
-    campaign.teachers = response.entity;
-    return when(state.teachers);
+    campaign.teachers = response.entity.teachers.map(function (teacher) {
+        return new CodeGradX.User(teacher);
+    });
+    return when(campaign.teachers);
   });
 };
 
 /** Get the list of all exercises available in the current campaign.
-    
     
     @return {Promise<Array[Object]>} - yield an array of exercises
     @property {string} exercise.nickname
@@ -1341,7 +1376,7 @@ CodeGradX.Campaign.prototype.getExercises = function () {
   var campaign = this;
   state.debug('getExercises1', campaign);
   return state.sendAXServer('x', {
-    path: ('/campaign/exercises/' + campaign.name),      
+    path: ('/campaign/listExercises/' + campaign.name),      
     method: 'GET',
     headers: {
       Accept: "application/json"
@@ -1349,8 +1384,10 @@ CodeGradX.Campaign.prototype.getExercises = function () {
   }).then(function (response) {
     state.debug('getExercises2');
     //console.log(response);
-    campaign.exercises = response.entity;
-    return when(state.exercises);
+    campaign.exercises = response.entity.exercises.map(function (exercise) {
+        return new CodeGradX.Exercise(exercise);
+    });
+    return when(campaign.exercises);
   });
 };
 
@@ -1415,6 +1452,41 @@ CodeGradX.Campaign.prototype.getJobs = function () {
     }
     state.jobs = _.map(response.entity.jobs, js2job);
     return when(state.jobs);
+  });
+};
+
+/** Get the jobs submitted by a student in the current campaign.
+    This is restricted to admins or teachers of the campaign.
+    
+    @returns {Promise} yields Array[Job]
+*/
+
+CodeGradX.Campaign.prototype.getCampaignStudentJobs = function (user) {
+  var state = CodeGradX.getCurrentState();
+  var campaign = this;
+  state.debug('getAchievements1', campaign, user);
+  return state.sendAXServer('x', {
+    path: ('/history/campaignJobs/' + campaign.name + '/' + user.personid),
+    method: 'GET',
+    headers: {
+      Accept: "application/json"
+    }
+  }).then(function (response) {
+    state.debug('getAchievements2');
+    //console.log(response);
+    function normalizeUUID (uuid) {
+        var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
+        return uuid.replace(uuidRegexp, "$1-$2-$3-$4-$5");
+    }
+    function js2job (js) {
+        var job = new CodeGradX.Job(js);
+        job.jobid = normalizeUUID(js.uuid);
+        job.pathdir = '/s' + 
+            js.uuid.replace(/(.)/g, "/$1");
+        return job;
+    }
+    user.jobs = _.map(response.entity.jobs, js2job);
+    return when(user.jobs);
   });
 };
 
@@ -2452,6 +2524,25 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     state.debug('getJobReport2', job);
     job.XMLreport = response.entity;
     return when(job);
+  }).catch(function (reasons) {
+      // sort reasons and extract only waitedTooMuch if present:
+      function tooLongWaiting (reasons) {
+          if ( _.isArray(reasons) ) {
+              for ( let r of reasons ) {
+                  let result = tooLongWaiting(r);
+                  if ( result ) {
+                      return result;
+                  }
+              }
+          } else if ( reasons instanceof Error ) {
+              if ( reasons.message.match(/waitedTooMuch/) ) {
+                  return reasons;
+              }
+          }
+          return undefined;
+      }
+      var result = tooLongWaiting(reasons);
+      return when.reject(result || reasons);
   });
   var promise2 = promise.then(function (response) {
     // Fill archived, started, ended, finished, mark and totalMark
@@ -2496,6 +2587,8 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     state.debug('getJobReport6', job);
     //console.log(job);
     return promise1;
+  }).finally(function () {
+      return promise1;
   });
 };
 
