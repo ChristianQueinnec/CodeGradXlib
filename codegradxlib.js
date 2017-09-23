@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-22 19:26:29 queinnec"
+// Time-stamp: "2017-09-23 20:35:34 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1168,21 +1168,7 @@ CodeGradX.User.prototype.getAllJobs = function () {
     }).then(function (response) {
         state.debug('getAllJobs2');
         //console.log(response);
-        function normalizeUUID (uuid) {
-            var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
-            return uuid.replace(uuidRegexp, "$1-$2-$3-$4-$5");
-        }
-        function js2job (js) {
-            var markFactor = CodeGradX.xml2html.default.markFactor;
-            var job = new CodeGradX.Job(js);
-            job.jobid = normalizeUUID(js.uuid);
-            job.mark *= markFactor;
-            job.totalMark *= markFactor;
-            job.pathdir = '/s' + 
-                js.uuid.replace(/(.)/g, "/$1");
-            return job;
-        }
-        state.jobs = _.map(response.entity.jobs, js2job);
+        state.jobs = _.map(response.entity.jobs, CodeGradX.Job.js2job);
         return when(state.jobs);
     });
 };
@@ -1439,18 +1425,7 @@ CodeGradX.Campaign.prototype.getJobs = function () {
   }).then(function (response) {
     state.debug('getJobs2');
     //console.log(response);
-    function normalizeUUID (uuid) {
-        var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
-        return uuid.replace(uuidRegexp, "$1-$2-$3-$4-$5");
-    }
-    function js2job (js) {
-        var job = new CodeGradX.Job(js);
-        job.jobid = normalizeUUID(js.uuid);
-        job.pathdir = '/s' + 
-            js.uuid.replace(/(.)/g, "/$1");
-        return job;
-    }
-    state.jobs = _.map(response.entity.jobs, js2job);
+    state.jobs = _.map(response.entity.jobs, CodeGradX.Job.js2job);
     return when(state.jobs);
   });
 };
@@ -1474,18 +1449,7 @@ CodeGradX.Campaign.prototype.getCampaignStudentJobs = function (user) {
   }).then(function (response) {
     state.debug('getAchievements2');
     //console.log(response);
-    function normalizeUUID (uuid) {
-        var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
-        return uuid.replace(uuidRegexp, "$1-$2-$3-$4-$5");
-    }
-    function js2job (js) {
-        var job = new CodeGradX.Job(js);
-        job.jobid = normalizeUUID(js.uuid);
-        job.pathdir = '/s' + 
-            js.uuid.replace(/(.)/g, "/$1");
-        return job;
-    }
-    user.jobs = _.map(response.entity.jobs, js2job);
+    user.jobs = _.map(response.entity.jobs, CodeGradX.Job.js2job);
     return when(user.jobs);
   });
 };
@@ -2491,7 +2455,26 @@ CodeGradX.ExercisesSet.prototype.getExerciseByIndex = function (index) {
 */
 
 CodeGradX.Job = function (js) {
+    function normalizeUUID (uuid) {
+        var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
+        return uuid.replace(/-/g, '').replace(uuidRegexp, "$1-$2-$3-$4-$5");
+    }
+    if ( js.uuid && ! js.jobid ) {
+        js.jobid = normalizeUUID(js.uuid);
+    }
+    var markFactor = CodeGradX.xml2html.default.markFactor;
+    if ( js.totalMark !== markFactor ) {
+        js.mark *= markFactor;
+        js.totalMark *= markFactor;
+    }
+    if ( js.jobid && ! js.pathdir ) {
+        js.pathdir = '/s' + js.jobid.replace(/-/g, '').replace(/(.)/g, "/$1");
+    }
   _.assign(this, js);
+};
+
+CodeGradX.Job.js2job = function (js) {
+    return new CodeGradX.Job(js);
 };
 
 /** Get the marking report of that Job. The marking report will be stored
