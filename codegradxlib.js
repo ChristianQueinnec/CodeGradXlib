@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-23 20:35:34 queinnec"
+// Time-stamp: "2017-09-24 16:38:59 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1267,7 +1267,6 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
       @property {string} name
       @property {Date} starttime - Start date of the Campaign
       @property {Date} endtime - End date of the Campaign
-      @property {string} exercisesname - Name of the set of Exercises
       @property {ExerciseSet} _exercises (filled by getExercises)
 
       Exercises may be obtained one by one with `getExercise()`.
@@ -1476,7 +1475,7 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
     }
     
     var p3 = state.sendAXServer('x', {
-        path: ('/exercisesset/path/' + (campaign.exercisesname || campaign.name)),
+        path: ('/exercisesset/path/' + campaign.name),
         method: 'GET',
         headers: {
             Accept: "application/json"
@@ -1557,7 +1556,7 @@ CodeGradX.Campaign.prototype.uploadExercisesSet = function (filename) {
         }
         state.debug('uploadExercisesSet6', JSON.stringify(headers));
         return state.sendAXServer('x', {
-            path: ('/exercisesset/yml2json/' + campaign.exercisesname),
+            path: ('/exercisesset/yml2json/' + campaign.name),
             method: "POST",
             headers: headers,
             entity: content
@@ -1591,11 +1590,11 @@ CodeGradX.Campaign.prototype.uploadExercisesSetFromDOM = function (form) {
     var headers = {
         "Content-Type": "multipart/form-data",
         "Content-Disposition": ("inline; filename=" + basefilename),
-        "Accept": 'text/xml'
+        "Accept": 'application/json'
     };
     var fd = new FormData(form);
     return state.sendAXServer('x', {
-        path: ('/exercisesset/yml2json/' + campaign.exercisesname),
+        path: ('/exercisesset/yml2json/' + campaign.name),
         method: "POST",
         headers: headers,
         entity: fd
@@ -2244,10 +2243,10 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
           // partial marks TOBEDONE
         });
         if ( jspj.marking ) {
-            job.mark = markFactor *
-                CodeGradX._str2num(jspj.marking.$.mark);
-            job.totalMark = markFactor *
-                CodeGradX._str2num(jspj.marking.$.totalMark);
+            job.mark = Math.round(markFactor *
+                CodeGradX._str2num(jspj.marking.$.mark));
+            job.totalMark = Math.round(markFactor *
+                CodeGradX._str2num(jspj.marking.$.totalMark));
             job.archived = CodeGradX._str2Date(jspj.marking.$.archived);
             job.started = CodeGradX._str2Date(jspj.marking.$.started);
             job.ended = CodeGradX._str2Date(jspj.marking.$.ended);
@@ -2464,8 +2463,8 @@ CodeGradX.Job = function (js) {
     }
     var markFactor = CodeGradX.xml2html.default.markFactor;
     if ( js.totalMark !== markFactor ) {
-        js.mark *= markFactor;
-        js.totalMark *= markFactor;
+        js.mark = Math.round(js.mark * markFactor);
+        js.totalMark = Math.round(js.totalMark * markFactor);
     }
     if ( js.jobid && ! js.pathdir ) {
         js.pathdir = '/s' + js.jobid.replace(/-/g, '').replace(/(.)/g, "/$1");
@@ -2539,8 +2538,10 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
       //console.log(js);
       job.mark      = CodeGradX._str2num(js.marking.$.mark);
       job.mark      *= CodeGradX.xml2html.default.markFactor;
+      job.mark = Math.round(job.mark);
       job.totalMark = CodeGradX._str2num(js.marking.$.totalMark);
       job.totalMark *= CodeGradX.xml2html.default.markFactor;
+      job.totalMark = Math.round(job.totalMark);
       job.archived  = CodeGradX._str2Date(js.marking.$.archived);
       job.started   = CodeGradX._str2Date(js.marking.$.started);
       job.ended     = CodeGradX._str2Date(js.marking.$.ended);
