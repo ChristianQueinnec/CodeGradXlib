@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-09-24 16:38:59 queinnec"
+// Time-stamp: "2017-10-10 13:15:01 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
