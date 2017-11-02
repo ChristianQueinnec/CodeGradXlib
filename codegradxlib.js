@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-10-10 13:15:01 queinnec"
+// Time-stamp: "2017-11-02 15:18:45 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1030,6 +1030,7 @@ CodeGradX.User.prototype.modify = function (fields) {
     */
 
 CodeGradX.User.prototype.getCampaigns = function (now) {
+    var user = this;
     function filterActive (campaigns) {
         var dnow = new Date();
         var activeCampaigns = {};
@@ -1043,20 +1044,20 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
         return activeCampaigns;
     }
     if ( now ) {
-        if ( this._campaigns ) {
+        if ( user._campaigns ) {
             // return current campaigns
-            return when(this._campaigns);
-        } else if ( this._all_campaigns ) {
-            this._campaigns = filterActive(this._all_campaigns);
-            return when(this._campaigns);
+            return when(user._campaigns);
+        } else if ( user._all_campaigns ) {
+            user._campaigns = filterActive(user._all_campaigns);
+            return when(user._campaigns);
         }
     }
-    if ( this._all_campaigns ) {
+    if ( user._all_campaigns ) {
         if ( now ) {
-            this._campaigns = filterActive(this._all_campaigns);
-            return when(this._campaigns);
+            user._campaigns = filterActive(user._all_campaigns);
+            return when(user._campaigns);
         } else {
-            return when(this._all_campaigns);
+            return when(user._all_campaigns);
         }
     } else {
         var state = CodeGradX.getCurrentState();
@@ -1076,12 +1077,12 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
                 var campaign = new CodeGradX.Campaign(js);
                 campaigns[campaign.name] = campaign;
             });
-            this._all_campaigns = campaigns;
-            this._campaigns = filterActive(this._all_campaigns);
+            user._all_campaigns = campaigns;
+            user._campaigns = filterActive(user._all_campaigns);
             if ( now ) {
-                return when(this._campaigns);
+                return when(user._campaigns);
             } else {
-                return when(this._all_campaigns);
+                return when(user._all_campaigns);
             }
         });
     }
@@ -1096,19 +1097,20 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
     */
 
 CodeGradX.User.prototype.getCampaign = function (name) {
+  var user = this;
   var state = CodeGradX.getCurrentState();
   state.debug('getCampaign', name);
-  if ( this._campaigns && this._campaigns[name] ) {
-      return when(this._campaigns[name]);
-  } else if ( this._all_campaigns && this._all_campaigns[name] ) {
-      return when(this._all_campaigns[name]);
+  if ( user._campaigns && user._campaigns[name] ) {
+      return when(user._campaigns[name]);
+  } else if ( user._all_campaigns && user._all_campaigns[name] ) {
+      return when(user._all_campaigns[name]);
   } else {
-      return this.getCampaigns()
+      return user.getCampaigns()
           .then(function (campaigns) {
-              if ( this._campaigns && this._campaigns[name] ) {
-                  return when(this._campaigns[name]);
-              } else if ( this._all_campaigns && this._all_campaigns[name] ) {
-                  return when(this._all_campaigns[name]);
+              if ( user._campaigns && user._campaigns[name] ) {
+                  return when(user._campaigns[name]);
+              } else if ( user._all_campaigns && user._all_campaigns[name] ) {
+                  return when(user._all_campaigns[name]);
               } else {
                   return when.reject(new Error("No such campaign " + name));
               }
