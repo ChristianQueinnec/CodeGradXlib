@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-11-02 15:18:45 queinnec"
+// Time-stamp: "2017-11-21 09:25:24 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -72,6 +72,7 @@ var registry = require('rest/mime/registry');
 var xml2js = require('xml2js');
 var xml2jsproc = require('xml2js/lib/processors');
 var sax = require('sax');
+var he = require('he');
 
 // Define that additional MIME type:
 registry.register('application/octet-stream', {
@@ -360,13 +361,17 @@ CodeGradX.getCurrentUser = function (force) {
         return when(state.currentUser);
     }
     state.debug('getCurrentUser1');
+    let params = {};
+    if ( FW4EX.currentCampaignName ) {
+        params.campaign = FW4EX.currentCampaignName;
+    }
     return state.sendAXServer('x', {
         path: '/whoami',
         method: 'GET',
         headers: {
             'Accept': 'application/json'
         },
-        entity: {}
+        entity: params
     }).then(function (response) {
         //console.log(response);
         state.debug('getCurrentUser2', response);
@@ -621,13 +626,13 @@ CodeGradX.checkStatusCode = function (response) {
 CodeGradX.State.prototype.sendAXServer = function (kind, options) {
   var state = this;
   state.debug('sendAXServer', kind, options);
-  var newoptions = regenerateNewOptions();
+  var newoptions = regenerateNewOptions(options);
   var adescriptions = getActiveServers();
   var checkServersCount = 0;
 
   function regenerateNewOptions (options) {
       var newoptions = _.assign({}, options);
-      newoptions.headers = newoptions.headers || {};
+      newoptions.headers = newoptions.headers || options.headers || {};
       if ( state.currentCookie ) {
           //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
           if ( isNode() ) {
@@ -1175,6 +1180,43 @@ CodeGradX.User.prototype.getAllJobs = function () {
     });
 };
 
+/** Fetch all exercises submitted by the user (independently of the
+    current campaign) but only the exercices created after the
+    starttime of the current campaign.
+
+        @returns {Promise<Exercises>} yields {Array[Exercise]}
+
+ */
+
+CodeGradX.User.prototype.getAllExercises = function () {
+    var state = CodeGradX.getCurrentState();
+    var user = this;
+    state.debug('getAllExercises1', user);
+    return CodeGradX.getCurrentUser()
+        .then(function (user) {
+            return user.getCurrentCampaign();
+        }).then(function (campaign) {
+            FW4EX.fillCampaignCharacteristics(campaign);
+            let url = `/exercises/person/${user.personid}`
+            let d = campaign.starttime.toISOString().replace(/T.*$/, '');
+            url += `?after=${encodeURI(d)}`;
+            return state.sendAXServer('x', {
+                path: url,
+                method: 'GET',
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json"
+                }
+            });
+        }).then(function (response) {
+            state.debug('getAllExercises2');
+            //console.log(response);
+            state.exercises = _.map(response.entity.exercises,
+                                    CodeGradX.Exercise.js2exercise);
+            return when(state.exercises);
+        });
+};
+
 /** get the list of exercises a user tried in a given campaign, get
     also the list of badges (or certificates) won during that
     campaign. It enriches the current user with new properties
@@ -1258,6 +1300,44 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
     }).then(processResponse);
   });
 };
+
+CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
+  var user = this;
+  var state = CodeGradX.getCurrentState();
+  state.debug('submitNewExerciseFromDOM1');
+  function processResponse (response) {
+      //console.log(response);
+      state.debug('submitNewExerciseFromDOM3', response);
+      return CodeGradX.parsexml(response.entity).then(function (js) {
+        //console.log(js);
+        state.debug('submitNewExerciseFromDOM4', js);
+        js = js.fw4ex.exerciseSubmittedReport;
+        var exercise = new CodeGradX.Exercise({
+          location: js.$.location,
+          personid: CodeGradX._str2num(js.person.$.personid),
+          exerciseid: js.exercise.$.exerciseid,
+          XMLsubmission: response.entity
+        });
+        state.debug('submitNewExerciseFromDOM5', exercise.exerciseid);
+        return when(exercise);
+      });
+  }
+  var fd = new FormData(form);
+  var basefilename = FW4EX.currentFileName
+      .replace(new RegExp("^.*/"), '');
+  var headers = {
+      "Content-Type": "multipart/form-data",
+      "Content-Disposition": ("inline; filename=" + basefilename),
+      "Accept": 'text/xml'
+  };
+  return state.sendESServer('e', {
+      path: '/exercises/',
+      method: "POST",
+      headers: headers,
+      entity: fd
+  }).then(processResponse);
+};
+
 
 // **************** Campaign *********************************
 
@@ -1642,9 +1722,22 @@ CodeGradX.Campaign.prototype.uploadExercisesSetFromDOM = function (form) {
 
     */
 
-CodeGradX.Exercise = function (json) {
-  // initialize name, nickname, safecookie, summary, tags:
-  _.assign(this, json);
+CodeGradX.Exercise = function (js) {
+    function normalizeUUID (uuid) {
+        var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
+        return uuid.replace(/-/g, '').replace(uuidRegexp, "$1-$2-$3-$4-$5");
+    }
+    if ( js.uuid && ! js.exerciseid ) {
+        js.exerciseid = normalizeUUID(js.uuid);
+    }
+    if ( js.uuid && ! js.location ) {
+        js.location = '/e' + js.uuid.replace(/-/g, '').replace(/(.)/g, "/$1");
+    }
+    _.assign(this, js);
+};
+
+CodeGradX.Exercise.js2exercise = function (js) {
+    return new CodeGradX.Exercise(js);
 };
 
 /** Get the XML descriptor of the Exercise.
@@ -1782,11 +1875,17 @@ CodeGradX.Exercise.prototype.getEquipmentFile = function (file) {
 
 */
 
+const identificationRegExp =
+  new RegExp("^(.|\n)*(<identification (.|\n)*</identification>)(.|\n)*$");
+const summaryRegExp =
+  new RegExp("^(.|\n)*(<summary.*?>(.|\n)*</summary>)(.|\n)*$");
+
 function extractIdentification (exercise, s) {
-    var identificationRegExp = new RegExp("^(.|\n)*(<identification (.|\n)*</identification>)(.|\n)*$");
-    var summaryRegExp = new RegExp("^(.|\n)*(<summary.*?>(.|\n)*</summary>)(.|\n)*$");
     var content = s.replace(identificationRegExp, "$2");
     return CodeGradX.parsexml(content).then(function (result) {
+        if ( ! result.identification ) {
+            return when(exercise);
+        }
         result = result.identification;
         // extract identification:
         exercise.name = result.$.name;
@@ -2191,6 +2290,15 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
 
   @property {string} safecookie - the long identifier of the exercise.
 
+A failure might be:
+
+  <fw4ex version="1.0">
+    <exerciseAuthorReport exerciseid="9A9701A8-CE17-11E7-AB9A-DBAB25888DB0">
+      <report>
+      </report>
+    </exerciseAuthorReport>
+  </fw4ex>
+
 */
 
 CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
@@ -2208,82 +2316,86 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
         state.debug("catchXMLerror", reason);
         return when.reject(reason);
     }
-    return CodeGradX.parsexml(response.entity).then(function (js) {
-      state.debug("getExerciseReport3", js);
-      js = js.fw4ex.exerciseAuthorReport;
-      exercise.name = js.identification.$.name;
-      exercise.nickname = js.identification.$.nickname;
-      exercise.summary = js.identification.summary;
-      // Caution: if there is only one tag then tags is 
-      // { '$': { name: 'js' } } If there is more than one tag, then tags is
-      // [ { '$': { name: 'js' } }, { '$': { name: 'closure' } } ]
-      var tags = js.identification.tags.tag;
-      if ( _.isArray(tags) ) {
-          exercise.tags = _.map(js.identification.tags.tag, function (jstag) {
-              return jstag.$.name;
-          });
-      } else {
-          exercise.tags = [ tags.name ];
-      }
-      exercise.authorship = js.identification.authorship.author;
-      if ( ! _.isArray(exercise.authorship) ) {
-        exercise.authorship = [ exercise.authorship ];
-      }
-      exercise.pseudojobs = {};
-      exercise.totaljobs    = CodeGradX._str2num(js.pseudojobs.$.totaljobs);
-      exercise.finishedjobs = CodeGradX._str2num(js.pseudojobs.$.finishedjobs);
-      function processPseudoJob (jspj) {
-        var name = jspj.submission.$.name;
-        var markFactor = CodeGradX.xml2html.default.markFactor;
-        var job = new CodeGradX.Job({
-          exercise:  exercise,
-          XMLpseudojob: jspj,
-          jobid:     jspj.$.jobid,
-          pathdir:   jspj.$.location,
-          duration:  CodeGradX._str2num(jspj.$.duration),
-          problem:   false  
-          // partial marks TOBEDONE
-        });
-        if ( jspj.marking ) {
-            job.mark = Math.round(markFactor *
-                CodeGradX._str2num(jspj.marking.$.mark));
-            job.totalMark = Math.round(markFactor *
-                CodeGradX._str2num(jspj.marking.$.totalMark));
-            job.archived = CodeGradX._str2Date(jspj.marking.$.archived);
-            job.started = CodeGradX._str2Date(jspj.marking.$.started);
-            job.ended = CodeGradX._str2Date(jspj.marking.$.ended);
-            job.finished = CodeGradX._str2Date(jspj.marking.$.finished);
-        }
-        if ( jspj.$.problem ) {
-            job.problem = true;
-            if ( jspj.report ) {
-                job.problem = jspj.report;
-            }
-        }
-        exercise.pseudojobs[name] = job;
-      }
-      var pseudojobs = js.pseudojobs.pseudojob;
-      if ( _.isArray(pseudojobs) ) {
-          pseudojobs.forEach(processPseudoJob);
-      } else if ( pseudojobs ) {
-          processPseudoJob(pseudojobs);
-      } else {
-          // nothing! exercise.finishedjobs is probably 0!
-      }
-      //console.log(exercise); // DEBUG
-      if ( js.$.safecookie ) {
-        exercise.safecookie = js.$.safecookie;
-      }
-      return when(exercise);
-    })
+    state.debug("getExerciseReport3a");
+    return extractIdentification(exercise, response.entity)
+          .then(function (exercise) {
+              state.debug("getExerciseReport3b");
+              return CodeGradX.parsexml(response.entity);
+          }).then(function (js) {
+              state.debug("getExerciseReport3c", js);
+              js = js.fw4ex.exerciseAuthorReport;
+              exercise.pseudojobs = {};
+              exercise._pseudojobs = [];
+              if ( js.report ) {
+                  exercise.globalReport = js.report;
+                  if ( exercise._pseudojobs.length === 0 ) {
+                      return when(exercise);
+                  }
+              }
+              exercise.totaljobs =
+                  CodeGradX._str2num(js.pseudojobs.$.totaljobs);
+              exercise.finishedjobs =
+                  CodeGradX._str2num(js.pseudojobs.$.finishedjobs);
+              function processPseudoJob (jspj) {
+                  var name = jspj.submission.$.name;
+                  var markFactor = CodeGradX.xml2html.default.markFactor;
+                  var job = new CodeGradX.Job({
+                      exercise:  exercise,
+                      XMLpseudojob: jspj,
+                      jobid:     jspj.$.jobid,
+                      pathdir:   jspj.$.location,
+                      duration:  CodeGradX._str2num(jspj.$.duration),
+                      problem:   false,
+                      label: name  
+                      // partial marks TOBEDONE
+                  });
+                  if ( jspj.marking ) {
+                      job.expectedMark = Math.round(markFactor *
+                          CodeGradX._str2num(jspj.submission.$.expectedMark));
+                      job.mark = Math.round(markFactor *
+                          CodeGradX._str2num(jspj.marking.$.mark));
+                      job.totalMark = Math.round(markFactor *
+                          CodeGradX._str2num(jspj.marking.$.totalMark));
+                      job.archived =
+                          CodeGradX._str2Date(jspj.marking.$.archived);
+                      job.started =
+                          CodeGradX._str2Date(jspj.marking.$.started);
+                      job.ended =
+                          CodeGradX._str2Date(jspj.marking.$.ended);
+                      job.finished =
+                          CodeGradX._str2Date(jspj.marking.$.finished);
+                  }
+                  if ( jspj.$.problem ) {
+                      job.problem = true;
+                      if ( jspj.report ) {
+                          job.problem = jspj.report;
+                      }
+                  }
+                  exercise.pseudojobs[name] = job;
+                  exercise._pseudojobs.push(job);
+              }
+              var pseudojobs = js.pseudojobs.pseudojob;
+              if ( _.isArray(pseudojobs) ) {
+                  pseudojobs.forEach(processPseudoJob);
+              } else if ( pseudojobs ) {
+                  processPseudoJob(pseudojobs);
+              } else {
+                  // nothing! exercise.finishedjobs is probably 0!
+              }
+              //console.log(exercise); // DEBUG
+              if ( js.$.safecookie ) {
+                  exercise.safecookie = js.$.safecookie;
+              }
+              return when(exercise);
+          })
           .catch(catchXMLerror);
   }
   return state.sendRepeatedlyESServer('s', parameters, {
-    path: (exercise.location + '/' + exercise.exerciseid + '.xml'),
-    method: 'GET',
-    headers: {
-      "Accept": 'text/xml'
-    }
+      path: (exercise.location + '/' + exercise.exerciseid + '.xml'),
+      method: 'GET',
+      headers: {
+          "Accept": 'text/xml'
+      }
   }).then(processResponse);
 };
 
@@ -2628,7 +2740,7 @@ CodeGradX.xml2html = function (s, options) {
   var mode = 'default';
   var questionCounter = 0, sectionLevel = 0;
   var htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
-  var divTagsRegExp = new RegExp('^(warning|error|introduction|conclusion|normal|stem)$');
+  var divTagsRegExp = new RegExp('^(warning|error|introduction|conclusion|normal|stem|report)$');
   var spanTagsRegExp = new RegExp("^(user|machine|lineNumber)$");
   var ignoreTagsRegExp = new RegExp("^(FW4EX|expectations|title|fw4ex)$");
   function convertAttributes (attributes) {
@@ -2719,14 +2831,19 @@ CodeGradX.xml2html = function (s, options) {
       result += '<!-- ' + text + ' -->';
     }
   };
-  parser.cdata = function (text) {
+  parser.oncdata = function (text) {
     if ( ! mode.match(/ignore/) ) {
-      result += '<![CDATA[' + text;
+        result += '<pre>' + he.encode(text);
     }
   };
-  parser.closecdata = function () {
+  parser.cdata = function (text) {
     if ( ! mode.match(/ignore/) ) {
-      result += ']]>';
+        result += he.encode(text);
+    }
+  };
+  parser.onclosecdata = function () {
+    if ( ! mode.match(/ignore/) ) {
+        result += '</pre>';
     }
   };
   parser.write(s).close();
