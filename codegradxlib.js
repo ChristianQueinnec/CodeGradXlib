@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-11-21 09:25:24 queinnec"
+// Time-stamp: "2017-11-21 10:13:09 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -70,7 +70,7 @@ var rest = require('rest');
 var mime = require('rest/interceptor/mime');
 var registry = require('rest/mime/registry');
 var xml2js = require('xml2js');
-var xml2jsproc = require('xml2js/lib/processors');
+//var xml2jsproc = require('xml2js/lib/processors');
 var sax = require('sax');
 var he = require('he');
 
@@ -250,7 +250,7 @@ CodeGradX.State = function (initializer) {
       2: {
         host: 'a1.codegradx.org',
         enabled: false
-      },
+      }
     },
     e: {
       next: 3,
@@ -580,6 +580,7 @@ CodeGradX.checkStatusCode = function (response) {
   var state = CodeGradX.getCurrentState();
   state.debug('checkStatusCode1', response);
   //console.log(response);
+    /* eslint no-control-regex: 0 */
   var reasonRegExp = new RegExp("^(.|\n)*<reason>((.|\n)*)</reason>(.|\n)*$");
   function extractFW4EXerrorMessage (response) {
     var reason;
@@ -837,7 +838,7 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
   }
   var adescriptions = getActiveServers();
   if ( adescriptions.length === 0 ) {
-    return state.checkServers(kind).then(function (descriptions) {
+    return state.checkServers(kind).then(function (/*descriptions*/) {
       var adescriptions2 = getActiveServers();
       if ( adescriptions2.length === 0 ) {
         return when.reject(new Error("no available server " + kind));
@@ -912,7 +913,7 @@ function (kind, parameters, options) {
 CodeGradX.State.prototype.sendRepeatedlyESServer.default = {
   step: 3, // seconds
   attempts: 30,
-  progress: function (parameters) {}
+  progress: function (/*parameters*/) {}
 };
 
 /** Authenticate the user. This will return a Promise leading to
@@ -1111,7 +1112,7 @@ CodeGradX.User.prototype.getCampaign = function (name) {
       return when(user._all_campaigns[name]);
   } else {
       return user.getCampaigns()
-          .then(function (campaigns) {
+          .then(function (/*campaigns*/) {
               if ( user._campaigns && user._campaigns[name] ) {
                   return when(user._campaigns[name]);
               } else if ( user._all_campaigns && user._all_campaigns[name] ) {
@@ -1197,7 +1198,7 @@ CodeGradX.User.prototype.getAllExercises = function () {
             return user.getCurrentCampaign();
         }).then(function (campaign) {
             FW4EX.fillCampaignCharacteristics(campaign);
-            let url = `/exercises/person/${user.personid}`
+            let url = `/exercises/person/${user.personid}`;
             let d = campaign.starttime.toISOString().replace(/T.*$/, '');
             url += `?after=${encodeURI(d)}`;
             return state.sendAXServer('x', {
@@ -1260,8 +1261,9 @@ CodeGradX.User.prototype.getProgress = function (campaign) {
 
     */
 
-CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
-  var user = this;
+CodeGradX.User.prototype.submitNewExercise =
+ function (filename /*, parameters*/) {
+  //var user = this;
   var state = CodeGradX.getCurrentState();
   state.debug('submitNewExercise1', filename);
   function processResponse (response) {
@@ -1302,7 +1304,7 @@ CodeGradX.User.prototype.submitNewExercise = function (filename, parameters) {
 };
 
 CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
-  var user = this;
+  //var user = this;
   var state = CodeGradX.getCurrentState();
   state.debug('submitNewExerciseFromDOM1');
   function processResponse (response) {
@@ -1821,7 +1823,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
                     exercise.inlineFileName = result.div.expectations.file.$.basename;
                 }
                 return when(response);
-            }).catch(function (reason) {
+            }).catch(function (/*reason*/) {
                 exercise.expectations = [];
                 return when(response);
             });
@@ -1831,7 +1833,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
         }
     });
     return when.join(promise3, promise4)
-        .then(function (values) {
+        .then(function (/*values*/) {
             return promise1;
         });
 };
@@ -1926,11 +1928,12 @@ function extractIdentification (exercise, s) {
     
     [ '/foo', '/bar/hux', '/bar/wek']
 
-*/
 
 function extractExpectations (exercice, s) {
     return exercise;
 }
+
+*/
 
 /** Convert an XML fragment describing directories and files into
     pathnames. For instance,
@@ -1980,6 +1983,8 @@ function extractEquipment (exercise, s) {
                 exercise.equipment = flatten(result.equipment, '');
             });
         } catch (e) {
+            var state = CodeGradX.getCurrentState();
+            state.debug("extractEquipment", e);
         }
     }
     return exercise;
@@ -2037,7 +2042,7 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
           return when.reject(new Error("Non suitable exercise"));
       } else {
           return exercise.getDescription()
-          .then(function (description) {
+          .then(function (/*description*/) {
               return exercise.sendStringAnswer(answer);
           });
       }
@@ -2318,7 +2323,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
     }
     state.debug("getExerciseReport3a");
     return extractIdentification(exercise, response.entity)
-          .then(function (exercise) {
+          .then(function (/*exercise*/) {
               state.debug("getExerciseReport3b");
               return CodeGradX.parsexml(response.entity);
           }).then(function (js) {
@@ -2682,7 +2687,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     var content = response.entity.replace(contentRegExp, "$2");
     job.HTMLreport = CodeGradX.xml2html(content);
   });
-  return when.join(promise2, promise3, promise4).then(function (values) {
+  return when.join(promise2, promise3, promise4).then(function (/*values*/) {
     state.debug('getJobReport6', job);
     //console.log(job);
     return promise1;
@@ -2736,7 +2741,7 @@ CodeGradX.Job.prototype.getProblemReport = function (parameters) {
 CodeGradX.xml2html = function (s, options) {
   options = _.assign({}, CodeGradX.xml2html.default, options);
   var result = '';
-  var mark, totalMark;
+  //var mark, totalMark;
   var mode = 'default';
   var questionCounter = 0, sectionLevel = 0;
   var htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
@@ -2942,6 +2947,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
         return CodeGradX.parsexml(response.entity)
             .then(processJS)
             .catch(function (reason) {
+                /* eslint "no-console": 0 */
                 console.log(reason);
                 console.log(response);
                 return when.reject(reason);
@@ -2961,7 +2967,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
 CodeGradX.Batch.prototype.getReport.default = {
   step: 5, // seconds
   attempts: 100,
-  progress: function (parameters) {}
+  progress: function (/*parameters*/) {}
 };
 
 /** Get the final state of the Batch report where all

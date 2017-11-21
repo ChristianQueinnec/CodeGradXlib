@@ -8,7 +8,7 @@ clean :
 # ############## Working rules:
 
 lint :
-	jshint codegradxlib.js spec/*.js
+	eslint codegradxlib.js
 
 nsp+snyk :
 	npm link nsp
