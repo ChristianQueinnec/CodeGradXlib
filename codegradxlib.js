@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-11-21 10:13:09 queinnec"
+// Time-stamp: "2017-11-27 16:47:06 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -2113,7 +2113,7 @@ CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
             exercise.uuid = js.exercise.$.exerciseid;
             var job = new CodeGradX.Job({
                 exercise: exercise,
-                content: FW4EX.currentZipFileName,
+                content: FW4EX.currentFileName,
                 responseXML: response.entity,
                 response: js,
                 personid: CodeGradX._str2num(js.person.$.personid),
@@ -2124,7 +2124,7 @@ CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
             return when(job);
         });
     }
-    var basefilename = FW4EX.currentZipFileName.replace(new RegExp("^.*/"), '');
+    var basefilename = FW4EX.currentFileName.replace(new RegExp("^.*/"), '');
     var headers = {
         "Content-Type": "multipart/form-data",
         "Content-Disposition": ("inline; filename=" + basefilename),
@@ -2269,6 +2269,61 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
       entity: content
     }).then(processResponse);
   });
+};
+
+/** Send a batch of files that is, multiple answers to be marked
+    against an Exercise. That file is selected with an input:file
+    widget in the browser.
+
+    @param {DOMform} form - the input:file widget
+    @returns {Promise<Batch>} yielding a Batch.
+
+The form DOM element must contain an <input type='file' name='content'>
+element. This code only runs in a browser providing the FormData class.
+
+*/
+
+CodeGradX.Exercise.prototype.sendBatchFromDOM = function (form) {
+    var exercise = this;
+    var state = CodeGradX.getCurrentState();
+    state.debug('sendBatchFile1');
+    if ( ! exercise.safecookie ) {
+        return when.reject("Non deployed exercise " + exercise.name);
+    }
+    function processResponse (response) {
+        //console.log(response);
+        state.debug('sendBatchFile2', response);
+        return CodeGradX.parsexml(response.entity).then(function (js) {
+            //console.log(js);
+            state.debug('sendBatchFile3', js);
+            js = js.fw4ex.multiJobSubmittedReport;
+            exercise.uuid = js.exercise.$.exerciseid;
+            var batch = new CodeGradX.Batch({
+                exercise: exercise,
+                responseXML: response.entity,
+                response: js,
+                personid: CodeGradX._str2num(js.person.$.personid),
+                archived: CodeGradX._str2Date(js.batch.$.archived),
+                batchid:  js.batch.$.batchid,
+                pathdir:  js.$.location,
+                finishedjobs: 0
+            });
+            return when(batch);
+        });
+    }
+    var basefilename = FW4EX.currentFileName.replace(new RegExp("^.*/"), '');
+    var headers = {
+        "Content-Type": "multipart/form-data",
+        "Content-Disposition": ("inline; filename=" + basefilename),
+        "Accept": 'text/xml'
+    };
+    var fd = new FormData(form);
+    return state.sendAXServer('a', {
+        path: ('/exercise/' + exercise.safecookie + '/batch'),
+        method: "POST",
+        headers: headers,
+        entity: fd
+    }).then(processResponse);
 };
 
 /** After submitting a new Exercise, get Exercise autocheck reports
