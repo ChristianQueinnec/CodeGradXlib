@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-11-27 16:47:06 queinnec"
+// Time-stamp: "2017-11-27 16:53:23 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -2099,7 +2099,7 @@ element. This code only runs in a browser providing the FormData class.
 CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
     var exercise = this;
     var state = CodeGradX.getCurrentState();
-    state.debug('sendZipFileAnswer1', FW4EX.currentZipFileName);
+    state.debug('sendZipFileAnswer1', FW4EX.currentFileName);
     if ( ! exercise.safecookie ) {
         return when.reject("Non deployed exercise " + exercise.name);
     }
