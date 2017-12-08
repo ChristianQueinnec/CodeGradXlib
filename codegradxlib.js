@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-11-27 16:53:23 queinnec"
+// Time-stamp: "2017-12-08 19:12:24 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1669,7 +1669,7 @@ CodeGradX.Campaign.prototype.uploadExercisesSetFromDOM = function (form) {
         campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
         return when(campaign.exercisesSet);
     }
-    var basefilename = FW4EX.currentExercisesSetFileName
+    var basefilename = FW4EX.currentFileName
         .replace(new RegExp("^.*/"), '');
     var headers = {
         "Content-Type": "multipart/form-data",
