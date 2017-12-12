@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-12-08 19:12:24 queinnec"
+// Time-stamp: "2017-12-12 09:43:15 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -248,6 +248,10 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       2: {
+        host: 'a5.codegradx.org',
+        enabled: false
+      },
+      3: {
         host: 'a1.codegradx.org',
         enabled: false
       }
@@ -264,6 +268,10 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       2: {
+        host: 'e5.codegradx.org',
+        enabled: false
+      },
+      3: {
         host: 'e1.codegradx.org',
         enabled: false
       }
@@ -277,6 +285,10 @@ CodeGradX.State = function (initializer) {
       },
       1: {
         host: 'x2.codegradx.org',
+        enabled: false
+      },
+      2: {
+        host: 'x5.codegradx.org',
         enabled: false
       }
     },
@@ -293,12 +305,16 @@ CodeGradX.State = function (initializer) {
       2: {
         host: 's3.codegradx.org',
         enabled: false
-      },
+      },,
       3: {
+        host: 's5.codegradx.org',
+        enabled: false
+      }
+      4: {
         host: 's1.codegradx.org',
         enabled: false
       },
-      4: {
+      5: {
         host: 's0.codegradx.org',
         enabled: false
       }
@@ -335,6 +351,7 @@ CodeGradX.State = function (initializer) {
   CodeGradX.getCurrentState = function () {
     return state;
   };
+  return state;
 };
 
 /** Get the current state (if defined).
