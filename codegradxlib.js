@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-12-12 09:43:15 queinnec"
+// Time-stamp: "2017-12-12 10:47:12 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -305,11 +305,11 @@ CodeGradX.State = function (initializer) {
       2: {
         host: 's3.codegradx.org',
         enabled: false
-      },,
+      },
       3: {
         host: 's5.codegradx.org',
         enabled: false
-      }
+      },
       4: {
         host: 's1.codegradx.org',
         enabled: false
