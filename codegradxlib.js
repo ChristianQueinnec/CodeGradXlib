@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-12-12 10:47:12 queinnec"
+// Time-stamp: "2017-12-13 09:44:35 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -563,7 +563,7 @@ CodeGradX.State.prototype.checkServers = function (kind) {
         .then(returnDescriptions)
         .catch(returnDescriptions);
 };
-CodeGradX.State.maxWait = 1000; // 1 second
+CodeGradX.State.maxWait = 3000; // 3 seconds
 
 /** Check all possible servers of all kinds (a, e, x or s) that is,
     update the state for all of those servers. If correctly programmed
@@ -1973,6 +1973,9 @@ function extractEquipment (exercise, s) {
     var equipmentRegExp = new RegExp(
         "^(.|\n)*(<equipment>\s*(.|\n)*?\s*</equipment>)(.|\n)*$");
     var content = s.replace(equipmentRegExp, "$2");
+    if ( s.length === content.length ) {
+        return exercise;
+    }
     function flatten (o, dir) {
         if ( _.isArray(o) ) {
             return [].concat.call(null, o.map(function (o) {
