@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-12-13 09:44:35 queinnec"
+// Time-stamp: "2017-12-27 10:20:20 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -73,6 +73,7 @@ var xml2js = require('xml2js');
 //var xml2jsproc = require('xml2js/lib/processors');
 var sax = require('sax');
 var he = require('he');
+var util = require('util');
 
 // Define that additional MIME type:
 registry.register('application/octet-stream', {
@@ -161,7 +162,7 @@ CodeGradX.Log.prototype.debug = function () {
     } else if ( arguments[i] === undefined ) {
       msg += 'undefined ';
     } else {
-      msg += arguments[i].toString() + ' ';
+      msg += util.inspect(arguments[i], { depth: 3 }) + ' ';
     }
   }
   if ( this.items.length > this.size ) {
@@ -179,10 +180,10 @@ CodeGradX.Log.prototype.debug = function () {
 
   */
 
-CodeGradX.Log.prototype.show = function () {
+CodeGradX.Log.prototype.show = function (items) {
   // console.log is run later so take a copy of the log now to
   // avoid displaying a later version of the log:
-  var items = this.items.slice(0);
+  items = items || this.items.slice(0);
   console.log(items);
   return this;
 };
@@ -200,8 +201,7 @@ CodeGradX.Log.prototype.showAndRemove = function () {
   // avoid displaying a later version of the log:
   var items = this.items;
   this.items = [];
-  console.log(items);
-  return this;
+  return this.show(items);
 };
 
 // **************** Global state *********************************
@@ -237,7 +237,7 @@ CodeGradX.State = function (initializer) {
       // Use that URI to check whether the server is available or not:
       suffix: '/alive',
       // next a server to check:
-      next: 5,  
+      //next: 5,  
       0: {
         // a full hostname supersedes the default FQDN:
         host: 'a4.codegradx.org',
@@ -1812,7 +1812,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
         exercise.XMLcontent = content;
         exercise.stem = CodeGradX.xml2html(content);
         // extract equipment:
-        state.debug("getDescription5", exercise);
+        state.debug("getDescription5b", exercise);
         extractEquipment(exercise, response.entity);
         // extract identity and authorship:
         state.debug("getDescription6", exercise);
@@ -1820,7 +1820,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     });
     var promise4 = promise.then(function (response) {
         // If only one question expecting only one file, retrieve its name:
-        state.debug('getDescription5');
+        state.debug('getDescription5c');
         var expectationsRegExp =
             new RegExp("<expectations>((.|\n)*?)</expectations>", "g");
         function concat (s1, s2) {
@@ -1974,6 +1974,7 @@ function extractEquipment (exercise, s) {
         "^(.|\n)*(<equipment>\s*(.|\n)*?\s*</equipment>)(.|\n)*$");
     var content = s.replace(equipmentRegExp, "$2");
     if ( s.length === content.length ) {
+        // No equipment!
         return exercise;
     }
     function flatten (o, dir) {
@@ -2726,6 +2727,9 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     state.debug('getJobReport3', job);
     var markingRegExp = new RegExp("^(.|\n)*(<marking (.|\n)*?>)(.|\n)*$");
     var marking = response.entity.replace(markingRegExp, "$2");
+    if ( marking.length === response.entity.length ) {
+        return when.reject(response);
+    }
     marking = marking.replace(/>/, "/>");
     //console.log(marking);
     return CodeGradX.parsexml(marking).then(function (js) {
@@ -2749,6 +2753,9 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     state.debug('getJobReport4', job);
     var exerciseRegExp = new RegExp("^(.|\n)*(<exercise (.|\n)*?>)(.|\n)*$");
     var exercise = response.entity.replace(exerciseRegExp, "$2");
+    if ( exercise.length === response.entity.length ) {
+        return when.reject(response);
+    }
     //console.log(exercise);
     return CodeGradX.parsexml(exercise).then(function (js) {
       _.assign(job, js.exercise.$);
@@ -2758,9 +2765,13 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   var promise4 = promise.then(function (response) {
     // Fill report
     state.debug('getJobReport5');
-    var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*?</content>)(.|\n)*$");
+    var contentRegExp = new RegExp("^(.|\n)*(<report>(.|\n)*?</report>)(.|\n)*$");
     var content = response.entity.replace(contentRegExp, "$2");
+    if ( content.length === response.entity.length ) {
+        return when.reject(response);
+    }
     job.HTMLreport = CodeGradX.xml2html(content);
+    return when(response);
   });
   return when.join(promise2, promise3, promise4).then(function (/*values*/) {
     state.debug('getJobReport6', job);
