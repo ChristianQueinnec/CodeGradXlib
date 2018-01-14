@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2017-12-27 10:20:20 queinnec"
+// Time-stamp: "2018-01-14 19:49:28 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -252,6 +252,10 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       3: {
+        host: 'a6.codegradx.org',
+        enabled: false
+      },
+      4: {
         host: 'a1.codegradx.org',
         enabled: false
       }
@@ -272,6 +276,10 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       3: {
+        host: 'e6.codegradx.org',
+        enabled: false
+      },
+      4: {
         host: 'e1.codegradx.org',
         enabled: false
       }
@@ -289,6 +297,10 @@ CodeGradX.State = function (initializer) {
       },
       2: {
         host: 'x5.codegradx.org',
+        enabled: false
+      },
+      3: {
+        host: 'x6.codegradx.org',
         enabled: false
       }
     },
@@ -315,6 +327,10 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       5: {
+        host: 's6.codegradx.org',
+        enabled: false
+      },
+      6: {
         host: 's0.codegradx.org',
         enabled: false
       }
@@ -2699,6 +2715,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     //state.log.show();
     //console.log(response);
     state.debug('getJobReport2', job);
+    job.originServer = response.url.replace(/^(.*)\/s\/.*$/, "$1");
     job.XMLreport = response.entity;
     return when(job);
   }).catch(function (reasons) {
@@ -2818,6 +2835,34 @@ CodeGradX.Job.prototype.getProblemReport = function (parameters) {
         return when(job);
     });
     return promise1;
+};
+
+/** Compute the URL that form the base URL to access directly the
+    report, the problem report or the archive containing student's
+    programs.
+  
+    @returns {string} url
+
+*/
+
+CodeGradX.Job.prototype.getBaseURL = function () {
+    var job = this;
+    var state = CodeGradX.getCurrentState();
+    state.debug('getJobTGZurl', job);
+    var path = job.pathdir + '/' + job.jobid;
+    return path;
+};
+CodeGradX.Job.prototype.getReportURL = function () {
+    var job = this;
+    return job.getBaseURL() + '.xml';
+};
+CodeGradX.Job.prototype.getProblemReportURL = function () {
+    var job = this;
+    return job.getBaseURL() + '_.xml';
+};
+CodeGradX.Job.prototype.getTgzURL = function () {
+    var job = this;
+    return job.getBaseURL() + '.tgz';
 };
 
 /** Conversion of texts (stems, reports) from XML to HTML.
