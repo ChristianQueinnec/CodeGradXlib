@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-01-14 19:49:28 queinnec"
+// Time-stamp: "2018-01-15 09:40:17 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -2408,6 +2408,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
   function processResponse (response) {
     state.debug("getExerciseReport2", response);
     //console.log(response);
+    exercise.originServer = response.url.replace(/^(.*)\/s\/.*$/, "$1");
     exercise.XMLauthorReport = response.entity;
     function catchXMLerror (reason) {
         state.debug("catchXMLerror", reason);
@@ -2488,12 +2489,26 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
           .catch(catchXMLerror);
   }
   return state.sendRepeatedlyESServer('s', parameters, {
-      path: (exercise.location + '/' + exercise.exerciseid + '.xml'),
+      path: exercise.getExerciseReportURL(),
       method: 'GET',
       headers: {
           "Accept": 'text/xml'
       }
   }).then(processResponse);
+};
+
+CodeGradX.Exercise.prototype.getBaseURL = function () {
+    var exercise = this;
+    var path = exercise.location + '/' + exercise.exerciseid;
+    return path;
+};
+CodeGradX.Exercise.prototype.getExerciseReportURL = function () {
+    var exercise = this;
+    return exercise.getBaseURL() + '.xml';
+};
+CodeGradX.Exercise.prototype.getTgzURL = function () {
+    var exercise = this;
+    return exercise.getBaseURL() + '.tgz';
 };
 
 // **************** ExercisesSet ***************************
@@ -2703,7 +2718,7 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   if ( job.XMLreport ) {
     return when(job);
   }
-  var path = job.pathdir + '/' + job.jobid + '.xml';
+  var path = job.getReportURL();
   var promise = state.sendRepeatedlyESServer('s', parameters, {
     path: path,
     method: 'GET',
@@ -2819,7 +2834,7 @@ CodeGradX.Job.prototype.getProblemReport = function (parameters) {
     if ( job.XMLproblemReport ) {
         return when(job);
     }
-    var path = job.pathdir + '/' + job.jobid + '_.xml';
+    var path = job.getProblemReportURL();
     var promise = state.sendRepeatedlyESServer('s', parameters, {
         path: path,
         method: 'GET',
@@ -2831,6 +2846,7 @@ CodeGradX.Job.prototype.getProblemReport = function (parameters) {
         //state.log.show();
         //console.log(response);
         state.debug('getJobProblemReport2', job);
+        job.originServer = response.url.replace(/^(.*)\/s\/.*$/, "$1");
         job.XMLproblemReport = response.entity;
         return when(job);
     });
@@ -2847,8 +2863,6 @@ CodeGradX.Job.prototype.getProblemReport = function (parameters) {
 
 CodeGradX.Job.prototype.getBaseURL = function () {
     var job = this;
-    var state = CodeGradX.getCurrentState();
-    state.debug('getJobTGZurl', job);
     var path = job.pathdir + '/' + job.jobid;
     return path;
 };
@@ -3025,10 +3039,11 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
     },
     CodeGradX.Batch.prototype.getReport.default,
     parameters);
-  var path = batch.pathdir + '/' + batch.batchid + '.xml';
+    var path = batch.getReportURL();
   function processResponse (response) {
-    //console.log(response);
-    state.debug('getBatchReport2', response, batch);
+      //console.log(response);
+      state.debug('getBatchReport2', response, batch);
+      batch.originServer = response.url.replace(/^(.*)\/s\/.*$/, "$1");
       function processJS (js) {
           //console.log(js);
           state.debug('getBatchReport3', js);
@@ -3143,6 +3158,12 @@ CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
     }
   }
   return tryFetching();
+};
+
+CodeGradX.Batch.prototype.getReportURL = function () {
+    var batch = this;
+    var path = batch.pathdir + '/' + batch.batchid + '.xml';
+    return path;
 };
 
 // end of codegradxlib.js
