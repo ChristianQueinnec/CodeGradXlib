@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-01-17 15:08:45 queinnec"
+// Time-stamp: "2018-01-17 15:44:06 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -2009,7 +2009,7 @@ function extractEquipment (exercise, s) {
                 o = o.file;
             }
         }
-        if ( o.$ && o.$.basename && ! o.$.hidden ) {
+        if ( !o.file && !o.directory && o.$ && o.$.basename && ! o.$.hidden ) {
             results.push(dir + '/' + o.$.basename);
         }
         return results;
@@ -2893,9 +2893,13 @@ CodeGradX.xml2html = function (s, options) {
   //var mark, totalMark;
   var mode = 'default';
   var questionCounter = 0, sectionLevel = 0;
+  // HTML tags to be left as they are:    
   var htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
+  // Tags to be converted into DIV:
   var divTagsRegExp = new RegExp('^(warning|error|introduction|conclusion|normal|stem|report)$');
+  // Tags to be converted into SPAN:
   var spanTagsRegExp = new RegExp("^(user|machine|lineNumber)$");
+  // Tags to be ignored:
   var ignoreTagsRegExp = new RegExp("^(FW4EX|expectations|title|fw4ex)$");
   function convertAttributes (attributes) {
     var s = '';
@@ -2952,10 +2956,12 @@ CodeGradX.xml2html = function (s, options) {
         result += '<div' + attributes + ' class="fw4ex_section' +
           (++sectionLevel) + '">';
       } else if ( tagname.match(/^question$/) ) {
-        var title = node.attributes.title;
+        var qname = node.attributes.name;
+        var title = node.attributes.title || '';
         result += '<div' + attributes + ' class="fw4ex_question">';
         result += '<div class="fw4ex_question_title" data_counter="' +
-          (++questionCounter) + '">' + (title||'') + '</div>';
+           (++questionCounter) + '">' + qname + ": " +
+            title + '</div>';
       } else {
         result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
       }
