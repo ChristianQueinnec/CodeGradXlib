@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-01-15 09:40:17 queinnec"
+// Time-stamp: "2018-01-17 15:01:16 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1986,6 +1986,7 @@ function extractExpectations (exercice, s) {
 */
 
 function extractEquipment (exercise, s) {
+    exercise.equipment = [];
     var equipmentRegExp = new RegExp(
         "^(.|\n)*(<equipment>\s*(.|\n)*?\s*</equipment>)(.|\n)*$");
     var content = s.replace(equipmentRegExp, "$2");
@@ -1994,22 +1995,25 @@ function extractEquipment (exercise, s) {
         return exercise;
     }
     function flatten (o, dir) {
-        if ( _.isArray(o) ) {
-            return [].concat.call(null, o.map(function (o) {
-                return flatten(o, dir);
-            }));
-        } else if ( o.file ) {
-            if ( o.file.$.hidden ) {
-                return [];
-            } else {
-                return [dir + '/' + o.file.$.basename];
-            }
-        } else if ( o.directory ) {
+        let results = []
+        if ( o.directory ) {
             var newdir = dir + '/' + o.directory.$.basename;
-            return flatten(o.directory, newdir);
+            results = results.concat(flatten(o.directory, newdir));
         }
+        if ( o.file ) {
+            if ( Array.isArray(o.file) ) {
+                o.file.forEach(function (o) {
+                    results = results.concat(flatten(o, dir));
+                });
+            } else {
+                o = o.file;
+            }
+        }
+        if ( o.$ && o.$.basename && ! o.$.hidden ) {
+            results.push(dir + '/' + o.$.basename);
+        }
+        return results;
     }
-    exercise.equipment = [];
     if ( content.length > 0 ) {
         try {
             var parser = new xml2js.Parser({
