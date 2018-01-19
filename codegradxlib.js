@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-01-17 15:44:06 queinnec"
+// Time-stamp: "2018-01-19 18:08:21 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1997,8 +1997,15 @@ function extractEquipment (exercise, s) {
     function flatten (o, dir) {
         let results = [];
         if ( o.directory ) {
-            var newdir = dir + '/' + o.directory.$.basename;
-            results = results.concat(flatten(o.directory, newdir));
+            if ( Array.isArray(o.directory) ) {
+                o.directory.forEach(function (o) {
+                    var newdir = dir + '/' + o.$.basename;
+                    results = results.concat(flatten(o, newdir));
+                });
+            } else {
+                var newdir = dir + '/' + o.directory.$.basename;
+                results = results.concat(flatten(o.directory, newdir));
+            }
         }
         if ( o.file ) {
             if ( Array.isArray(o.file) ) {
