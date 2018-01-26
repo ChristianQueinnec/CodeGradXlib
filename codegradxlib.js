@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-01-19 18:08:21 queinnec"
+// Time-stamp: "2018-01-26 16:34:00 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1457,7 +1457,10 @@ CodeGradX.Campaign.prototype.getTeachers = function () {
     state.debug('getTeachers2');
     //console.log(response);
     campaign.teachers = response.entity.teachers.map(function (teacher) {
-        return new CodeGradX.User(teacher);
+        let tuser = new CodeGradX.User(teacher);
+        // Don't duplicate the requester's cookie:
+        delete tuser.cookie;
+        return tuser;
     });
     return when(campaign.teachers);
   });
@@ -1823,7 +1826,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     var promise3 = promise.then(function (response) {
         // Extract stem
         state.debug("getDescription4", response);
-        var contentRegExp = new RegExp("^(.|\n)*(<content>(.|\n)*</content>)(.|\n)*$");
+        var contentRegExp = new RegExp("^(.|\n)*(<\s*content\s*>(.|\n)*</content\s*>)(.|\n)*$");
         var content = response.entity.replace(contentRegExp, "$2");
         exercise.XMLcontent = content;
         exercise.stem = CodeGradX.xml2html(content);
@@ -1838,7 +1841,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
         // If only one question expecting only one file, retrieve its name:
         state.debug('getDescription5c');
         var expectationsRegExp =
-            new RegExp("<expectations>((.|\n)*?)</expectations>", "g");
+            new RegExp("<\s*expectations\s*>((.|\n)*?)</expectations\s*>", "g");
         function concat (s1, s2) {
             return s1 + s2;
         }
@@ -1911,9 +1914,9 @@ CodeGradX.Exercise.prototype.getEquipmentFile = function (file) {
 */
 
 const identificationRegExp =
-  new RegExp("^(.|\n)*(<identification (.|\n)*</identification>)(.|\n)*$");
+  new RegExp("^(.|\n)*(<\s*identification +(.|\n)*</identification\s*>)(.|\n)*$");
 const summaryRegExp =
-  new RegExp("^(.|\n)*(<summary.*?>(.|\n)*</summary>)(.|\n)*$");
+  new RegExp("^(.|\n)*(<\s*summary.*?>(.|\n)*</summary\s*>)(.|\n)*$");
 
 function extractIdentification (exercise, s) {
     var content = s.replace(identificationRegExp, "$2");
@@ -3014,6 +3017,12 @@ CodeGradX.xml2html = function (s, options) {
     }
   };
   parser.write(s).close();
+  if ( questionCounter <= 1 ) {
+      // If only one question, remove its title:
+      let questionTitleRegExp = new RegExp(
+          '<div class=.fw4ex_question_title. [^>]*>.*?</div>');
+      result = result.replace(questionTitleRegExp, '');
+  }
   return result;
 };
 CodeGradX.xml2html.default = {
