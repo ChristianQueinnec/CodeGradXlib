@@ -20,7 +20,7 @@ machine that runs locally the whole CodeGradX infrastructure). This
 low lever library may be used by other web applications.
 
 More information (partially in French) on the [CodeGradX
-](http://paracamplus.com/spip/spip.php?rubrique2) infrastructure.
+](https://paracamplus.com/spip.php?rubrique2) infrastructure.
 
 ## Installation
 

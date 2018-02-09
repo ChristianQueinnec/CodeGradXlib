@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-01-26 16:34:00 queinnec"
+// Time-stamp: "2018-02-09 08:30:40 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -237,26 +237,22 @@ CodeGradX.State = function (initializer) {
       // Use that URI to check whether the server is available or not:
       suffix: '/alive',
       // next a server to check:
-      //next: 5,  
+      //next: 7,  
       0: {
         // a full hostname supersedes the default FQDN:
-        host: 'a4.codegradx.org',
+        host: 'a5.codegradx.org',
         enabled: false
       },
       1: {
-        host: 'a2.codegradx.org',
+        host: 'a4.codegradx.org',
         enabled: false
       },
       2: {
-        host: 'a5.codegradx.org',
+        host: 'a2.codegradx.org',
         enabled: false
       },
       3: {
         host: 'a6.codegradx.org',
-        enabled: false
-      },
-      4: {
-        host: 'a1.codegradx.org',
         enabled: false
       }
     },
@@ -264,23 +260,19 @@ CodeGradX.State = function (initializer) {
       next: 3,
       suffix: '/alive',
       0: {
-        host: 'e4.codegradx.org',
+        host: 'e5.codegradx.org',
         enabled: false
       },
       1: {
-        host: 'e2.codegradx.org',
+        host: 'e4.codegradx.org',
         enabled: false
       },
       2: {
-        host: 'e5.codegradx.org',
+        host: 'e2.codegradx.org',
         enabled: false
       },
       3: {
         host: 'e6.codegradx.org',
-        enabled: false
-      },
-      4: {
-        host: 'e1.codegradx.org',
         enabled: false
       }
     },
@@ -292,11 +284,11 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       1: {
-        host: 'x2.codegradx.org',
+        host: 'x5.codegradx.org',
         enabled: false
       },
       2: {
-        host: 'x5.codegradx.org',
+        host: 'x2.codegradx.org',
         enabled: false
       },
       3: {
@@ -311,27 +303,19 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       1: {
-        host: 's2.codegradx.org',
-        enabled: false
-      },
-      2: {
-        host: 's3.codegradx.org',
-        enabled: false
-      },
-      3: {
         host: 's5.codegradx.org',
         enabled: false
       },
-      4: {
-        host: 's1.codegradx.org',
+      2: {
+        host: 's2.codegradx.org',
         enabled: false
       },
-      5: {
+      3: {
         host: 's6.codegradx.org',
         enabled: false
       },
-      6: {
-        host: 's0.codegradx.org',
+      4: {
+        host: 's3.codegradx.org',
         enabled: false
       }
     }
@@ -1804,7 +1788,9 @@ CodeGradX.Exercise.prototype.getDescription = function () {
         path: ('/exercisecontent/' + exercise.safecookie + '/content'),
         method: 'GET',
         headers: {
-            Accept: "text/xml"
+            Accept: "text/xml",
+            // useful for debug:
+            "X-CodeGradX-Comment": `ExerciseName=${exercise.name}`
         }
     });
     // Parse the HTTP response, translate the XML into a Javascript object
