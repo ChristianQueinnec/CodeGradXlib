@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-02-09 08:30:40 queinnec"
+// Time-stamp: "2018-03-02 14:21:05 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -248,10 +248,6 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       2: {
-        host: 'a2.codegradx.org',
-        enabled: false
-      },
-      3: {
         host: 'a6.codegradx.org',
         enabled: false
       }
@@ -268,10 +264,6 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       2: {
-        host: 'e2.codegradx.org',
-        enabled: false
-      },
-      3: {
         host: 'e6.codegradx.org',
         enabled: false
       }
@@ -288,10 +280,6 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       2: {
-        host: 'x2.codegradx.org',
-        enabled: false
-      },
-      3: {
         host: 'x6.codegradx.org',
         enabled: false
       }
@@ -307,15 +295,7 @@ CodeGradX.State = function (initializer) {
         enabled: false
       },
       2: {
-        host: 's2.codegradx.org',
-        enabled: false
-      },
-      3: {
         host: 's6.codegradx.org',
-        enabled: false
-      },
-      4: {
-        host: 's3.codegradx.org',
         enabled: false
       }
     }
