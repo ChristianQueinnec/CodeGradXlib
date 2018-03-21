@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-03-21 09:16:21 queinnec"
+// Time-stamp: "2018-03-21 18:46:42 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -162,7 +162,7 @@ CodeGradX.Log.prototype.debug = function () {
     } else if ( arguments[i] === undefined ) {
       msg += 'undefined ';
     } else {
-      msg += util.inspect(arguments[i], { depth: 3 }) + ' ';
+      msg += util.inspect(arguments[i], { depth: 2 }) + ' ';
     }
   }
   if ( this.items.length > this.size ) {
@@ -172,20 +172,29 @@ CodeGradX.Log.prototype.debug = function () {
   return this;
 };
 
-/** Display the log with `console.log`.
+/** Display the log with `console.log` or in a file.
+    Console.log is asynchronous while writing in a file is synchronous!
 
     @method show
+    @param {Array[object]} items - supersede the log with items
+    @param {string} filename - write in file rather than console.
     @returns {Log}
     @memberof {CodeGradX.Log#}
 
   */
 
-CodeGradX.Log.prototype.show = function (items) {
-  // console.log is run later so take a copy of the log now to
-  // avoid displaying a later version of the log:
-  items = items || this.items.slice(0);
-  console.log(items);
-  return this;
+CodeGradX.Log.prototype.show = function (items, filename) {
+    // console.log is run later so take a copy of the log now to
+    // avoid displaying a later version of the log. Howe
+    items = items || this.items.slice(0);
+    for ( var item of items ) {
+        if ( filename ) {
+            require('fs').appendFileSync(filename, `${item}\n`);
+        } else {
+            console.log(item);
+        }
+    }
+    return this;
 };
 
 /** Display the log with `console.log` and empty it.
@@ -196,12 +205,12 @@ CodeGradX.Log.prototype.show = function (items) {
 
   */
 
-CodeGradX.Log.prototype.showAndRemove = function () {
+CodeGradX.Log.prototype.showAndRemove = function (filename) {
   // console.log is run later so take a copy of the log now to
   // avoid displaying a later version of the log:
   var items = this.items;
   this.items = [];
-  return this.show(items);
+    return this.show(items, filename);
 };
 
 // **************** Global state *********************************
@@ -298,7 +307,7 @@ CodeGradX.State = function (initializer) {
             3: {
                 host: 's3.codegradx.org',
                 enabled: false,
-                slow: true
+                once: true
             }
         }
     };
@@ -759,7 +768,7 @@ CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
         return newoptions;
     }
 
-    function mk_seeError (description) {
+    function mk_invalidate (description) {
         return function seeError (reason) {
             // A MIME deserialization problem may also trigger `seeError`.
             function see (o) {
@@ -770,6 +779,8 @@ CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
                 return result;
             }
             state.debug('sendConcurrently seeError', see(reason));
+            // Don't consider the absence of a report to be a
+            // reason to disable the server.
             description.enabled = false;
             description.lastError = reason;
             //var js = JSON.parse(reason.entity);
@@ -783,8 +794,8 @@ CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
             description.host + options.path;
         state.debug("sendConcurrently send", tryoptions.path);
         return state.userAgent(tryoptions)
-            .then(CodeGradX.checkStatusCode)
-            .catch(mk_seeError(description));
+            .catch(mk_invalidate(description))
+            .then(CodeGradX.checkStatusCode);
     }
     
     function tryConcurrently (adescriptions) {
@@ -830,14 +841,14 @@ function (kind, parameters, options) {
                          parameters);
     var count = parms.attempts;
 
-    function removeSlowServers (adescriptions) {
+    function removeOnceServers (adescriptions) {
         var aresult = [];
         for (let item of adescriptions) {
-            if ( ! item.slow ) {
+            if ( ! item.once ) {
                 aresult.push(item);
             }
         }
-        state.debug('sendRepeatedlyESServer Non slow active servers',
+        state.debug('sendRepeatedlyESServer Non Once active servers',
                     kind, _.map(aresult, 'host'));
         return aresult;
     }
@@ -852,7 +863,7 @@ function (kind, parameters, options) {
             return when.reject(new Error("waitedTooMuch"));
         }
         return state.getActiveServers(kind)
-            .then(removeSlowServers)
+            .then(removeOnceServers)
             .delay(parms.step * 1000)
             .then(function () {
                 return state.sendESServer(kind, options);
@@ -1220,9 +1231,9 @@ CodeGradX.User.prototype.getProgress = function (campaign) {
     */
 
 CodeGradX.User.prototype.submitNewExercise = function (filename) {
-  //var user = this;
+  var user = this;
   var state = CodeGradX.getCurrentState();
-  state.debug('submitNewExercise1', filename);
+  state.debug('submitNewExercise1', filename, user);
   function processResponse (response) {
       //console.log(response);
       state.debug('submitNewExercise3', response);
@@ -1240,23 +1251,24 @@ CodeGradX.User.prototype.submitNewExercise = function (filename) {
         return when(exercise);
       });
   }
-  return CodeGradX.readFileContent(filename).then(function (content) {
-    state.debug('submitNewExercise2', content.length);
-    var basefilename = filename.replace(new RegExp("^.*/"), '');
-    var headers = {
-        "Content-Type": "application/octet-stream",
-        "Content-Disposition": ("inline; filename=" + basefilename),
-        "Accept": 'text/xml'
-    };
-    if ( isNode() ) {
-        headers["Content-Length"] = content.length;
-    }
-    return state.sendSequentially('e', {
-      path: '/exercises/',
-      method: "POST",
-      headers: headers,
-      entity: content
-    }).then(processResponse);
+  return CodeGradX.readFileContent(filename)
+        .then(function (content) {
+            state.debug('submitNewExercise2', content.length);
+            var basefilename = filename.replace(new RegExp("^.*/"), '');
+            var headers = {
+                "Content-Type": "application/octet-stream",
+                "Content-Disposition": ("inline; filename=" + basefilename),
+                "Accept": 'text/xml'
+            };
+            if ( isNode() ) {
+                headers["Content-Length"] = content.length;
+            }
+            return state.sendSequentially('e', {
+                path: '/exercises/',
+                method: "POST",
+                headers: headers,
+                entity: content
+            }).then(processResponse);
   });
 };
 
@@ -1269,9 +1281,9 @@ CodeGradX.User.prototype.submitNewExercise = function (filename) {
     */
 
 CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
-  //var user = this;
+  var user = this;
   var state = CodeGradX.getCurrentState();
-  state.debug('submitNewExerciseFromDOM1');
+  state.debug('submitNewExerciseFromDOM1', user);
   function processResponse (response) {
       //console.log(response);
       state.debug('submitNewExerciseFromDOM3', response);

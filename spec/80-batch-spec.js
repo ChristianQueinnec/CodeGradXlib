@@ -99,13 +99,10 @@ describe('CodeGradX', function () {
     }).catch(faildone);
   }, 50*1000); // 50 seconds
 
-    // it("show log2", function (done) {
-    //     CodeGradX.getCurrentState().log.show();
-    //     CodeGradX.getCurrentState().log.items = [];
-    //     // Don't call done() to give time to flush stdout and stderr
-    // }, 10*1000);
-
-    // it("stop", function () { process.exit(0); });
+    it("show log", function () {
+        CodeGradX.getCurrentState().log.show(null, '/tmp/80.txt');
+        CodeGradX.getCurrentState().log.items = [];
+    });
 
   var file1 = 'spec/min.c';
 
@@ -148,37 +145,29 @@ describe('CodeGradX', function () {
   it("may submit a new exercise and get one pseudojob", function (done) {
     var state = CodeGradX.getCurrentState();
     var faildone = make_faildone(done);
-    state.log.size = 50;
+    state.log.size = 100;
     expect(state.currentUser).toBeDefined();
-    counter = 0;
-    state.currentUser.submitNewExercise(exerciseTGZFile1, {
-      step: 15,
-      attempts: 30,
-      progress: function (parameters) {
-        counter = parameters.i;
-        //console.log(parameters.i + ', ');
-      }
-    })
-    .then(function (exercise) {
-      expect(exercise).toBeDefined();
-      expect(exercise instanceof CodeGradX.Exercise).toBeTruthy();
-      exercise2 = exercise;
-      exercise.getExerciseReport().then(function (e3) {
-          expect(e3).toBe(exercise2);
-          //console.log(exercise); // DEBUG
-          var job2 = exercise.pseudojobs.perfect;
-          job2.getReport().then(function (job) {
-              expect(job).toBe(job2);
-              expect(job.mark).toBe(10000);
-              var job3 = exercise.pseudojobs.half;
-              job3.getReport().then(function (job) {
-                  expect(job).toBe(job3);
-                  expect(job.mark).toBe(4500);
-                  done();
-              }, faildone);
-          }, faildone);
-      }, faildone);
-    }, faildone);
+    state.currentUser.submitNewExercise(exerciseTGZFile1)
+          .then(function (exercise) {
+              expect(exercise).toBeDefined();
+              expect(exercise instanceof CodeGradX.Exercise).toBeTruthy();
+              exercise2 = exercise;
+              return exercise.getExerciseReport().then(function (e3) {
+                  expect(e3).toBe(exercise2);
+                  //console.log(exercise); // DEBUG
+                  var job2 = exercise.pseudojobs.perfect;
+                  return job2.getReport().then(function (job) {
+                      expect(job).toBe(job2);
+                      expect(job.mark).toBe(10000);
+                      var job3 = exercise.pseudojobs.half;
+                      return job3.getReport().then(function (job) {
+                          expect(job).toBe(job3);
+                          expect(job.mark).toBe(4500);
+                          done();
+                      });
+                  });
+              });
+          }).catch(faildone);
   }, 100*1000); // 100 seconds
 
   var batchTGZfile = 'spec/oefgc.tgz';
@@ -189,8 +178,8 @@ describe('CodeGradX', function () {
     expect(exercise2).toBeDefined();
     var counter = 0;
     var parameters = {
-        step: 4,
-        retry: 40,
+        step: 2,
+        retry: 80,
         progress: function (parameters) {
           counter++;
           //state.log.show();
@@ -211,7 +200,7 @@ describe('CodeGradX', function () {
         }
         batch2.getFinalReport(parameters).then(function (batch3) {
           expect(batch3).toBe(batch2);
-          expect(counter).toBeGreaterThan(1);
+          //expect(counter).toBeGreaterThan(1);
           expect(batch.finishedjobs).toBeGreaterThan(0);
           expect(batch.totaljobs).toBe(batch.finishedjobs);
           // Check jobsCache:
