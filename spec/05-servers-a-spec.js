@@ -23,36 +23,56 @@ describe('CodeGradX', function () {
   }
 
   function initializer (state) {
-    state.servers = {
-      domain: '.localdomain',
-      names: ['a', 'e', 'x', 's'],
-      protocol: 'http',
-      a: {
-        next: 1,
-        suffix: '/alive',
-        0: {
-        }
-      },
-      e: {
-        next: 1,
-        suffix: '/alive',
-        0: {
-        }
-      },
-      x: {
-        next: 1,
-        protocol: 'https',
-        suffix: '/dbalive',
-        0: {
-        }
-      },
-      s: {
-        next: 1,
-        suffix: '/',
-        0: {
-        }
-      }
-    };
+      state.servers = {
+          domain: '.localdomain',
+          names: ['a', 'e', 'x', 's'],
+          protocol: 'http',
+          a: {
+              suffix: '/alive',
+              0: {
+                  host: "a0.localdomain",
+                  enabled: false
+              },
+              1: {
+                  host: "a1.localdomain",
+                  enabled: false
+              }
+          },
+          e: {
+              suffix: '/alive',
+              0: {
+                  host: "e0.localdomain",
+                  enabled: false
+              },
+              1: {
+                  host: "e1.localdomain",
+                  enabled: false
+              }
+          },
+          x: {
+              protocol: 'https',
+              suffix: '/dbalive',
+              0: {
+                  host: "x0.localdomain",
+                  enabled: false
+              },
+              1: {
+                  host: "x1.localdomain",
+                  enabled: false
+              }
+          },
+          s: {
+              suffix: '/',
+              0: {
+                  host: "s0.localdomain",
+                  enabled: false
+              },
+              1: {
+                  host: "s1.localdomain",
+                  enabled: false
+              }
+          }
+      };
     return state;
   }
 
@@ -139,7 +159,6 @@ describe('CodeGradX', function () {
       expect(descriptions[0].lastError).not.toBeDefined();
       expect(descriptions[1].enabled).toBeTruthy();
       expect(descriptions[1].lastError).not.toBeDefined();
-      expect(descriptions.next).toBe(2);
       done();
     }, faildone);
   });

@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-03-14 20:00:27 queinnec"
+// Time-stamp: "2018-03-21 09:16:21 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -222,120 +222,118 @@ CodeGradX.Log.prototype.showAndRemove = function () {
   */
 
 CodeGradX.State = function (initializer) {
-  this.userAgent = rest.wrap(mime);
-  this.log = new CodeGradX.Log();
-  // State of servers:
-  this.servers = {
-    // The domain to be suffixed to short hostnames:
-    domain: '.codegradx.org',
-    // the shortnames of the four kinds of servers:
-    names: ['a', 'e', 'x', 's'],
-    // default protocol:
-    protocol: 'https',
-    // Description of the A servers:
-    a: {
-      // Use that URI to check whether the server is available or not:
-      suffix: '/alive',
-      // next a server to check:
-      //next: 7,  
-      0: {
-        // a full hostname supersedes the default FQDN:
-        host: 'a5.codegradx.org',
-        enabled: false
-      },
-      1: {
-        host: 'a4.codegradx.org',
-        enabled: false
-      },
-      2: {
-        host: 'a6.codegradx.org',
-        enabled: false
-      }
-    },
-    e: {
-      next: 3,
-      suffix: '/alive',
-      0: {
-        host: 'e5.codegradx.org',
-        enabled: false
-      },
-      1: {
-        host: 'e4.codegradx.org',
-        enabled: false
-      },
-      2: {
-        host: 'e6.codegradx.org',
-        enabled: false
-      }
-    },
-    x: {
-      // no next means that all possible servers are listed here:
-      suffix: '/dbalive',
-      0: {
-        host: 'x4.codegradx.org',
-        enabled: false
-      },
-      1: {
-        host: 'x5.codegradx.org',
-        enabled: false
-      },
-      2: {
-        host: 'x6.codegradx.org',
-        enabled: false
-      }
-    },
-    s: {
-      suffix: '/index.txt',
-      0: {
-        host: 's4.codegradx.org',
-        enabled: false
-      },
-      1: {
-        host: 's5.codegradx.org',
-        enabled: false
-      },
-      2: {
-        host: 's6.codegradx.org',
-        enabled: false
-      },
-      3: {
-        host: 's3.codegradx.org',
-        enabled: false
-      }
+    this.userAgent = rest.wrap(mime);
+    this.log = new CodeGradX.Log();
+    // State of servers:
+    this.servers = {
+        // The domain to be suffixed to short hostnames:
+        domain: '.codegradx.org',
+        // the shortnames of the four kinds of servers:
+        names: ['a', 'e', 'x', 's'],
+        // default protocol:
+        protocol: 'https',
+        // Descriptions of the A servers:
+        a: {
+            // Use that URI to check whether the server is available or not:
+            suffix: '/alive',
+            // Description of an A server:
+            0: {
+                // a full hostname supersedes the default FQDN:
+                host: 'a5.codegradx.org',
+                enabled: false
+            },
+            1: {
+                host: 'a4.codegradx.org',
+                enabled: false
+            },
+            2: {
+                host: 'a6.codegradx.org',
+                enabled: false
+            }
+        },
+        e: {
+            suffix: '/alive',
+            0: {
+                host: 'e5.codegradx.org',
+                enabled: false
+            },
+            1: {
+                host: 'e4.codegradx.org',
+                enabled: false
+            },
+            2: {
+                host: 'e6.codegradx.org',
+                enabled: false
+            }
+        },
+        x: {
+            suffix: '/dbalive',
+            0: {
+                host: 'x4.codegradx.org',
+                enabled: false
+            },
+            1: {
+                host: 'x5.codegradx.org',
+                enabled: false
+            },
+            2: {
+                host: 'x6.codegradx.org',
+                enabled: false
+            }
+        },
+        s: {
+            suffix: '/index.txt',
+            0: {
+                host: 's4.codegradx.org',
+                enabled: false
+            },
+            1: {
+                host: 's5.codegradx.org',
+                enabled: false
+            },
+            2: {
+                host: 's6.codegradx.org',
+                enabled: false
+            },
+            3: {
+                host: 's3.codegradx.org',
+                enabled: false,
+                slow: true
+            }
+        }
+    };
+    // Current values
+    this.currentUser = null;
+    this.currentCookie = null;
+    // Post-initialization
+    var state = this;
+    // Cache for jobs useful when processing batches:
+    state.cache = {
+        jobs: {} 
+    };
+    if ( _.isFunction(initializer) ) {
+        state = initializer.call(state, state);
     }
-  };
-  // Current values
-  this.currentUser = null;
-  this.currentCookie = null;
-  // Post-initialization
-  var state = this;
-  // Cache for jobs useful when processing batches:
-  state.cache = {
-      jobs: {} 
-  };
-  if ( _.isFunction(initializer) ) {
-    state = initializer.call(state, state);
-  }
-  var protocol = 'http';
-  if ( CodeGradX.checkIfHTTPS() ) {
-      // Make 'Upgrade Insecure Request' happy:
-      // and avoid "Blocked: mixed-content'
-      protocol = 'https';
-  }
-  state.servers.protocol = state.servers.protocol || protocol;
-  state.servers.a.protocol = state.servers.a.protocol ||
+    var protocol = 'http';
+    if ( CodeGradX.checkIfHTTPS() ) {
+        // Make 'Upgrade Insecure Request' happy:
+        // and avoid "Blocked: mixed-content'
+        protocol = 'https';
+    }
+    state.servers.protocol = state.servers.protocol || protocol;
+    state.servers.a.protocol = state.servers.a.protocol ||
         state.servers.protocol;
-  state.servers.e.protocol = state.servers.e.protocol ||
+    state.servers.e.protocol = state.servers.e.protocol ||
         state.servers.protocol;
-  state.servers.s.protocol = state.servers.s.protocol ||
+    state.servers.s.protocol = state.servers.s.protocol ||
         state.servers.protocol;
-  state.servers.x.protocol = state.servers.x.protocol ||
+    state.servers.x.protocol = state.servers.x.protocol ||
         state.servers.protocol;
-  // Make the state global
-  CodeGradX.getCurrentState = function () {
+    // Make the state global
+    CodeGradX.getCurrentState = function () {
+        return state;
+    };
     return state;
-  };
-  return state;
 };
 
 /** Get the current state (if defined).
@@ -363,7 +361,7 @@ CodeGradX.getCurrentUser = function (force) {
     }
     state.debug('getCurrentUser1');
     let params = {};
-    if ( FW4EX.currentCampaignName ) {
+    if ( isFW4EXcampaignDefined() ) {
         params.campaign = FW4EX.currentCampaignName;
     }
     return state.sendAXServer('x', {
@@ -408,14 +406,12 @@ CodeGradX.State.prototype.gc = function () {
   `domain` information. After the check, the `enabled` key is set to
   a boolean telling wether the host is available or not.
 
-  Description are gathered in `descriptions` with two additional keys:
+  Descriptions are gathered in `descriptions` with one additional key:
   `suffix` is the path to add to the URL used to check the
-  availability of the server. `next` if present is the index of a
-  potentially available server of the same kind. No `next` property
-  means that all possible servers are listed.
+  availability of the server.
 
   @param {string} kind - the kind of server (a, e, x or s)
-  @param {number} index - the number of the server.
+  @param {number} index - the index of the server.
   @returns {Promise<Response>} - Promise leading to {HTTPresponse}
 
   Descriptions are kept in the global state.
@@ -480,14 +476,16 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
 };
 
 /** Check all possible servers of some kind (a, e, x or s) that is,
-    update the state for those servers. If correctly programmed
-    these checks are concurrently run.
-
-    If server ki (kind k, index i) emit an HTTPresponse, then
-    descriptions.next (if present) should be at least greater than i.
+    update the state for those servers. If correctly programmed these
+    checks are concurrently run but `checkServers` will only be
+    resolved when all concurrent checks are resolved. However there is
+    a timeout of 3 seconds.
 
     @param {string} kind - the kind of server (a, e, x or s)
-    @returns {Promise} yields Array[HTTPresponse]
+    @returns {Promise} yields Descriptions
+
+    Descriptions = { 0: Description, 1: Description, ... }
+    Description = { host: "", enabled: boolean, ... }
 
     */
 
@@ -495,76 +493,74 @@ CodeGradX.State.prototype.checkServers = function (kind) {
   var state = this;
   state.debug('checkServers', kind);
   var descriptions = state.servers[kind];
-  function incrementNext (response) {
-    if ( descriptions.next ) {
-        if ( response.status.code < 300 ) {
-            descriptions.next++;
-        }
-        state.debug('incrementNext', response, descriptions.next);
-    }
-    return when(descriptions);        
-  }
-  function dontIncrementNext (reason) {
-    state.debug('dontIncrementNext', reason);
-    return when(descriptions);
-  }
   var promise, promises = [];
-  var nextDone = false;
-  if ( ! descriptions.next ) {
-      nextDone = true;
-  }
   for ( var key in descriptions ) {
     if ( /^\d+$/.exec(key) ) {
       key = CodeGradX._str2num(key);
       promise = state.checkServer(kind, key);
-      if ( descriptions.next && key === descriptions.next ) {
-         // Try also the next potential server:
-         promise = promise.then(incrementNext);
-         nextDone = true;
-      }
-      promise = promise.timeout(CodeGradX.State.maxWait)
-            .catch(dontIncrementNext);
+      promise = promise.timeout(CodeGradX.State.maxWait);
       promises.push(promise);
     }
   }
-  if ( ! nextDone ) {
-      promise = state.checkServer(kind, descriptions.next)
-          .timeout(1000)
-          .then(incrementNext)
-          .catch(dontIncrementNext);
-      promises.push(promise);
-  }
   function returnDescriptions () {
     state.debug('returnDescriptions', descriptions);
-    promises.forEach(function (promise) { // probably useless!
-        promise.done(descriptions);
-    });
     return when(descriptions);
   }
-  // Don't wait for all promises to be settled, return as soon as one
-  // is successful. Meanwhile the other promises will update descriptions.
   return when.settle(promises)
         .then(returnDescriptions)
         .catch(returnDescriptions);
 };
 CodeGradX.State.maxWait = 3000; // 3 seconds
 
-/** Check all possible servers of all kinds (a, e, x or s) that is,
-    update the state for all of those servers. If correctly programmed
-    these checks are concurrently run.
+/** Filter out of the descriptions of some 'kind' of servers those
+    that are deemed to be available. If no availableserver is found
+    then check all servers.
 
-    @returns {Promise} yields many mingled responses.
+    @param {string} kind - the kind of server (a, e, x or s)
+    @returns {Promise} yielding Array[Description]
 
-    */
+    Descriptions = { 0: Description, 1: Description, ... }
+    Description = { host: "", enabled: boolean, ... }
 
-CodeGradX.State.prototype.checkAllServers = function () {
-  var state = this;
-  state.debug('checkAllServers');
-  var promises = _.map(this.servers.names, this.checkServers, this);
-  return when.all(promises);
+*/
+
+CodeGradX.State.prototype.getActiveServers = function (kind) {
+    var state = this;
+    var descriptions = state.servers[kind];
+    function filterDefined (array) {
+        var result = [];
+        array.forEach(function (item) {
+            if ( item ) {
+                result.push(item);
+            }
+        });
+        return result;
+    }
+    state.debug("getActiveServers Possible:", kind,
+                filterDefined(_.map(descriptions, 'host')));
+    // _.filter leaves 'undefined' values in the resulting array:
+    var active = filterDefined(_.filter(descriptions, {enabled: true}));
+    state.debug('getActiveServers Active:', kind,
+                _.map(active, 'host'));
+    if ( active.length === 0 ) {
+        // check again all servers:
+        return state.checkServers(kind)
+            .then(function (descriptions) {
+                active = filterDefined(_.filter(descriptions, {enabled: true}));
+                if ( active.length === 0 ) {
+                    var error = new Error(`No available ${kind} servers`);
+                    return when.reject(error);
+                } else {
+                    return when(active);
+                }
+            });
+    } else {
+        return when(active);
+    }
 };
 
 /** Check HTTP response and try to elaborate a good error message.
+    A good HTTP response has a return code less than 300.
 
     Error messages look like:
     <?xml version="1.0" encoding="UTF-8"?>
@@ -575,6 +571,7 @@ CodeGradX.State.prototype.checkAllServers = function () {
         </message>
       </errorAnswer>
     </fw4ex>
+
     */
 
 CodeGradX.checkStatusCode = function (response) {
@@ -605,17 +602,17 @@ CodeGradX.checkStatusCode = function (response) {
       state.debug('checkStatusCode2', msg);
       //console.log(response);
       var error = new Error(msg);
+      error.response = response;
       return when.reject(error);
   }
   return when(response);
 };
 
-/** Ask an A or X server.
-    Send request to the first available server of the right kind.
+/** Send request to the first available server of the right kind.
     In case of problems, try sequentially the next available server of
     the same kind.
 
-    @param {string} kind - the kind of server (a or x)
+    @param {string} kind - the kind of server (usually a or x)
     @param {object} options - description of the HTTP request to send
     @property {string} options.path
     @property {string} options.method
@@ -625,144 +622,108 @@ CodeGradX.checkStatusCode = function (response) {
 
     */
 
-CodeGradX.State.prototype.sendAXServer = function (kind, options) {
-  var state = this;
-  state.debug('sendAXServer', kind, options);
-  var newoptions = regenerateNewOptions(options);
-  var adescriptions = getActiveServers();
-  var checkServersCount = 0;
-
-  function regenerateNewOptions (options) {
-      var newoptions = _.assign({}, options);
-      newoptions.headers = newoptions.headers || options.headers || {};
-      if ( state.currentCookie ) {
-          //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
-          if ( isNode() ) {
-              newoptions.headers.Cookie = state.currentCookie;
-          } else {
-              if ( ! document.cookie.indexOf(state.currentCookie) ) {
-                  document.cookie = state.currentCookie + ";path='/';";
-              }
-          }
-      }
-      return newoptions;
-  }
-  function getActiveServers () {
-    state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
-    //console.log(state.servers[kind]);
-    var active = _.filter(state.servers[kind], {enabled: true});
-    state.debug('Active:', _.pluck(active, 'host'));
-    return active;
-  }
-  function updateCurrentCookie (response) {
-    //console.log(response.headers);
-    //console.log(response);
-    state.debug('updateCurrentCookie', response);
-    function extractCookie (tag) {
-        if ( response.headers[tag] ) { // char case ?
-            var cookies = response.headers[tag];
-            cookies = _.map(cookies, function (s) {
-                return s.replace(/;.*$/, '');
-            });
-            cookies = _.filter(cookies, function (s) {
-                s = s.replace(/^u=/, '');
-                return /^U/.exec(s);
-            });
-            return (state.currentCookie = cookies);
+CodeGradX.State.prototype.sendSequentially = function (kind, options) {
+    var state = this;
+    state.debug('sendSequentially', kind, options);
+    
+    function regenerateNewOptions (options) {
+        var newoptions = _.assign({}, options);
+        newoptions.headers = newoptions.headers || options.headers || {};
+        if ( state.currentCookie ) {
+            //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
+            if ( isNode() ) {
+                newoptions.headers.Cookie = state.currentCookie;
+            } else {
+                if ( ! document.cookie.indexOf(state.currentCookie) ) {
+                    document.cookie = state.currentCookie + ";path='/';";
+                }
+            }
         }
+        return newoptions;
     }
-    if ( ! extractCookie('Set-Cookie') ) {
-        extractCookie('X-CodeGradX-Cookie');
+
+    function updateCurrentCookie (response) {
+        //console.log(response.headers);
+        //console.log(response);
+        state.debug('sendSequentially updateCurrentCookie', response);
+        function extractCookie (tag) {
+            if ( response.headers[tag] ) { // char case ?
+                var cookies = response.headers[tag];
+                cookies = _.map(cookies, function (s) {
+                    return s.replace(/;.*$/, '');
+                });
+                cookies = _.filter(cookies, function (s) {
+                    s = s.replace(/^u=/, '');
+                    return /^U/.exec(s);
+                });
+                return (state.currentCookie = cookies);
+            }
+        }
+        if ( ! extractCookie('Set-Cookie') ) {
+            extractCookie('X-CodeGradX-Cookie');
+        }
+        return when(response);
     }
-    return when(response);
-  }
-  var lastReason;
-  function tryNext (reason) {
-    // Stop trying X servers as soon as one answers with a client error.
-    if ( kind === 'x' &&
-         _.isObject(reason) &&
-         _.has(reason, 'kind') &&
-         reason.kind === 'error' &&
-         _.has(reason, 'code') &&
-         reason.code === 400 ) {
-        lastReason = reason;
-        state.debug('tryNext3', 'stopX', reason);
-        return when.reject(lastReason);
+
+    function mk_invalidate (description) {
+        // This function declares the host as unable to answer.
+        // Meanwhile, the host may answer with bad status code!
+        return function (reason) {
+            state.debug('sendAXserver invalidate', description, reason);
+            //console.log(reason);
+            description.enabled = false;
+            description.lastError = reason;
+            return when.reject(reason);
+        };
     }
-    if ( _.isError(reason) ) {
-        lastReason = reason;
-    }
-    state.debug('tryNext1', reason);
-    if ( adescriptions.length > 0 ) {
-      var description = _.first(adescriptions);
-      adescriptions = _.rest(adescriptions);
-      newoptions = regenerateNewOptions(options);
-      newoptions.protocol = newoptions.protocol || description.protocol;
-      newoptions.path = newoptions.protocol + '://' +
+    function send (description) {
+        var newoptions = regenerateNewOptions(options);
+        newoptions.protocol = newoptions.protocol || description.protocol;
+        newoptions.path = newoptions.protocol + '://' +
             description.host + options.path;
-      newoptions.mixin = {
-          withCredentials: true
-      };
-      state.debug('tryNext2', newoptions.path);
-      var promise;
-      try {
-          promise = state.userAgent(newoptions);
-      } catch (e) {
-          state.debug('tryNext2Error', e);
-          promise = when.reject(e);
-      }
-      return promise
+        newoptions.mixin = {
+            withCredentials: true
+        };
+        state.debug('sendSequentially send', newoptions.path);
+        return state.userAgent(newoptions)
             .catch(mk_invalidate(description))
             .then(CodeGradX.checkStatusCode)
-            .then(updateCurrentCookie)
-            .catch(tryNext);
-    } else if ( checkServersCount++ === 0 ) {
-        return tryAll();
-    } else if ( _.isError(lastReason) ) {
-        return when.reject(lastReason);
-    } else {
-        return allTried(new Error("All unavailable servers " + kind));
+            .then(updateCurrentCookie);
     }
-  }
-  function mk_invalidate (description) {
-    return function (reason) {
-      state.debug('invalidate', description, reason);
-      //console.log(reason);
-      description.enabled = false;
-      description.lastError = reason;
-      return when.reject(reason);
-    };
-  }
-  function allTried (reason) {
-    state.debug('allTried', reason);
-    return when.reject(reason);
-  }
-  function tryAll () {
-    state.debug('tryAll', adescriptions);
-    if ( adescriptions.length === 0 ) {
-      // Determine available servers if not yet done:
-      return state.checkServers(kind)
-            .then(function (descriptions) {
-                state.debug('sendAXServer2 ', descriptions);
-                var adescriptions2 = getActiveServers();
-                if ( adescriptions2.length === 0 ) {
-                    return allTried(new Error('No available server ' + kind));
-                } else {
-                    adescriptions = adescriptions2;
-                    return tryNext('goAgain');
-                }
-            }).catch(allTried);
-    } else {
-      return tryNext('goFirst');
+
+    function trySequentially (adescriptions) {
+        var promise = when.reject('start');
+        adescriptions.forEach(function (description) {
+            promise = promise.catch(function (reason) {
+                state.debug('sendSequentially trySequentially', reason);
+                return send(description);
+            });
+        });
+        return promise;
     }
-  }
-  return tryAll();
+    function retrySequentially (reason) {
+        state.debug('sendSequentially retry', reason);
+        return state.getActiveServers(kind)
+            .then(trySequentially);
+    }
+    
+    return state.getActiveServers(kind)
+        .then(trySequentially)
+        .catch(retrySequentially);
 };
 
-/** Ask once an E or S server.
-    Send request concurrently to all available servers. The fastest wins.
+/** By default sending to an A or X server is done sequentially until
+    one answers positively.
+*/
 
-    @param {string} kind - the kind of server (e or s)
+CodeGradX.State.prototype.sendAXServer = function (kind, options) {
+    var state = this;
+    return state.sendSequentially(kind, options);
+};
+
+/** Send request concurrently to all available servers. The fastest wins.
+
+    @param {string} kind - the kind of server (usually e or s)
     @param {object} options - description of the HTTP request to send
     @property {string} woptions.path
     @property {string} options.method
@@ -770,89 +731,78 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
     @property {object} options.entity - string or object depending on Content-Type
     @returns {Promise} yields {HTTPresponse}
 
-    */
+*/
 
-CodeGradX.State.prototype.sendESServer = function (kind, options) {
-  var state = this;
-  state.debug('sendESServer1', kind, options);
-  var newoptions = _.assign({}, options);
-  newoptions.headers = _.assign({}, options.headers);
-  if ( state.currentCookie ) {
-      //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
-      if ( isNode() ) {
-          newoptions.headers.Cookie = state.currentCookie;
-      } else {
-          if ( ! document.cookie.indexOf(state.currentCookie) ) {
-              document.cookie = state.currentCookie + ";path='/';";
-          }
-      }
-  }
-  function getActiveServers () {
-    state.debug("Possible:", _.pluck(state.servers[kind], 'host'));
-    //console.log(state.servers[kind]);
-    var active = _.filter(state.servers[kind], {enabled: true});
-    state.debug('Active:', _.pluck(active, 'host'));
-    return active;
-  }
-  function mk_seeError (description) {
-    function seeError (reason) {
-      // A MIME deserialization problem may also trigger `seeError`.
-      function see (o) {
-        var result = '';
-        for ( var key in o ) {
-          result += key + '=' + o[key] + ' ';
+
+CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
+    var state = this;
+    state.debug('sendConcurrently', kind, options);
+
+    function regenerateNewOptions (options) {
+        var newoptions = _.assign({}, options);
+        newoptions.headers = newoptions.headers || options.headers || {};
+        if ( state.currentCookie ) {
+            //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
+            if ( isNode() ) {
+                newoptions.headers.Cookie = state.currentCookie;
+            } else {
+                if ( ! document.cookie.indexOf(state.currentCookie) ) {
+                    document.cookie = state.currentCookie + ";path='/';";
+                }
+            }
         }
-        return result;
-      }
-      state.debug('seeError', see(reason));
-      description.enabled = false;
-      description.lastError = reason;
-      //var js = JSON.parse(reason.entity);
-      return when.reject(reason);
+        if ( kind === 'e' ) {
+            newoptions.mixin = {
+                withCredentials: true
+            };
+        }
+        return newoptions;
     }
-    return seeError;
-  }
-  function tryRequesting (description) {
-    var tryoptions = _.assign({}, newoptions);
-    tryoptions.path = description.protocol + '://' +
-          description.host + options.path;
-    if ( kind === 'e' ) {
-        tryoptions.mixin = {
-            withCredentials: true
+
+    function mk_seeError (description) {
+        return function seeError (reason) {
+            // A MIME deserialization problem may also trigger `seeError`.
+            function see (o) {
+                var result = '';
+                for ( var key in o ) {
+                    result += key + '=' + o[key] + ' ';
+                }
+                return result;
+            }
+            state.debug('sendConcurrently seeError', see(reason));
+            description.enabled = false;
+            description.lastError = reason;
+            //var js = JSON.parse(reason.entity);
+            return when.reject(reason);
         };
     }
-    state.debug("tryRequesting", tryoptions.path);
-    var promise;
-    try {
-        promise = state.userAgent(tryoptions);
-    } catch (e) {
-        state.debug("tryRequestingError", e);
-        promise = when.reject(e);
+
+    function send (description) {
+        var tryoptions = _.assign({}, regenerateNewOptions(options));
+        tryoptions.path = description.protocol + '://' +
+            description.host + options.path;
+        state.debug("sendConcurrently send", tryoptions.path);
+        return state.userAgent(tryoptions)
+            .then(CodeGradX.checkStatusCode)
+            .catch(mk_seeError(description));
     }
-    return promise
-      .then(CodeGradX.checkStatusCode)
-      .catch(mk_seeError(description));
-  }
-  function allTried (reason) {
-    state.debug('allTried', reason);
-    return when.reject(reason);
-  }
-  var adescriptions = getActiveServers();
-  if ( adescriptions.length === 0 ) {
-    return state.checkServers(kind).then(function (/*descriptions*/) {
-      var adescriptions2 = getActiveServers();
-      if ( adescriptions2.length === 0 ) {
-        return when.reject(new Error("no available server " + kind));
-      } else {
-        state.debug('sendESServer2',  adescriptions2);
-        var promises = _.map(adescriptions2, tryRequesting);
+    
+    function tryConcurrently (adescriptions) {
+        var promises = adescriptions.map(send);
         return when.any(promises);
-      }
-    }).catch(allTried);
-  } else {
-    var promises = _.map(adescriptions, tryRequesting);
-    return when.any(promises);
-  }
+    }
+    
+    return state.getActiveServers(kind)
+        .then(tryConcurrently);
+};
+
+/** By default requesting an E or S server is done concurrently (except
+    when submitting a new exercise).
+*/
+
+CodeGradX.State.prototype.sendESServer = function (kind, options) {
+    var state = this;
+    return state.sendConcurrently(kind, options);
 };
 
 /** Ask repeatedly an E or S server.
@@ -868,48 +818,50 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     By default, `parameters` is initialized with
     CodeGradX.State.prototype.sendRepeatedlyESServer.default
 
-  Nota: when.any does not cancel the other concurrent promises. So use
-  the boolean `shouldStop` to avoid invoking `retryNext` forever.
+  Nota: when.any does not cancel the other concurrent promises.
   */
 
 CodeGradX.State.prototype.sendRepeatedlyESServer =
 function (kind, parameters, options) {
-  var state = this;
-  var finalResponse;
-  state.debug('sendRepeatedlyESServer', kind, parameters, options);
-  var parms = _.assign({ i: 0 },
-    CodeGradX.State.prototype.sendRepeatedlyESServer.default,
-    parameters);
-  function retryNext () {
-    if ( finalResponse ) {
-      return when(finalResponse);
+    var state = this;
+    state.debug('sendRepeatedlyESServer', kind, parameters, options);
+    var parms = _.assign({ i: 0 },
+          CodeGradX.State.prototype.sendRepeatedlyESServer.default,
+                         parameters);
+    var count = parms.attempts;
+
+    function removeSlowServers (adescriptions) {
+        var aresult = [];
+        for (let item of adescriptions) {
+            if ( ! item.slow ) {
+                aresult.push(item);
+            }
+        }
+        state.debug('sendRepeatedlyESServer Non slow active servers',
+                    kind, _.map(aresult, 'host'));
+        return aresult;
     }
-    state.debug("retryNext1", parms);
-    try {
-      parms.progress(parms);
-    } catch (exc) {
-      // ignore problems raised by progress()!
+    function retry (reason) {
+        state.debug('sendRepeatedlyESServer retry', reason, count--);
+        try {
+            parms.progress(parms);
+        } catch (exc) {
+            state.debug('sendRepeatedlyESServer progress', exc);
+        }
+        if ( count <= 0 ) {
+            return when.reject(new Error("waitedTooMuch"));
+        }
+        return state.getActiveServers(kind)
+            .then(removeSlowServers)
+            .delay(parms.step * 1000)
+            .then(function () {
+                return state.sendESServer(kind, options);
+            })
+            .catch(retry);
     }
-    if ( parms.i++ < parms.attempts ) {
-      state.debug("retryNext2", parms.i, parms.attempts);
-      var promise = state.sendESServer(kind, options)
-         .then(function (response) {
-                if ( response.status.code >= 300 ) {
-                    return when.reject(new Error(response.status.code));
-                } else {
-                    finalResponse = response;
-                    return when(response);
-                }
-      });
-      var dt = parms.step * 1000;
-      var delayedPromise = when(true).delay(dt).then(retryNext);
-      var promises = [promise, delayedPromise];
-      return when.any(promises);
-    } else {
-      return when.reject(new Error("waitedTooMuch"));
-    }
-  }
-  return retryNext();
+
+    return state.sendESServer(kind, options)
+        .catch(retry);
 };
 CodeGradX.State.prototype.sendRepeatedlyESServer.default = {
   step: 3, // seconds
@@ -988,6 +940,7 @@ CodeGradX.User = function (json) {
           var campaign = new CodeGradX.Campaign(js);
           campaigns[campaign.name] = campaign;
       });
+      // Just record the current active campaigns:
       this._campaigns = campaigns;
   }
 };
@@ -1031,8 +984,12 @@ CodeGradX.User.prototype.modify = function (fields) {
       @returns {Promise<Hashtable<Campaign>>} yielding a Hashtable of Campaigns
                 indexed by their name.
 
-   The current user maintains in _campaigns the active campaigns and in
-   _all_campaigns all past or current campaigns.
+   The current user maintains in _campaigns the active campaigns and
+   in _all_campaigns all past or current campaigns. Three cases are
+   possible: 
+      - both are defined
+      - only _campaigns is defined (see constructor 'User')
+      - none are defined
 
     */
 
@@ -1107,22 +1064,14 @@ CodeGradX.User.prototype.getCampaign = function (name) {
   var user = this;
   var state = CodeGradX.getCurrentState();
   state.debug('getCampaign', name);
-  if ( user._campaigns && user._campaigns[name] ) {
-      return when(user._campaigns[name]);
-  } else if ( user._all_campaigns && user._all_campaigns[name] ) {
-      return when(user._all_campaigns[name]);
-  } else {
-      return user.getCampaigns()
-          .then(function (/*campaigns*/) {
-              if ( user._campaigns && user._campaigns[name] ) {
-                  return when(user._campaigns[name]);
-              } else if ( user._all_campaigns && user._all_campaigns[name] ) {
-                  return when(user._all_campaigns[name]);
-              } else {
-                  return when.reject(new Error("No such campaign " + name));
-              }
-          });
-  }
+  return user.getCampaigns()
+        .then(function (campaigns) {
+            if ( campaigns && campaigns[name] ) {
+                return when(campaigns[name]);
+            } else {
+                return when.reject(new Error("No such campaign " + name));
+            }
+        });
 };
 
 /** Get current campaign if FW4EX.currentCampaignName is defined or
@@ -1130,11 +1079,21 @@ CodeGradX.User.prototype.getCampaign = function (name) {
 
     @return {Promise<Campaign>} yields {Campaign}
 
+    FUTURE: remove that dependency against FW4EX!!!!!!!!!!!!
 */
+
+function isFW4EXcampaignDefined () {
+    try {
+        return FW4EX.currentCampaignName;
+    } catch (e) {
+        FW4EX = {};
+        return false;
+    }
+}
 
 CodeGradX.User.prototype.getCurrentCampaign = function () {
     var user = this;
-    if ( FW4EX.currentCampaignName ) {
+    if ( isFW4EXcampaignDefined() ) {
         return user.getCampaign(FW4EX.currentCampaignName)
             .then(function (campaign) {
                 FW4EX.currentCampaign = campaign;
@@ -1253,17 +1212,14 @@ CodeGradX.User.prototype.getProgress = function (campaign) {
 };
 
 /** submit a new Exercise and return it as soon as submitted successfully.
-    However fetching the ExerciseReport is started with the `parameters`
-    repetition parameters.
+    This variant sends a file from the local file system.
 
     @param {string} filename - tgz file containing the exercise
-    @param {Object} parameters - repetition parameters
     @returns {Promise<Exercise>} yielding Exercise
 
     */
 
-CodeGradX.User.prototype.submitNewExercise =
- function (filename /*, parameters*/) {
+CodeGradX.User.prototype.submitNewExercise = function (filename) {
   //var user = this;
   var state = CodeGradX.getCurrentState();
   state.debug('submitNewExercise1', filename);
@@ -1295,7 +1251,7 @@ CodeGradX.User.prototype.submitNewExercise =
     if ( isNode() ) {
         headers["Content-Length"] = content.length;
     }
-    return state.sendESServer('e', {
+    return state.sendSequentially('e', {
       path: '/exercises/',
       method: "POST",
       headers: headers,
@@ -1303,6 +1259,14 @@ CodeGradX.User.prototype.submitNewExercise =
     }).then(processResponse);
   });
 };
+
+/** submit a new Exercise and return it as soon as submitted successfully.
+    This variant sends the content of a DOM form.
+
+    @param {DOM} form - a DOM element
+    @returns {Promise<Exercise>} yielding Exercise
+
+    */
 
 CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
   //var user = this;
@@ -1333,7 +1297,7 @@ CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
       "Content-Disposition": ("inline; filename=" + basefilename),
       "Accept": 'text/xml'
   };
-  return state.sendESServer('e', {
+  return state.sendSequentially('e', {
       path: '/exercises/',
       method: "POST",
       headers: headers,
@@ -2162,6 +2126,7 @@ CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
 
 /** Send the content of a file as the proposed solution to an Exercise.
     Returns a Job on which you may invoke the `getReport` method.
+    This variant sends a file read from the local file system.
 
       @param {string} filename
       @returns {Promise<Job>} yields {Job}
@@ -2743,13 +2708,14 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     state.debug('getJobReport3', job);
     var markingRegExp = new RegExp("^(.|\n)*(<marking (.|\n)*?>)(.|\n)*$");
     var marking = response.entity.replace(markingRegExp, "$2");
+    state.debug('getJobReport3 marking', marking);
+    //console.log(marking); //DEBUG
     if ( marking.length === response.entity.length ) {
         return when.reject(response);
     }
     marking = marking.replace(/>/, "/>");
     //console.log(marking);
     return CodeGradX.parsexml(marking).then(function (js) {
-      //console.log(js);
       job.mark      = CodeGradX._str2num(js.marking.$.mark);
       job.mark      *= CodeGradX.xml2html.default.markFactor;
       job.mark = Math.round(job.mark);
@@ -2783,6 +2749,8 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     state.debug('getJobReport5');
     var contentRegExp = new RegExp("^(.|\n)*(<report>(.|\n)*?</report>)(.|\n)*$");
     var content = response.entity.replace(contentRegExp, "$2");
+    //state.debug('getJobReport5 content',
+    //         content.length, response.entity.length);
     if ( content.length === response.entity.length ) {
         return when.reject(response);
     }

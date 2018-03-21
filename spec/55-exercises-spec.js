@@ -10,6 +10,7 @@ describe('CodeGradX', function () {
             var state = CodeGradX.getCurrentState();
             state.debug('faildone', reason).show();
             //console.log(reason);
+            state.log.show();
             fail(reason);
             done();
         };
@@ -51,6 +52,11 @@ describe('CodeGradX', function () {
             }).catch(faildone);
     });
 
+    // it("show log1", function () {
+    //     //CodeGradX.getCurrentState().log.show();
+    //     CodeGradX.getCurrentState().log.items = [];
+    // });
+
     it("fail upload a new ExercisesSet" , function (done) {
         var state = CodeGradX.getCurrentState();
         var faildone = make_faildone(done);
@@ -78,6 +84,12 @@ describe('CodeGradX', function () {
             }).catch(faildone);
     });
 
+    // it("show log2", function (done) {
+    //     CodeGradX.getCurrentState().log.show();
+    //     CodeGradX.getCurrentState().log.items = [];
+    //     // Don't call done() to give time to flush stdout and stderr
+    // }, 10*1000);
+
     it("succeed upload a new ExercisesSet" , function (done) {
         var state = CodeGradX.getCurrentState();
         var faildone = make_faildone(done);
@@ -85,21 +97,27 @@ describe('CodeGradX', function () {
             .then(function (campaign) {
                 expect(campaign).toBeDefined();
                 //console.log(campaign);//
-                campaign.uploadExercisesSet('spec/es.yml')
+                return campaign.uploadExercisesSet('spec/es.yml')
                     .then(function (exercisesSet1) {
                         expect(exercisesSet1).toBeDefined();
-                        //console.log(exercisesSet1);//
+                        console.log(exercisesSet1);//
                         expect(exercisesSet1.notice[2]).toMatch('30882');
                         //console.log(exercisesSet1.exercises[0]);//
                         expect(exercisesSet1.exercises[0].title).toBe('closures');
-                        campaign.getExercisesSet()
+                        return campaign.getExercisesSet()
                             .then(function (exercisesSet2) {
                                 expect(exercisesSet2).toEqual(exercisesSet1);
                                 done();
                             }).catch(faildone);
                     }).catch(faildone);
             }).catch(faildone);
-    });
+    }, 20*1000);
+
+    // it("show log3", function (done) {
+    //     CodeGradX.getCurrentState().log.show();
+    //     CodeGradX.getCurrentState().log.items = [];
+    //     // Don't call done() to give time to flush stdout and stderr
+    // }, 10*1000);
 
     it("fetch that new ExercisesSet", function (done) {
         var state = CodeGradX.getCurrentState();

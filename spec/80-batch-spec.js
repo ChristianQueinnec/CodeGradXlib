@@ -7,7 +7,7 @@ var CodeGradX = require('../codegradxlib.js');
 var authData = require('./auth-data.json');
 
 describe('CodeGradX', function () {
-  CodeGradX.xml2html.default.markFactor = 1;
+  CodeGradX.xml2html.default.markFactor = 100;
 
   function make_faildone (done) {
       return function faildone (reason) {
@@ -78,6 +78,12 @@ describe('CodeGradX', function () {
 
   var code1 = "int min(int a, int b) { return a; }\n";
 
+    // it("show log1", function (done) {
+    //     //CodeGradX.getCurrentState().log.show();
+    //     CodeGradX.getCurrentState().log.items = [];
+    //     // Don't call done() to give time to flush stdout and stderr
+    // }, 1*1000);
+
   it("sends a string answer to exercise1 and waits for report", 
      function (done) {
     var state = CodeGradX.getCurrentState();
@@ -86,12 +92,20 @@ describe('CodeGradX', function () {
     expect(exercise1).toBeDefined();
     exercise1.sendStringAnswer(code1).then(function (job) {
       expect(job).toBeDefined();
-      job.getReport().then(function (job) {
-        expect(job.mark).toBe(0.6);
+      return job.getReport().then(function (job) {
+        expect(job.mark).toBe(60);
         done();
-      }, faildone);
-    }, faildone);
+      });
+    }).catch(faildone);
   }, 50*1000); // 50 seconds
+
+    // it("show log2", function (done) {
+    //     CodeGradX.getCurrentState().log.show();
+    //     CodeGradX.getCurrentState().log.items = [];
+    //     // Don't call done() to give time to flush stdout and stderr
+    // }, 10*1000);
+
+    // it("stop", function () { process.exit(0); });
 
   var file1 = 'spec/min.c';
 
@@ -121,7 +135,7 @@ describe('CodeGradX', function () {
     exercise1.sendFileAnswer(file1).then(function (job) {
       expect(job).toBeDefined();
       job.getReport().then(function (job) {
-        expect(job.mark).toBe(1);
+        expect(job.mark).toBe(100);
         done();
       }, faildone);
     }, faildone);
@@ -155,11 +169,11 @@ describe('CodeGradX', function () {
           var job2 = exercise.pseudojobs.perfect;
           job2.getReport().then(function (job) {
               expect(job).toBe(job2);
-              expect(job.mark).toBe(100);
+              expect(job.mark).toBe(10000);
               var job3 = exercise.pseudojobs.half;
               job3.getReport().then(function (job) {
                   expect(job).toBe(job3);
-                  expect(job.mark).toBe(45);
+                  expect(job.mark).toBe(4500);
                   done();
               }, faildone);
           }, faildone);
@@ -175,7 +189,7 @@ describe('CodeGradX', function () {
     expect(exercise2).toBeDefined();
     var counter = 0;
     var parameters = {
-        step: 10,
+        step: 4,
         retry: 40,
         progress: function (parameters) {
           counter++;
@@ -183,7 +197,9 @@ describe('CodeGradX', function () {
         }
     };
     var job1;
-    exercise2.sendBatch(batchTGZfile).then(function (batch) {
+    exercise2.sendBatch(batchTGZfile)
+     .delay(CodeGradX.Batch.prototype.getReport.default.step*1000)
+     .then(function (batch) {
       //console.log(batch);
       batch.getReport(parameters).then(function (batch2) {
         //console.log(batch2);
@@ -206,5 +222,11 @@ describe('CodeGradX', function () {
       }, faildone);
     }, faildone);
   }, 500*1000); // 500 seconds
+
+    // it("show log", function (done) {
+    //     CodeGradX.getCurrentState().log.show();
+    //     //CodeGradX.getCurrentState().log.items = [];
+    //     // Don't call done() to give time to flush stdout and stderr
+    // }, 10*1000);
 
 });

@@ -14,34 +14,46 @@ describe('CodeGradX', function () {
   });
 
   function initializer (state) {
-    state.servers = {
-      domain: '.localdomain',
-      names: ['e', 'e', 'x', 's'],
-      a: {
-        next: 1,
-        suffix: '/alive',
-        0: {
-        }
-      },
-      e: {
-        next: 1,
-        suffix: '/alive',
-        0: {
-        }
-      },
-      x: {
-        next: 1,
-        suffix: '/dbalive',
-        0: {
-        }
-      },
-      s: {
-        next: 1,
-        suffix: '/',
-        0: {
-        }
-      }
-    };
+      state.servers = {
+          domain: '.localdomain',
+          names: ['e', 'e', 'x', 's'],
+          a: {
+              suffix: '/alive',
+              0: {
+                  host: "a0.localdomain"
+              },
+              1: {
+                  host: "a1.localdomain"
+              }
+          },
+          e: {
+              suffix: '/alive',
+              0: {
+                  host: "e0.localdomain"
+              },
+              1: {
+                  host: "e1.localdomain"
+              }
+          },
+          x: {
+              suffix: '/dbalive',
+              0: {
+                  host: "x0.localdomain"
+              },
+              1: {
+                  host: "x1.localdomain"
+              }
+          },
+          s: {
+              suffix: '/',
+              0: {
+                  host: "s0.localdomain"
+              },
+              1: {
+                  host: "s1.localdomain"
+              }
+          }
+      };
     return state;
   }
 
@@ -161,7 +173,6 @@ describe('CodeGradX', function () {
       expect(descriptions[0].lastError).not.toBeDefined();
       expect(descriptions[1].enabled).toBeTruthy();
       expect(descriptions[1].lastError).not.toBeDefined();
-      expect(descriptions.next).toBe(2);
       done();
     }, faildone);
   });

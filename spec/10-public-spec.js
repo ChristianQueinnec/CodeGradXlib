@@ -46,7 +46,6 @@ describe('CodeGradX', function () {
     }
     var promise1 = state.checkServers('e');
     promise1.then(function (descriptions) {
-      expect(descriptions.next).toBeGreaterThan(0);
       var promise2 = state.sendESServer('e', {
         path: '/path/insta2',
         headers: {

@@ -73,11 +73,12 @@ describe('CodeGradX', function () {
       expect(js).toBeDefined();
       expect(js.you).toBeDefined();
       expect(js.you.skill).toBeDefined();
-      expect(js.you.skill).toBe(62);
+        // Bad tests since these figures may evolve!
+      expect(js.you.skill).toBe(63); //may evolve!
       expect(_.isObject(js.others)).toBeTruthy();
       expect(js.others).toBeDefined();
-      expect(js.others[1]).toBe(7);
-      expect(js.others[2]).toBe(6);
+      expect(js.others[1]).toBe(5); //may evolve!
+      expect(js.others[2]).toBe(5); //may evolve!
       done();
     }, faildone);
   }, 30*1000); // 15 seconds

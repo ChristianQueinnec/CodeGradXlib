@@ -7,6 +7,7 @@ describe('CodeGradX', function () {
   it('should be loaded', function (done) {
     expect(CodeGradX).toBeDefined();
     var state = new CodeGradX.State();
+    CodeGradX.xml2html.default.markFactor = 100;
     done();
   });
 
@@ -67,16 +68,17 @@ describe('CodeGradX', function () {
   });
 
   it("should convert question", function (done) {
-    var xml = "<question title='two words'>stem</question>";
+    var xml = "<question title='two words' name='Q1'>stem</question>";
     var html = CodeGradX.xml2html(xml);
-    expect(html).toMatch(/<div title="two words" class="fw4ex_question"><div class="fw4ex_question_title" data_counter="1">two words<\/div>stem<\/div>/);
+    expect(html).toMatch(/<div title="two words" name="Q1" class="fw4ex_question">stem<\/div>/);
     done();
   });
 
+    // Attention: attributes name and title appear in various order:
   it("should convert questions", function (done) {
-    var xml = "<section><question title='two words'>stem</question><question title='other words'>other stem</question></section>";
+    var xml = "<section><question title='two words' name='Q1'>stem</question><question name='Q2' title='other words'>other stem</question></section>";
     var html = CodeGradX.xml2html(xml);
-    expect(html).toMatch(/<div class="fw4ex_section1"><div title="two words" class="fw4ex_question"><div class="fw4ex_question_title" data_counter="1">two words<\/div>stem<\/div><div title="other words" class="fw4ex_question"><div class="fw4ex_question_title" data_counter="2">other words<\/div>other stem<\/div><\/div>/);
+    expect(html).toMatch(/<div class="fw4ex_section1"><div title="two words" name="Q1" class="fw4ex_question"><div class="fw4ex_question_title" data_counter="1">Q1: two words<\/div>stem<\/div><div name="Q2" title="other words" class="fw4ex_question"><div class="fw4ex_question_title" data_counter="2">Q2: other words<\/div>other stem<\/div><\/div>/);
     done();
   });
 

@@ -79,6 +79,7 @@ function _str2Date (str) {
       expect(campaign.starttime.getFullYear()).toBeLessThan(2008);
       expect(campaign.endtime.getFullYear()).toBeGreaterThan(2028);
       //console.log(campaign);
+      expect(campaign.exercisesSet).toBeUndefined();
       campaign.getExercisesSet().then(function (es) {
         //console.log(es);
         expect(es instanceof CodeGradX.ExercisesSet).toBeTruthy();
