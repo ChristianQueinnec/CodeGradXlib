@@ -1,7 +1,7 @@
 // Jasmine test. Get current user
 
 var CodeGradX = require('../codegradxlib.js');
-var authData = require('./auth-data.json');
+var authData = require('./auth1-data.json');      // lambda student
 
 describe('CodeGradX', function () {
 

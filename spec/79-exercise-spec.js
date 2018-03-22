@@ -1,7 +1,7 @@
 // define a new exercise and send a new job against it.
 
 var CodeGradX = require('../codegradxlib.js');
-var authData = require('./auth-data.json');
+var authData = require('./auth3-data.json');      // author
 
 describe('CodeGradX', function () {
   CodeGradX.xml2html.default.markFactor = 100;

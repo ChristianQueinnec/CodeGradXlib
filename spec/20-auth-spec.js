@@ -4,7 +4,7 @@
 // This file was more used as a test and experiment code.
 
 var CodeGradX = require('../codegradxlib.js');
-var authData = require('./auth-data.json');
+var authData = require('./auth1-data.json');     // lambda student
 
 describe('CodeGradX', function () {
   it('should be loaded', function () {
@@ -36,7 +36,7 @@ describe('CodeGradX', function () {
       expect(state.currentCookie).toBeDefined();
       expect(state.currentCookie.length).toBeGreaterThan(0);
       state.currentUser = new CodeGradX.User(response.entity);
-      expect(state.currentUser.lastname).toBe('one');
+      expect(state.currentUser.lastname).toBe('FW4EX');
       expect(CodeGradX.getCurrentState()).toBe(state);
       state.sendAXServer('x', {
         path: '/',
@@ -62,7 +62,7 @@ describe('CodeGradX', function () {
     .then(function (user) {
       //console.log(user);
       expect(user).toBeDefined();
-      expect(user.lastname).toBe('one');
+      expect(user.lastname).toBe('FW4EX');
       expect(user).toBe(state.currentUser);
       done();
     }, faildone);

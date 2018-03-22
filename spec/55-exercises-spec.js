@@ -1,7 +1,8 @@
 // Jasmine test to check getting exercises.json
 
 var CodeGradX = require('../codegradxlib.js');
-var authData = require('./auth-data.json');
+var authData = require('./auth1-data.json');      // lambda student
+// Caution: will use auth2-data.json later        // teacher
 
 describe('CodeGradX', function () {
 
@@ -24,6 +25,7 @@ describe('CodeGradX', function () {
             .then(function (user) {
                 expect(user).toBeDefined();
                 expect(user).toBe(state.currentUser);
+                expect(user.personid).toBe(45);
                 done();
             }).catch(faildone);
     }, 6*1000); // 6 seconds
@@ -65,9 +67,14 @@ describe('CodeGradX', function () {
                 expect(campaign).toBeDefined();
                 //console.log(campaign);//
                 campaign.uploadExercisesSet('spec/es.yml')
-                    .then(faildone)
-                    .catch(done);
-            }).catch(faildone);
+                    .then(function (result) {
+                        console.log(result);//DEBUG
+                        faildone();
+                    })
+                    .catch(function (reason) {
+                        done();
+                    });
+            });
     });
 
     it("reconnect as a teacher", function (done) {
@@ -77,7 +84,7 @@ describe('CodeGradX', function () {
         state.getAuthenticatedUser(authData.login, authData.password)
             .then(function (user) {
                 //console.log(user);
-                expect(user.personid).toBe(30882);
+                expect(user.personid).toBe(23);
                 expect(user).toBeDefined();
                 expect(user).toBe(state.currentUser);
                 done();
@@ -101,9 +108,11 @@ describe('CodeGradX', function () {
                     .then(function (exercisesSet1) {
                         expect(exercisesSet1).toBeDefined();
                         console.log(exercisesSet1);//
-                        expect(exercisesSet1.notice[2]).toMatch('30882');
+                        expect(exercisesSet1.notice[2])
+                            .toMatch('Teacher FW4EX');
                         //console.log(exercisesSet1.exercises[0]);//
-                        expect(exercisesSet1.exercises[0].title).toBe('closures');
+                        expect(exercisesSet1.exercises[0].title)
+                            .toBe('closures');
                         return campaign.getExercisesSet()
                             .then(function (exercisesSet2) {
                                 expect(exercisesSet2).toEqual(exercisesSet1);

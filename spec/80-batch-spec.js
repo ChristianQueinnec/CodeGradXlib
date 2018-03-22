@@ -4,7 +4,7 @@
 //       http://paracamplus.com/CodeGradX/VM/latest/
 
 var CodeGradX = require('../codegradxlib.js');
-var authData = require('./auth-data.json');
+var authData = require('./auth3-data.json');       // author
 
 describe('CodeGradX', function () {
   CodeGradX.xml2html.default.markFactor = 100;

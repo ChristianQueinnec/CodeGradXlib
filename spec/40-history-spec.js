@@ -2,7 +2,7 @@
 // requires file ./auth-data.json with login and password (not under git!)
 
 var CodeGradX = require('../codegradxlib.js');
-var authData = require('./auth-data.json');
+var authData = require('./auth1-data.json');      // lambda student
 var _ = require('lodash');
 
 describe('CodeGradX', function () {
@@ -74,7 +74,7 @@ describe('CodeGradX', function () {
       expect(js.you).toBeDefined();
       expect(js.you.skill).toBeDefined();
         // Bad tests since these figures may evolve!
-      expect(js.you.skill).toBe(63); //may evolve!
+      expect(js.you.personId).toBe(45);
       expect(_.isObject(js.others)).toBeTruthy();
       expect(js.others).toBeDefined();
       expect(js.others[1]).toBe(5); //may evolve!

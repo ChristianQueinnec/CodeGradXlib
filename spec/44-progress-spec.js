@@ -2,7 +2,7 @@
 // requires file ./auth-data.json with login and password (not under git!)
 
 var CodeGradX = require('../codegradxlib.js');
-var authData = require('./auth-data.json');
+var authData = require('./auth1-data.json');      // lambda student
 var _ = require('lodash');
 
 describe('CodeGradX', function () {
