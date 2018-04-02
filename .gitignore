@@ -1,6 +1,6 @@
 *~
 CodeGradXlib
-spec/auth-data.json
+spec/auth*-data.json
 spec/oefgc/*.tgz
 spec/oefgc/*/mark.txt
 Archive/

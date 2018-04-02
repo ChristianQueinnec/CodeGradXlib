@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-03-21 18:46:42 queinnec"
+// Time-stamp: "2018-04-02 18:04:04 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1075,14 +1075,18 @@ CodeGradX.User.prototype.getCampaign = function (name) {
   var user = this;
   var state = CodeGradX.getCurrentState();
   state.debug('getCampaign', name);
-  return user.getCampaigns()
-        .then(function (campaigns) {
-            if ( campaigns && campaigns[name] ) {
-                return when(campaigns[name]);
-            } else {
-                return when.reject(new Error("No such campaign " + name));
-            }
-        });
+  if ( user._campaigns && user._campaigns[name] ) {
+      return when(user._campaigns[name]);
+  } else {
+      return user.getCampaigns()
+          .then(function (campaigns) {
+              if ( campaigns && campaigns[name] ) {
+                  return when(campaigns[name]);
+              } else {
+                  return when.reject(new Error("No such campaign " + name));
+              }
+          });
+  }
 };
 
 /** Get current campaign if FW4EX.currentCampaignName is defined or
@@ -1424,6 +1428,9 @@ CodeGradX.Campaign.prototype.getExercises = function () {
   var state = CodeGradX.getCurrentState();
   var campaign = this;
   state.debug('getExercises1', campaign);
+  if ( campaign.exercises ) {
+      return when(campaign.exercises);
+  }
   return state.sendAXServer('x', {
     path: ('/campaign/listExercises/' + campaign.name),      
     method: 'GET',
@@ -1886,8 +1893,8 @@ function extractIdentification (exercise, s) {
         }
         // extract authors
         var authors = result.authorship;
-        if ( _.isArray(authors) ) {
-            exercise.authorship = _.map(authors, 'author');
+        if ( _.isArray(authors.author) ) {
+            exercise.authorship = authors.author;
         } else {
             exercise.authorship = [ authors.author ];
         }
