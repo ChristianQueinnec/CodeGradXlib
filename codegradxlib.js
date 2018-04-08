@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-04-02 18:04:04 queinnec"
+// Time-stamp: "2018-04-08 17:58:11 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1415,6 +1415,7 @@ CodeGradX.Campaign.prototype.getTeachers = function () {
 };
 
 /** Get the list of all exercises available in the current campaign.
+    The user must be a teacher of the campaign!
     
     @return {Promise<Array[Object]>} - yield an array of exercises
     @property {string} exercise.nickname
@@ -1670,6 +1671,45 @@ CodeGradX.Campaign.prototype.uploadExercisesSetFromDOM = function (form) {
         headers: headers,
         entity: fd
     }).then(processResponse);
+};
+
+/** Get related notifications.
+
+    @param {int} count - only last count notifications.
+    @param {int} from - only notifications that occur in the last from hours
+    @returns {Promise<Notifications>} yields Object[]
+
+Notifications are regular objects.
+
+*/
+
+CodeGradX.Campaign.prototype.getNotifications = function (count, from) {
+    let state = CodeGradX.getCurrentState();
+    let campaign = this;
+    state.debug('getNotifications1', from, count);
+    function processResponse (response) {
+        state.debug('getNotifications2', response);
+        return response.entity;
+    }
+    let headers = {
+        "Accept": 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    };
+    count = count ||
+        CodeGradX.Campaign.prototype.getNotifications.default.count;
+    let entity = { count };
+    if ( from ) {
+        entity.from = from;
+    }
+    return state.sendAXServer('x', {
+        path: ('/notification/campaign/' + campaign.name),
+        method: 'POST',
+        headers: headers,
+        entity: entity            
+    }).then(processResponse);
+};
+CodeGradX.Campaign.prototype.getNotifications.default = {
+    count: 10
 };
 
 // **************** Exercise ***************************
