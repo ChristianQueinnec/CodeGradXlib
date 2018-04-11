@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-04-08 17:58:11 queinnec"
+// Time-stamp: "2018-04-11 18:25:42 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1710,6 +1710,48 @@ CodeGradX.Campaign.prototype.getNotifications = function (count, from) {
 };
 CodeGradX.Campaign.prototype.getNotifications.default = {
     count: 10
+};
+
+/** get the best job reports 
+
+    @param {Exercise} exercise - an Exercise of the campaign
+    @returns {Promise<Jobs>} yields Job[]
+
+ {"jobs":[
+   {"person_id":2237361,
+    "totalMark":1,
+    "archived":"2017-07-08T20:04:49",
+    "uuid":"B28BE79C641811E7901800E6ED542A8E",
+    "mark":0,
+    "exercise_nickname":"notes",
+    "kind":"job",
+    "exercise_uuid":"11111111111199970003201704080001",
+    "exercise_name":"cnam.mooc.socle.notes.1",
+    "started":"2017-07-08T20:04:52",
+    "finished":"2017-07-08T20:04:52"},
+   ... ]}
+
+*/
+
+CodeGradX.Campaign.prototype.getTopJobs = function (exercise) {
+    let state = CodeGradX.getCurrentState();
+    let campaign = this;
+    state.debug('getTopJobs1', exercise);
+    function processResponse (response) {
+        state.debug('getTopJobs2', response);
+        let jobs = response.entity.jobs;
+        return jobs.map(CodeGradX.Job.js2job);
+    }
+    let headers = {
+        "Accept": 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    };
+    let exoUUID = exercise.uuid.replace(/-/, '');
+    return state.sendAXServer('x', {
+        path: ('/exercise/campaign/' + campaign.name + '/' + exoUUID),
+        method: 'GET',
+        headers: headers
+    }).then(processResponse);
 };
 
 // **************** Exercise ***************************
