@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-04-11 18:25:42 queinnec"
+// Time-stamp: "2018-04-15 18:06:35 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1010,9 +1010,7 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
         var dnow = new Date();
         var activeCampaigns = {};
         _.forEach(campaigns, function (campaign) {
-            if ( (campaign.starttime <= dnow) &&
-                 ( dnow <= campaign.endtime ) ) {
-                //console.log("gotten " + campaign.name);
+            if ( campaign.active ) {
                 activeCampaigns[campaign.name] = campaign;
             }
         });
