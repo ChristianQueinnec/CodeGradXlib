@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-04-15 18:06:35 queinnec"
+// Time-stamp: "2018-04-15 19:48:19 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1007,7 +1007,6 @@ CodeGradX.User.prototype.modify = function (fields) {
 CodeGradX.User.prototype.getCampaigns = function (now) {
     var user = this;
     function filterActive (campaigns) {
-        var dnow = new Date();
         var activeCampaigns = {};
         _.forEach(campaigns, function (campaign) {
             if ( campaign.active ) {
