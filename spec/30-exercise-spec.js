@@ -108,7 +108,7 @@ function _str2Date (str) {
       // the `free` campaign is active:
       //console.log(campaign1.exercisesSet, 'one');//
       state.currentUser.getCampaigns(true).then(function (campaigns2) {
-          expect(campaigns2.free).toBe(campaign1);
+          expect(campaigns2.free.name).toBe(campaign1.name);
           expect(Object.getOwnPropertyNames(campaigns2).length)
               .toBeLessThan(Object.getOwnPropertyNames(campaigns).length);
           done();
