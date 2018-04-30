@@ -13,8 +13,8 @@ lint :
 nsp+snyk :
 	npm link nsp
 	node_modules/.bin/nsp check
-	npm link snyk
-	-node_modules/.bin/snyk test codegradxlib
+#	npm link snyk
+#	-node_modules/.bin/snyk test codegradxlib
 
 tests : lint test.with.real.servers test.with.vmauthor
 
@@ -76,7 +76,7 @@ install :
 		${REMOTE}:/var/www/www.paracamplus.com/Resources/Javascript/
 
 propagate :
-	npm install -g codegradxlib
+	npm install -g codegradxlib@`jq -r .version < package.json`
 	cd ../CodeGradXagent    ; npm install -S codegradxlib
 	cd ../CodeGradXvmauthor ; npm install -S codegradxagent
 	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
