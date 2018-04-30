@@ -69,11 +69,14 @@ CodeGradXlib.tgz :
 	tar tzf CodeGradXlib.tgz
 
 REMOTE	=	www.paracamplus.com
-install : CodeGradXlib.tgz
+install :
+	-rm CodeGradXlib.tgz
+	m CodeGradXlib.tgz
 	rsync -avu CodeGradXlib.tgz \
 		${REMOTE}:/var/www/www.paracamplus.com/Resources/Javascript/
 
 propagate :
+	npm install -g codegradxlib
 	cd ../CodeGradXagent    ; npm install -S codegradxlib
 	cd ../CodeGradXvmauthor ; npm install -S codegradxagent
 	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
