@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-04-15 19:48:19 queinnec"
+// Time-stamp: "2018-04-25 09:49:51 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1408,6 +1408,61 @@ CodeGradX.Campaign.prototype.getTeachers = function () {
         return tuser;
     });
     return when(campaign.teachers);
+  });
+};
+
+/** Promote a student to a teacher position.
+
+    @return {Promise<Array[Object]>} - yield an array of teachers
+    @param {User} student - the student to promote
+
+*/
+
+CodeGradX.Campaign.prototype.promoteStudent = function (student) {
+  var state = CodeGradX.getCurrentState();
+  var campaign = this;
+  state.debug('promoteTeacher1', campaign, student.personid);
+  return state.sendAXServer('x', {
+    path: ('/campaign/promote/' + campaign.name + '/' + student.personid),
+    method: 'POST',
+    headers: {
+      Accept: "application/json"
+    }
+  }).then(function (response) {
+    state.debug('promoteTeacher2');
+    //console.log(response);
+    campaign.teachers = response.entity.teachers.map(function (teacher) {
+        let tuser = new CodeGradX.User(teacher);
+        // Don't duplicate the requester's cookie:
+        delete tuser.cookie;
+        return tuser;
+    });
+    return when(campaign.teachers);
+  });
+};
+
+/** Demote a teacher into a student position or
+    remove a student from the group of students
+
+    @return {Promise<Array[Object]>} - yield an array of teachers
+    @param {User} student - the student to promote
+
+*/
+
+CodeGradX.Campaign.prototype.demoteTeacher = function (student) {
+  var state = CodeGradX.getCurrentState();
+  var campaign = this;
+  state.debug('demoteTeacher1', campaign, student.personid);
+  return state.sendAXServer('x', {
+    path: ('/campaign/demote/' + campaign.name + '/' + student.personid),
+    method: 'POST',
+    headers: {
+      Accept: "application/json"
+    }
+  }).then(function (response) {
+    state.debug('demoteTeacher2');
+    //console.log(response);
+    return when(response.entity);
   });
 };
 
