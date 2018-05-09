@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-04-25 09:49:51 queinnec"
+// Time-stamp: "2018-05-05 14:50:02 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -829,6 +829,8 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
     By default, `parameters` is initialized with
     CodeGradX.State.prototype.sendRepeatedlyESServer.default
 
+    If a server has a 'once' property, it must be asked only once.
+
   Nota: when.any does not cancel the other concurrent promises.
   */
 
@@ -1017,9 +1019,10 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
     }
     if ( now ) {
         if ( user._campaigns ) {
-            // return current campaigns
+            // return all current campaigns:
             return when(user._campaigns);
         } else if ( user._all_campaigns ) {
+            // generate all current campaigns:
             user._campaigns = filterActive(user._all_campaigns);
             return when(user._campaigns);
         }
@@ -1074,6 +1077,8 @@ CodeGradX.User.prototype.getCampaign = function (name) {
   state.debug('getCampaign', name);
   if ( user._campaigns && user._campaigns[name] ) {
       return when(user._campaigns[name]);
+  } else if ( user._all_campaigns && user._all_campaigns[name] ) {
+      return when(user._all_campaigns[name]);
   } else {
       return user.getCampaigns()
           .then(function (campaigns) {
@@ -1114,7 +1119,7 @@ CodeGradX.User.prototype.getCurrentCampaign = function () {
     } else {
         return user.getCampaigns(true)
             .then(function (campaigns) {
-                if ( campaigns.length == 1 ) {
+                if ( campaigns.length === 1 ) {
                     FW4EX.currentCampaignName = campaigns[0].name;
                     FW4EX.currentCampaign = campaigns[0];
                     return when(campaigns[0]);
@@ -1356,10 +1361,13 @@ CodeGradX.Campaign = function (json) {
 
  */
 
-CodeGradX.Campaign.prototype.getStudents = function () {
+CodeGradX.Campaign.prototype.getStudents = function (refresh = false) {
   var state = CodeGradX.getCurrentState();
   var campaign = this;
   state.debug('getStudents1', campaign);
+  if ( ! refresh && campaign.students ) {
+      return when(campaign.students);
+  }
   return state.sendAXServer('x', {
     path: ('/campaign/listStudents/' + campaign.name),      
     method: 'GET',
@@ -1388,10 +1396,13 @@ CodeGradX.Campaign.prototype.getStudents = function () {
 
  */
 
-CodeGradX.Campaign.prototype.getTeachers = function () {
+CodeGradX.Campaign.prototype.getTeachers = function (refresh) {
   var state = CodeGradX.getCurrentState();
   var campaign = this;
   state.debug('getTeachers1', campaign);
+  if ( ! refresh && campaign.teachers ) {
+      return when(campaign.teachers);
+  }
   return state.sendAXServer('x', {
     path: ('/campaign/listTeachers/' + campaign.name),      
     method: 'GET',
@@ -1477,11 +1488,11 @@ CodeGradX.Campaign.prototype.demoteTeacher = function (student) {
 
  */
 
-CodeGradX.Campaign.prototype.getExercises = function () {
+CodeGradX.Campaign.prototype.getExercises = function (refresh = false) {
   var state = CodeGradX.getCurrentState();
   var campaign = this;
   state.debug('getExercises1', campaign);
-  if ( campaign.exercises ) {
+  if ( ! refresh && campaign.exercises ) {
       return when(campaign.exercises);
   }
   return state.sendAXServer('x', {
@@ -1500,6 +1511,45 @@ CodeGradX.Campaign.prototype.getExercises = function () {
   });
 };
 
+/** Get the list of all batches related to a campaign.
+
+    @return {Promise<Array[Object]>} - yield an array of batches
+    @property {string}       batch.uuid
+    @property {Exercise}     batch.exercise_uuid
+    @property {Person}       batch.person_id
+    @property {string}       batch.label
+    @property {Date}         batch.start
+    @property {Date}         batch.archived
+    @property {Date}         batch.finished
+
+ */
+
+CodeGradX.Campaign.prototype.getBatches = function (refresh = false) {
+  var state = CodeGradX.getCurrentState();
+  var campaign = this;
+  state.debug('getBatches1', campaign);
+  if ( ! refresh && campaign.batches ) {
+      return when(campaign.batches);
+  }
+  return state.sendAXServer('x', {
+    path: ('/campaign/listBatches/' + campaign.name),      
+    method: 'GET',
+    headers: {
+      Accept: "application/json"
+    }
+  }).then(function (response) {
+    state.debug('getBatches2');
+    //console.log(response);
+    campaign.batches = response.entity.batches.map(function (batch) {
+        return new CodeGradX.Batch(batch);
+    });
+    return when(campaign.batches);
+  });
+};
+CodeGradX.Campaign.prototype.getBatchs =
+    CodeGradX.Campaign.prototype.getBatches;
+
+
 /** Get the skills of the students enrolled in the current campaign.
 
     @return {Promise} yields {Object}
@@ -1511,10 +1561,13 @@ CodeGradX.Campaign.prototype.getExercises = function () {
 
     */
 
-CodeGradX.Campaign.prototype.getSkills = function () {
+CodeGradX.Campaign.prototype.getSkills = function (refresh = false) {
   var state = CodeGradX.getCurrentState();
   var campaign = this;
   state.debug('getSkills1', campaign);
+  if ( ! refresh && campaign.skills ) {
+      return when(campaign.skills);
+  }
   return state.sendAXServer('x', {
     //path: ('/skill/campaign/' + campaign.name),
     path: ('/statistics/myPosition/' + campaign.name),      
@@ -1525,8 +1578,8 @@ CodeGradX.Campaign.prototype.getSkills = function () {
   }).then(function (response) {
     state.debug('getSkills2');
     //console.log(response);
-    state.skills = response.entity;
-    return when(state.skills);
+    campaign.skills = response.entity;
+    return when(campaign.skills);
   });
 };
 
@@ -3156,7 +3209,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
     },
     CodeGradX.Batch.prototype.getReport.default,
     parameters);
-    var path = batch.getReportURL();
+  var path = batch.getReportURL();
   function processResponse (response) {
       //console.log(response);
       state.debug('getBatchReport2', response, batch);
@@ -3205,19 +3258,15 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
           }
           return when(batch);
     }
-    if ( response.headers['Content-Length'] > 0 ) {
-        batch.XMLreport = response.entity;
-        return CodeGradX.parsexml(response.entity)
-            .then(processJS)
-            .catch(function (reason) {
-                /* eslint "no-console": 0 */
-                console.log(reason);
-                console.log(response);
-                return when.reject(reason);
-            });
-    } else {
-        return when.reject(new Error("Empty response!"));
-    }
+      batch.XMLreport = response.entity;
+      return CodeGradX.parsexml(response.entity)
+          .then(processJS)
+          .catch(function (reason) {
+              /* eslint "no-console": 0 */
+              console.log(reason);
+              console.log(response);
+              return when.reject(reason);
+          });
   }
   return state.sendRepeatedlyESServer('s', parameters, {
     path: path,
@@ -3279,6 +3328,10 @@ CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
 
 CodeGradX.Batch.prototype.getReportURL = function () {
     var batch = this;
+    if ( ! batch.pathdir ) {
+        batch.pathdir = '/b' +
+            batch.batchid.replace(/-/g, '').replace(/(.)/g, "/$1");
+    }
     var path = batch.pathdir + '/' + batch.batchid + '.xml';
     return path;
 };

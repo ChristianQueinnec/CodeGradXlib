@@ -78,11 +78,11 @@ install :
 propagate :
 	npm install -g codegradxlib@`jq -r .version < package.json`
 	cd ../CodeGradXagent    ; npm install -S codegradxlib
-	cd ../CodeGradXvmauthor ; npm install -S codegradxagent
 	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
+	cd ../CodeGradXvmauthor ; npm install -S codegradxagent
 	cd ../CodeGradXenroll   ; npm install -S codegradxlib
-	cd ../CodeGradXmarker   ; npm install -S yasmini
 	cd ../CodeGradXmarker   ; npm install -S codegradxlib
+	cd ../CodeGradXmarker   ; npm install -S yasmini
 	cd ../../Servers/p/Paracamplus-*/;     m refresh.codegradx
 	cd ../../Servers/np/Paracamplus-*/;    m refresh.codegradx
 	cd ../../Servers/w.js/Paracamplus-*/;  m refresh.codegradx
