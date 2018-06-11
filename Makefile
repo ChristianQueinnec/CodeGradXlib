@@ -56,7 +56,7 @@ publish : lint nsp+snyk bower.json clean
 	cd tmp/CodeGradXlib/ && npm version patch && npm publish
 	cp -pf tmp/CodeGradXlib/package.json .
 	rm -rf tmp
-	npm install -g codegradxlib
+	npm install -g codegradxlib@`jq -r .version < package.json`
 	m propagate
 
 CodeGradXlib.tgz :
@@ -77,17 +77,17 @@ install :
 
 propagate :
 	npm install -g codegradxlib@`jq -r .version < package.json`
-	cd ../CodeGradXagent    ; npm install -S codegradxlib
-	cd ../CodeGradXvmauthor ; npm install -S codegradxlib
+	cd ../CodeGradXagent    ; rm -rf node_modules ; npm install
+	cd ../CodeGradXvmauthor ; rm -rf node_modules ; npm install
 	cd ../CodeGradXvmauthor ; npm install -S codegradxagent
 	cd ../CodeGradXenroll   ; npm install -S codegradxlib
 	cd ../CodeGradXmarker   ; npm install -S codegradxlib
 	cd ../CodeGradXmarker   ; npm install -S yasmini
-	cd ../../Servers/p/Paracamplus-*/;     m refresh.codegradx
 	cd ../../Servers/np/Paracamplus-*/;    m refresh.codegradx
 	cd ../../Servers/w.js/Paracamplus-*/;  m refresh.codegradx
-	cd ../../Servers/w.cc/Paracamplus-*/;  m refresh.codegradx
 	cd ../../Servers/w.ncc/Paracamplus-*/; m refresh.codegradx
+	cd ../../Servers/w.unx2/Paracamplus-*/; m refresh.codegradx
+	cd ../../Servers/w.njfp/Paracamplus-*/; m refresh.codegradx
 	grep '"codegradxlib":' ../CodeGradX*/package.json
 
 # ############## bower

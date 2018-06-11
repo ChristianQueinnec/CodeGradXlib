@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-05-05 14:50:02 queinnec"
+// Time-stamp: "2018-06-08 17:31:09 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -16,7 +16,7 @@ use case:
 
 ```javascript
 // Example of use:
-var CodeGradX = require('codegradxlib');
+const CodeGradX = require('codegradxlib');
 
 new CodeGradX.State(postInitializer);
 
@@ -58,22 +58,34 @@ CodeGradX infrastructure can be found in the documentation of
 // - name differently methods returning a Promise from others
 
 
-var CodeGradX = {};
+const CodeGradX = {};
 
   /** Export the `CodeGradX` object */
 module.exports = CodeGradX;
 
-var _    = require('lodash');
-var when = require('when');
-var nodefn = require('when/node');
-var rest = require('rest');
-var mime = require('rest/interceptor/mime');
-var registry = require('rest/mime/registry');
-var xml2js = require('xml2js');
-//var xml2jsproc = require('xml2js/lib/processors');
-var sax = require('sax');
-var he = require('he');
-var util = require('util');
+//const _    = require('lodash');
+const _ = (function () {
+    const isFunction = require('lodash/isFunction');
+    const forEach = require('lodash/forEach');
+    const isNumber = require('lodash/isNumber');
+    const memoize = require('lodash/memoize');
+    const forIn = require('lodash/forIn');
+    const has = require('lodash/has');
+    const filter = require('lodash/filter');
+    const map = require('lodash/map');
+    const reduce = require('lodash/reduce');
+    return { isFunction, forEach, isNumber, memoize, forIn,
+             has, filter, map, reduce };
+})();
+const when = require('when');
+const nodefn = require('when/node');
+const rest = require('rest');
+const mime = require('rest/interceptor/mime');
+const registry = require('rest/mime/registry');
+const xml2js = require('xml2js');
+const sax = require('sax');
+const he = require('he');
+const util = require('util');
 
 // Define that additional MIME type:
 registry.register('application/octet-stream', {
@@ -88,18 +100,18 @@ registry.register('application/octet-stream', {
 // See http://stackoverflow.com/questions/17575790/environment-detection-node-js-or-browser
 function _checkIsNode () {
   /*jshint -W054 */
-  var code = "try {return this===global;}catch(e){return false;}";
-  var f = new Function(code);
+  const code = "try {return this===global;}catch(e){return false;}";
+  const f = new Function(code);
   return f();
 }
 /* Are we running under Node.js */
-var isNode = _.memoize(_checkIsNode);
+const isNode = _.memoize(_checkIsNode);
 
 CodeGradX.checkIfHTTPS = function () {
     /*jshint -W054 */
-    var code = "try {if (this===window) {return window.document.documentURI}}catch(e){return false;}";
-    var f = new Function(code);
-    var uri = f();
+    const code = "try {if (this===window) {return window.document.documentURI}}catch(e){return false;}";
+    const f = new Function(code);
+    const uri = f();
     if ( uri ) {
         // We are within a browser
         return uri.match(/^https:/);
@@ -115,9 +127,9 @@ CodeGradX._str2num = function (str) {
 };
 
 CodeGradX._str2Date = function (str) {
-  var ms = Date.parse(str);
+  const ms = Date.parse(str);
   if ( ! isNaN(ms) ) {
-    var d = new Date(ms);
+    const d = new Date(ms);
     //console.log("STR:" + str + " => " + ms + " ==> " + d);
     return d;
   } else {
@@ -155,8 +167,8 @@ CodeGradX.Log = function () {
 
 CodeGradX.Log.prototype.debug = function () {
   // Separate seconds from milliseconds:
-  var msg = (''+_.now()).replace(/(...)$/, ".$1") + ' ';
-  for (var i=0 ; i<arguments.length ; i++) {
+  let msg = (''+Date.now()).replace(/(...)$/, ".$1") + ' ';
+  for (let i=0 ; i<arguments.length ; i++) {
     if ( arguments[i] === null ) {
       msg += 'null ';
     } else if ( arguments[i] === undefined ) {
@@ -187,7 +199,7 @@ CodeGradX.Log.prototype.show = function (items, filename) {
     // console.log is run later so take a copy of the log now to
     // avoid displaying a later version of the log. Howe
     items = items || this.items.slice(0);
-    for ( var item of items ) {
+    for ( let item of items ) {
         if ( filename ) {
             require('fs').appendFileSync(filename, `${item}\n`);
         } else {
@@ -208,7 +220,7 @@ CodeGradX.Log.prototype.show = function (items, filename) {
 CodeGradX.Log.prototype.showAndRemove = function (filename) {
   // console.log is run later so take a copy of the log now to
   // avoid displaying a later version of the log:
-  var items = this.items;
+  const items = this.items;
   this.items = [];
     return this.show(items, filename);
 };
@@ -315,7 +327,7 @@ CodeGradX.State = function (initializer) {
     this.currentUser = null;
     this.currentCookie = null;
     // Post-initialization
-    var state = this;
+    let state = this;
     // Cache for jobs useful when processing batches:
     state.cache = {
         jobs: {} 
@@ -323,7 +335,7 @@ CodeGradX.State = function (initializer) {
     if ( _.isFunction(initializer) ) {
         state = initializer.call(state, state);
     }
-    var protocol = 'http';
+    let protocol = 'http';
     if ( CodeGradX.checkIfHTTPS() ) {
         // Make 'Upgrade Insecure Request' happy:
         // and avoid "Blocked: mixed-content'
@@ -364,7 +376,7 @@ CodeGradX.getCurrentState = function () {
 */
 
 CodeGradX.getCurrentUser = function (force) {
-    var state = CodeGradX.getCurrentState();
+    const state = CodeGradX.getCurrentState();
     if ( !force && state.currentUser ) {
         return when(state.currentUser);
     }
@@ -404,7 +416,7 @@ CodeGradX.State.prototype.debug = function () {
 */
 
 CodeGradX.State.prototype.gc = function () {
-    var state = this;
+    const state = this;
     state.cache.jobs = {};
 };
 
@@ -427,17 +439,17 @@ CodeGradX.State.prototype.gc = function () {
   */
 
 CodeGradX.State.prototype.checkServer = function (kind, index) {
-  var state = this;
+  const state = this;
   state.debug('checkServer1', kind, index);
   if ( ! state.servers[kind] ) {
     state.servers[kind] = {};
   }
-  var descriptions = state.servers[kind];
+  const descriptions = state.servers[kind];
   if ( ! descriptions[index] ) {
     descriptions[index] = { enabled: false };
   }
-  var description = descriptions[index];
-  var host = description.host || (kind + index + state.servers.domain);
+  const description = descriptions[index];
+  const host = description.host || (kind + index + state.servers.domain);
   description.host = host;
   description.protocol = description.protocol || descriptions.protocol;
   // Don't use that host while being checked:
@@ -454,9 +466,9 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
     description.lastError = reason;
     return when.reject(reason);
   }
-  var url = description.protocol + "://" + host + descriptions.suffix;
+  const url = description.protocol + "://" + host + descriptions.suffix;
   state.debug('checkServer2', kind, index, url);
-  var request = {
+  const request = {
       path: url
   };
   if ( state.currentCookie ) {
@@ -499,11 +511,12 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
     */
 
 CodeGradX.State.prototype.checkServers = function (kind) {
-  var state = this;
+  const state = this;
   state.debug('checkServers', kind);
-  var descriptions = state.servers[kind];
-  var promise, promises = [];
-  for ( var key in descriptions ) {
+  const descriptions = state.servers[kind];
+  let promise;
+  const promises = [];
+  for ( let key in descriptions ) {
     if ( /^\d+$/.exec(key) ) {
       key = CodeGradX._str2num(key);
       promise = state.checkServer(kind, key);
@@ -534,10 +547,10 @@ CodeGradX.State.maxWait = 3000; // 3 seconds
 */
 
 CodeGradX.State.prototype.getActiveServers = function (kind) {
-    var state = this;
-    var descriptions = state.servers[kind];
+    const state = this;
+    const descriptions = state.servers[kind];
     function filterDefined (array) {
-        var result = [];
+        const result = [];
         array.forEach(function (item) {
             if ( item ) {
                 result.push(item);
@@ -548,7 +561,7 @@ CodeGradX.State.prototype.getActiveServers = function (kind) {
     state.debug("getActiveServers Possible:", kind,
                 filterDefined(_.map(descriptions, 'host')));
     // _.filter leaves 'undefined' values in the resulting array:
-    var active = filterDefined(_.filter(descriptions, {enabled: true}));
+    let active = filterDefined(_.filter(descriptions, {enabled: true}));
     state.debug('getActiveServers Active:', kind,
                 _.map(active, 'host'));
     if ( active.length === 0 ) {
@@ -557,7 +570,7 @@ CodeGradX.State.prototype.getActiveServers = function (kind) {
             .then(function (descriptions) {
                 active = filterDefined(_.filter(descriptions, {enabled: true}));
                 if ( active.length === 0 ) {
-                    var error = new Error(`No available ${kind} servers`);
+                    const error = new Error(`No available ${kind} servers`);
                     return when.reject(error);
                 } else {
                     return when(active);
@@ -584,14 +597,14 @@ CodeGradX.State.prototype.getActiveServers = function (kind) {
     */
 
 CodeGradX.checkStatusCode = function (response) {
-  var state = CodeGradX.getCurrentState();
+  const state = CodeGradX.getCurrentState();
   state.debug('checkStatusCode1', response);
   //console.log(response);
     /* eslint no-control-regex: 0 */
-  var reasonRegExp = new RegExp("^(.|\n)*<reason>((.|\n)*)</reason>(.|\n)*$");
+  const reasonRegExp = new RegExp("^(.|\n)*<reason>((.|\n)*)</reason>(.|\n)*$");
   function extractFW4EXerrorMessage (response) {
-    var reason;
-    var contentType = response.headers['Content-Type'];
+    let reason;
+    const contentType = response.headers['Content-Type'];
     if ( /text\/xml/.exec(contentType) ) {
       //console.log(response.entity);
       reason = response.entity.replace(reasonRegExp, ": $2");
@@ -606,11 +619,11 @@ CodeGradX.checkStatusCode = function (response) {
   if ( response.status &&
        response.status.code &&
        response.status.code >= 300 ) {
-      var msg = "Bad HTTP code " + response.status.code + ' ' +
+      const msg = "Bad HTTP code " + response.status.code + ' ' +
         extractFW4EXerrorMessage(response);
       state.debug('checkStatusCode2', msg);
       //console.log(response);
-      var error = new Error(msg);
+      const error = new Error(msg);
       error.response = response;
       return when.reject(error);
   }
@@ -632,11 +645,11 @@ CodeGradX.checkStatusCode = function (response) {
     */
 
 CodeGradX.State.prototype.sendSequentially = function (kind, options) {
-    var state = this;
+    const state = this;
     state.debug('sendSequentially', kind, options);
     
     function regenerateNewOptions (options) {
-        var newoptions = _.assign({}, options);
+        const newoptions = Object.assign({}, options);
         newoptions.headers = newoptions.headers || options.headers || {};
         if ( state.currentCookie ) {
             //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
@@ -657,7 +670,7 @@ CodeGradX.State.prototype.sendSequentially = function (kind, options) {
         state.debug('sendSequentially updateCurrentCookie', response);
         function extractCookie (tag) {
             if ( response.headers[tag] ) { // char case ?
-                var cookies = response.headers[tag];
+                let cookies = response.headers[tag];
                 cookies = _.map(cookies, function (s) {
                     return s.replace(/;.*$/, '');
                 });
@@ -686,7 +699,7 @@ CodeGradX.State.prototype.sendSequentially = function (kind, options) {
         };
     }
     function send (description) {
-        var newoptions = regenerateNewOptions(options);
+        const newoptions = regenerateNewOptions(options);
         newoptions.protocol = newoptions.protocol || description.protocol;
         newoptions.path = newoptions.protocol + '://' +
             description.host + options.path;
@@ -701,7 +714,7 @@ CodeGradX.State.prototype.sendSequentially = function (kind, options) {
     }
 
     function trySequentially (adescriptions) {
-        var promise = when.reject('start');
+        let promise = when.reject('start');
         adescriptions.forEach(function (description) {
             promise = promise.catch(function (reason) {
                 state.debug('sendSequentially trySequentially', reason);
@@ -726,7 +739,7 @@ CodeGradX.State.prototype.sendSequentially = function (kind, options) {
 */
 
 CodeGradX.State.prototype.sendAXServer = function (kind, options) {
-    var state = this;
+    const state = this;
     return state.sendSequentially(kind, options);
 };
 
@@ -744,11 +757,11 @@ CodeGradX.State.prototype.sendAXServer = function (kind, options) {
 
 
 CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
-    var state = this;
+    const state = this;
     state.debug('sendConcurrently', kind, options);
 
     function regenerateNewOptions (options) {
-        var newoptions = _.assign({}, options);
+        const newoptions = Object.assign({}, options);
         newoptions.headers = newoptions.headers || options.headers || {};
         if ( state.currentCookie ) {
             //newoptions.headers['X-FW4EX-Cookie'] = state.currentCookie;
@@ -772,8 +785,8 @@ CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
         return function seeError (reason) {
             // A MIME deserialization problem may also trigger `seeError`.
             function see (o) {
-                var result = '';
-                for ( var key in o ) {
+                let result = '';
+                for ( let key in o ) {
                     result += key + '=' + o[key] + ' ';
                 }
                 return result;
@@ -783,13 +796,13 @@ CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
             // reason to disable the server.
             description.enabled = false;
             description.lastError = reason;
-            //var js = JSON.parse(reason.entity);
+            //const js = JSON.parse(reason.entity);
             return when.reject(reason);
         };
     }
 
     function send (description) {
-        var tryoptions = _.assign({}, regenerateNewOptions(options));
+        const tryoptions = Object.assign({}, regenerateNewOptions(options));
         tryoptions.path = description.protocol + '://' +
             description.host + options.path;
         state.debug("sendConcurrently send", tryoptions.path);
@@ -799,7 +812,7 @@ CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
     }
     
     function tryConcurrently (adescriptions) {
-        var promises = adescriptions.map(send);
+        const promises = adescriptions.map(send);
         return when.any(promises);
     }
     
@@ -812,7 +825,7 @@ CodeGradX.State.prototype.sendConcurrently = function (kind, options) {
 */
 
 CodeGradX.State.prototype.sendESServer = function (kind, options) {
-    var state = this;
+    const state = this;
     return state.sendConcurrently(kind, options);
 };
 
@@ -836,15 +849,15 @@ CodeGradX.State.prototype.sendESServer = function (kind, options) {
 
 CodeGradX.State.prototype.sendRepeatedlyESServer =
 function (kind, parameters, options) {
-    var state = this;
+    const state = this;
     state.debug('sendRepeatedlyESServer', kind, parameters, options);
-    var parms = _.assign({ i: 0 },
+    const parms = Object.assign({ i: 0 },
           CodeGradX.State.prototype.sendRepeatedlyESServer.default,
                          parameters);
-    var count = parms.attempts;
+    let count = parms.attempts;
 
     function removeOnceServers (adescriptions) {
-        var aresult = [];
+        const aresult = [];
         for (let item of adescriptions) {
             if ( ! item.once ) {
                 aresult.push(item);
@@ -893,7 +906,7 @@ CodeGradX.State.prototype.sendRepeatedlyESServer.default = {
 
 CodeGradX.State.prototype.getAuthenticatedUser =
 function (login, password) {
-  var state = this;
+  const state = this;
   state.debug('getAuthenticatedUser1', login);
   return state.sendAXServer('x', {
     path: '/direct/check',
@@ -935,10 +948,10 @@ function (login, password) {
     */
 
 CodeGradX.User = function (json) {
-  _.assign(this, json);
+  Object.assign(this, json);
   //console.log(json);
   delete this.kind;
-  var state = CodeGradX.getCurrentState();
+  const state = CodeGradX.getCurrentState();
   if ( this.cookie ) {
       if ( ! state.currentCookie ) {
           state.currentCookie = this.cookie;
@@ -947,10 +960,10 @@ CodeGradX.User = function (json) {
       this.cookie = state.currentCookie;
   }
   if ( _.has(json, 'campaigns') ) {
-      var campaigns = {};
+      const campaigns = {};
       json.campaigns.forEach(function (js) {
           //console.log(js);
-          var campaign = new CodeGradX.Campaign(js);
+          const campaign = new CodeGradX.Campaign(js);
           campaigns[campaign.name] = campaign;
       });
       // Just record the current active campaigns:
@@ -973,7 +986,7 @@ CodeGradX.User = function (json) {
     */
 
 CodeGradX.User.prototype.modify = function (fields) {
-  var state = CodeGradX.getCurrentState();
+  const state = CodeGradX.getCurrentState();
   state.debug('modify1', fields);
   return state.sendAXServer('x', {
     path: '/person/selfmodify',
@@ -1007,9 +1020,9 @@ CodeGradX.User.prototype.modify = function (fields) {
     */
 
 CodeGradX.User.prototype.getCampaigns = function (now) {
-    var user = this;
+    const user = this;
     function filterActive (campaigns) {
-        var activeCampaigns = {};
+        const activeCampaigns = {};
         _.forEach(campaigns, function (campaign) {
             if ( campaign.active ) {
                 activeCampaigns[campaign.name] = campaign;
@@ -1035,7 +1048,7 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
             return when(user._all_campaigns);
         }
     } else {
-        var state = CodeGradX.getCurrentState();
+        const state = CodeGradX.getCurrentState();
         state.debug('getAllCampaigns1');
         return state.sendAXServer('x', {
             path: '/campaigns/',
@@ -1046,10 +1059,10 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
             }
         }).then(function (response) {
             state.debug('getAllCampaigns2', response);
-            var campaigns = {};
+            const campaigns = {};
             response.entity.forEach(function (js) {
                 //console.log(js);
-                var campaign = new CodeGradX.Campaign(js);
+                const campaign = new CodeGradX.Campaign(js);
                 campaigns[campaign.name] = campaign;
             });
             user._all_campaigns = campaigns;
@@ -1072,8 +1085,8 @@ CodeGradX.User.prototype.getCampaigns = function (now) {
     */
 
 CodeGradX.User.prototype.getCampaign = function (name) {
-  var user = this;
-  var state = CodeGradX.getCurrentState();
+  const user = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('getCampaign', name);
   if ( user._campaigns && user._campaigns[name] ) {
       return when(user._campaigns[name]);
@@ -1109,7 +1122,7 @@ function isFW4EXcampaignDefined () {
 }
 
 CodeGradX.User.prototype.getCurrentCampaign = function () {
-    var user = this;
+    const user = this;
     if ( isFW4EXcampaignDefined() ) {
         return user.getCampaign(FW4EX.currentCampaignName)
             .then(function (campaign) {
@@ -1126,7 +1139,7 @@ CodeGradX.User.prototype.getCurrentCampaign = function () {
                 } else if ( FW4EX.currentCampaign ) {
                     return when(FW4EX.currentCampaign);
                 } else {
-                    var msg = "Cannot determine current campaign";
+                    const msg = "Cannot determine current campaign";
                     return when.reject(new Error(msg));
                 }
             });
@@ -1141,8 +1154,8 @@ CodeGradX.User.prototype.getCurrentCampaign = function () {
  */
 
 CodeGradX.User.prototype.getAllJobs = function () {
-    var state = CodeGradX.getCurrentState();
-    var user = this;
+    const state = CodeGradX.getCurrentState();
+    const user = this;
     state.debug('getAllJobs1', user);
     return state.sendAXServer('x', {
         path:   '/history/jobs',
@@ -1167,8 +1180,8 @@ CodeGradX.User.prototype.getAllJobs = function () {
  */
 
 CodeGradX.User.prototype.getAllExercises = function () {
-    var state = CodeGradX.getCurrentState();
-    var user = this;
+    const state = CodeGradX.getCurrentState();
+    const user = this;
     state.debug('getAllExercises1', user);
     return CodeGradX.getCurrentUser()
         .then(function (user) {
@@ -1210,8 +1223,8 @@ CodeGradX.User.prototype.getAllExercises = function () {
  */
 
 CodeGradX.User.prototype.getProgress = function (campaign) {
-    var state = CodeGradX.getCurrentState();
-    var user = this;
+    const state = CodeGradX.getCurrentState();
+    const user = this;
     state.debug('getProgress1', user);
     return state.sendAXServer('x', {
         path:   ('/skill/progress/' + campaign.name),
@@ -1237,8 +1250,8 @@ CodeGradX.User.prototype.getProgress = function (campaign) {
     */
 
 CodeGradX.User.prototype.submitNewExercise = function (filename) {
-  var user = this;
-  var state = CodeGradX.getCurrentState();
+  const user = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('submitNewExercise1', filename, user);
   function processResponse (response) {
       //console.log(response);
@@ -1247,7 +1260,7 @@ CodeGradX.User.prototype.submitNewExercise = function (filename) {
         //console.log(js);
         state.debug('submitNewExercise4', js);
         js = js.fw4ex.exerciseSubmittedReport;
-        var exercise = new CodeGradX.Exercise({
+        const exercise = new CodeGradX.Exercise({
           location: js.$.location,
           personid: CodeGradX._str2num(js.person.$.personid),
           exerciseid: js.exercise.$.exerciseid,
@@ -1260,8 +1273,8 @@ CodeGradX.User.prototype.submitNewExercise = function (filename) {
   return CodeGradX.readFileContent(filename)
         .then(function (content) {
             state.debug('submitNewExercise2', content.length);
-            var basefilename = filename.replace(new RegExp("^.*/"), '');
-            var headers = {
+            const basefilename = filename.replace(new RegExp("^.*/"), '');
+            const headers = {
                 "Content-Type": "application/octet-stream",
                 "Content-Disposition": ("inline; filename=" + basefilename),
                 "Accept": 'text/xml'
@@ -1287,8 +1300,8 @@ CodeGradX.User.prototype.submitNewExercise = function (filename) {
     */
 
 CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
-  var user = this;
-  var state = CodeGradX.getCurrentState();
+  const user = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('submitNewExerciseFromDOM1', user);
   function processResponse (response) {
       //console.log(response);
@@ -1297,7 +1310,7 @@ CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
         //console.log(js);
         state.debug('submitNewExerciseFromDOM4', js);
         js = js.fw4ex.exerciseSubmittedReport;
-        var exercise = new CodeGradX.Exercise({
+        const exercise = new CodeGradX.Exercise({
           location: js.$.location,
           personid: CodeGradX._str2num(js.person.$.personid),
           exerciseid: js.exercise.$.exerciseid,
@@ -1307,10 +1320,10 @@ CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
         return when(exercise);
       });
   }
-  var fd = new FormData(form);
-  var basefilename = FW4EX.currentFileName
+  const fd = new FormData(form);
+  const basefilename = FW4EX.currentFileName
       .replace(new RegExp("^.*/"), '');
-  var headers = {
+  const headers = {
       "Content-Type": "multipart/form-data",
       "Content-Disposition": ("inline; filename=" + basefilename),
       "Accept": 'text/xml'
@@ -1342,7 +1355,7 @@ CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
 
 CodeGradX.Campaign = function (json) {
   // initialize name, starttime, endtime
-  _.assign(this, json);
+  Object.assign(this, json);
   this.starttime = CodeGradX._str2Date(json.starttime);
   this.endtime = CodeGradX._str2Date(json.endtime);
   //console.log(this);
@@ -1362,8 +1375,8 @@ CodeGradX.Campaign = function (json) {
  */
 
 CodeGradX.Campaign.prototype.getStudents = function (refresh = false) {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('getStudents1', campaign);
   if ( ! refresh && campaign.students ) {
       return when(campaign.students);
@@ -1397,8 +1410,8 @@ CodeGradX.Campaign.prototype.getStudents = function (refresh = false) {
  */
 
 CodeGradX.Campaign.prototype.getTeachers = function (refresh) {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('getTeachers1', campaign);
   if ( ! refresh && campaign.teachers ) {
       return when(campaign.teachers);
@@ -1430,8 +1443,8 @@ CodeGradX.Campaign.prototype.getTeachers = function (refresh) {
 */
 
 CodeGradX.Campaign.prototype.promoteStudent = function (student) {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('promoteTeacher1', campaign, student.personid);
   return state.sendAXServer('x', {
     path: ('/campaign/promote/' + campaign.name + '/' + student.personid),
@@ -1461,8 +1474,8 @@ CodeGradX.Campaign.prototype.promoteStudent = function (student) {
 */
 
 CodeGradX.Campaign.prototype.demoteTeacher = function (student) {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('demoteTeacher1', campaign, student.personid);
   return state.sendAXServer('x', {
     path: ('/campaign/demote/' + campaign.name + '/' + student.personid),
@@ -1489,8 +1502,8 @@ CodeGradX.Campaign.prototype.demoteTeacher = function (student) {
  */
 
 CodeGradX.Campaign.prototype.getExercises = function (refresh = false) {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('getExercises1', campaign);
   if ( ! refresh && campaign.exercises ) {
       return when(campaign.exercises);
@@ -1525,8 +1538,8 @@ CodeGradX.Campaign.prototype.getExercises = function (refresh = false) {
  */
 
 CodeGradX.Campaign.prototype.getBatches = function (refresh = false) {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('getBatches1', campaign);
   if ( ! refresh && campaign.batches ) {
       return when(campaign.batches);
@@ -1562,8 +1575,8 @@ CodeGradX.Campaign.prototype.getBatchs =
     */
 
 CodeGradX.Campaign.prototype.getSkills = function (refresh = false) {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('getSkills1', campaign);
   if ( ! refresh && campaign.skills ) {
       return when(campaign.skills);
@@ -1589,8 +1602,8 @@ CodeGradX.Campaign.prototype.getSkills = function (refresh = false) {
     */
 
 CodeGradX.Campaign.prototype.getJobs = function () {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('getJobs1', campaign, state.currentUser);
   return state.sendAXServer('x', {
     path: ('/history/campaign/' + campaign.name),
@@ -1613,8 +1626,8 @@ CodeGradX.Campaign.prototype.getJobs = function () {
 */
 
 CodeGradX.Campaign.prototype.getCampaignStudentJobs = function (user) {
-  var state = CodeGradX.getCurrentState();
-  var campaign = this;
+  const state = CodeGradX.getCurrentState();
+  const campaign = this;
   state.debug('getAchievements1', campaign, user);
   return state.sendAXServer('x', {
     path: ('/history/campaignJobs/' + campaign.name + '/' + user.personid),
@@ -1639,8 +1652,8 @@ CodeGradX.Campaign.prototype.getCampaignStudentJobs = function (user) {
     */
 
 CodeGradX.Campaign.prototype.getExercisesSet = function () {
-    var state = CodeGradX.getCurrentState();
-    var campaign = this;
+    const state = CodeGradX.getCurrentState();
+    const campaign = this;
     state.debug('getExercisesSet1', campaign);
     if ( campaign.exercisesSet ) {
         return when(campaign.exercisesSet);
@@ -1651,7 +1664,7 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
         return when(campaign.exercisesSet);
     }
     
-    var p3 = state.sendAXServer('x', {
+    const p3 = state.sendAXServer('x', {
         path: ('/exercisesset/path/' + campaign.name),
         method: 'GET',
         headers: {
@@ -1661,7 +1674,7 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
     return p3.then(processResponse).catch(function (reason) {
         try {
             state.debug("getExercisesSet2Error", reason);
-            var request1 = {
+            const request1 = {
                 method: 'GET',
                 path: campaign.home_url + "/exercises.json",
                 headers: {
@@ -1686,11 +1699,11 @@ CodeGradX.Campaign.prototype.getExercisesSet = function () {
     */
 
 CodeGradX.Campaign.prototype.getExercise = function (name) {
-  var state = CodeGradX.getCurrentState();
+  const state = CodeGradX.getCurrentState();
   state.debug('getExercise', name);
-  var campaign = this;
+  const campaign = this;
   return campaign.getExercisesSet().then(function (exercisesSet) {
-    var exercise = exercisesSet.getExercise(name);
+    const exercise = exercisesSet.getExercise(name);
     if ( exercise ) {
       return when(exercise);
     } else {
@@ -1711,8 +1724,8 @@ CodeGradX.Campaign.prototype.getExercise = function (name) {
  */
 
 CodeGradX.Campaign.prototype.uploadExercisesSet = function (filename) {
-    var state = CodeGradX.getCurrentState();
-    var campaign = this;
+    const state = CodeGradX.getCurrentState();
+    const campaign = this;
     state.debug('uploadExercisesSet1', campaign);
     function processResponse (response) {
         //console.log(response);
@@ -1722,8 +1735,8 @@ CodeGradX.Campaign.prototype.uploadExercisesSet = function (filename) {
     }      
     return CodeGradX.readFileContent(filename).then(function (content) {
         content += '\n';
-        var basefilename = filename.replace(new RegExp("^.*/"), '');
-        var headers = {
+        const basefilename = filename.replace(new RegExp("^.*/"), '');
+        const headers = {
             'Accept': 'application/octet-stream',
             'Content-Type': 'text/plain',
             'Content-Disposition': ("inline; filename=" + basefilename)
@@ -1753,8 +1766,8 @@ element. This code only runs in a browser providing the FormData class.
 */
 
 CodeGradX.Campaign.prototype.uploadExercisesSetFromDOM = function (form) {
-    var state = CodeGradX.getCurrentState();
-    var campaign = this;
+    const state = CodeGradX.getCurrentState();
+    const campaign = this;
     state.debug('uploadExercisesSetFromDOM1', FW4EX.currentExercisesSetFileName);
     function processResponse (response) {
         //console.log(response);
@@ -1762,14 +1775,14 @@ CodeGradX.Campaign.prototype.uploadExercisesSetFromDOM = function (form) {
         campaign.exercisesSet = new CodeGradX.ExercisesSet(response.entity);
         return when(campaign.exercisesSet);
     }
-    var basefilename = FW4EX.currentFileName
+    const basefilename = FW4EX.currentFileName
         .replace(new RegExp("^.*/"), '');
-    var headers = {
+    const headers = {
         "Content-Type": "multipart/form-data",
         "Content-Disposition": ("inline; filename=" + basefilename),
         "Accept": 'application/json'
     };
-    var fd = new FormData(form);
+    const fd = new FormData(form);
     return state.sendAXServer('x', {
         path: ('/exercisesset/yml2json/' + campaign.name),
         method: "POST",
@@ -1900,7 +1913,7 @@ CodeGradX.Campaign.prototype.getTopJobs = function (exercise) {
 
 CodeGradX.Exercise = function (js) {
     function normalizeUUID (uuid) {
-        var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
+        const uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
         return uuid.replace(/-/g, '').replace(uuidRegexp, "$1-$2-$3-$4-$5");
     }
     if ( js.uuid && ! js.exerciseid ) {
@@ -1909,7 +1922,7 @@ CodeGradX.Exercise = function (js) {
     if ( js.uuid && ! js.location ) {
         js.location = '/e' + js.uuid.replace(/-/g, '').replace(/(.)/g, "/$1");
     }
-    _.assign(this, js);
+    Object.assign(this, js);
 };
 
 CodeGradX.Exercise.js2exercise = function (js) {
@@ -1929,8 +1942,8 @@ CodeGradX.Exercise.js2exercise = function (js) {
        */
 
 CodeGradX.Exercise.prototype.getDescription = function () {
-    var exercise = this;
-    var state = CodeGradX.getCurrentState();
+    const exercise = this;
+    const state = CodeGradX.getCurrentState();
     state.debug('getDescription1', exercise);
     if ( exercise._description ) {
         return when(exercise._description);
@@ -1938,7 +1951,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     if ( ! exercise.safecookie ) {
         return when.reject("Non deployed exercise " + exercise.name);
     }
-    var promise = state.sendESServer('e', {
+    const promise = state.sendESServer('e', {
         path: ('/exercisecontent/' + exercise.safecookie + '/content'),
         method: 'GET',
         headers: {
@@ -1949,7 +1962,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
     });
     // Parse the HTTP response, translate the XML into a Javascript object
     // and provide it to the sequel:
-    var promise1 = promise.then(function (response) {
+    const promise1 = promise.then(function (response) {
         state.debug('getDescription2', response);
         //console.log(response);
         exercise.server = response.url.replace(
@@ -1963,11 +1976,11 @@ CodeGradX.Exercise.prototype.getDescription = function () {
         }
         return CodeGradX.parsexml(exercise._XMLdescription).then(parseXML);
     });
-    var promise3 = promise.then(function (response) {
+    const promise3 = promise.then(function (response) {
         // Extract stem
         state.debug("getDescription4", response);
-        var contentRegExp = new RegExp("^(.|\n)*(<\s*content\s*>(.|\n)*</content\s*>)(.|\n)*$");
-        var content = response.entity.replace(contentRegExp, "$2");
+        const contentRegExp = new RegExp("^(.|\n)*(<\s*content\s*>(.|\n)*</content\s*>)(.|\n)*$");
+        const content = response.entity.replace(contentRegExp, "$2");
         exercise.XMLcontent = content;
         exercise.stem = CodeGradX.xml2html(content);
         // extract equipment:
@@ -1977,21 +1990,21 @@ CodeGradX.Exercise.prototype.getDescription = function () {
         state.debug("getDescription6", exercise);
         return extractIdentification(exercise, response.entity);
     });
-    var promise4 = promise.then(function (response) {
+    const promise4 = promise.then(function (response) {
         // If only one question expecting only one file, retrieve its name:
         state.debug('getDescription5c');
-        var expectationsRegExp =
+        const expectationsRegExp =
             new RegExp("<\s*expectations\s*>((.|\n)*?)</expectations\s*>", "g");
         function concat (s1, s2) {
             return s1 + s2;
         }
-        var expectationss = response.entity.match(expectationsRegExp);
+        const expectationss = response.entity.match(expectationsRegExp);
         if ( expectationss ) {
-            var files = _.reduce(expectationss, concat);
-            var expectations = '<div>' + files + '</div>';
+            const files = _.reduce(expectationss, concat);
+            const expectations = '<div>' + files + '</div>';
             return CodeGradX.parsexml(expectations).then(function (result) {
                 state.debug('getDescription5a');
-                if ( _.isArray(result.div.expectations.file) ) {
+                if ( Array.isArray(result.div.expectations.file) ) {
                     // to be done. Maybe ? Why ?
                 } else {
                     //console.log(result.div.expectations);
@@ -2023,13 +2036,13 @@ CodeGradX.Exercise.prototype.getDescription = function () {
 */
 
 CodeGradX.Exercise.prototype.getEquipmentFile = function (file) {
-    var exercise = this;
-    var state = CodeGradX.getCurrentState();
+    const exercise = this;
+    const state = CodeGradX.getCurrentState();
     state.debug('getEquipmentFile1', exercise, file);
     if ( ! exercise.safecookie ) {
         return when.reject("Non deployed exercise " + exercise.name);
     }
-    var promise = state.sendESServer('e', {
+    const promise = state.sendESServer('e', {
         path: ('/exercisecontent/' + exercise.safecookie + '/path' + file),
         method: 'GET',
         headers: {
@@ -2059,7 +2072,7 @@ const summaryRegExp =
   new RegExp("^(.|\n)*(<\s*summary.*?>(.|\n)*</summary\s*>)(.|\n)*$");
 
 function extractIdentification (exercise, s) {
-    var content = s.replace(identificationRegExp, "$2");
+    const content = s.replace(identificationRegExp, "$2");
     return CodeGradX.parsexml(content).then(function (result) {
         if ( ! result.identification ) {
             return when(exercise);
@@ -2069,9 +2082,9 @@ function extractIdentification (exercise, s) {
         exercise.name = result.$.name;
         exercise.nickname = result.$.nickname;
         exercise.date = result.$.date;
-        var summary = content.replace(summaryRegExp, "$2");
+        const summary = content.replace(summaryRegExp, "$2");
         exercise.summary = CodeGradX.xml2html(summary);
-        if ( _.isArray(result.tags.tag) ) {
+        if ( Array.isArray(result.tags.tag) ) {
             exercise.tags = result.tags.tag.map(function (tag) {
                 return tag.$.name;
             });
@@ -2079,8 +2092,8 @@ function extractIdentification (exercise, s) {
             exercise.tags = [result.tags.tag.$.name];
         }
         // extract authors
-        var authors = result.authorship;
-        if ( _.isArray(authors.author) ) {
+        const authors = result.authorship;
+        if ( Array.isArray(authors.author) ) {
             exercise.authorship = authors.author;
         } else {
             exercise.authorship = [ authors.author ];
@@ -2130,9 +2143,9 @@ function extractExpectations (exercice, s) {
 
 function extractEquipment (exercise, s) {
     exercise.equipment = [];
-    var equipmentRegExp = new RegExp(
+    const equipmentRegExp = new RegExp(
         "^(.|\n)*(<equipment>\s*(.|\n)*?\s*</equipment>)(.|\n)*$");
-    var content = s.replace(equipmentRegExp, "$2");
+    const content = s.replace(equipmentRegExp, "$2");
     if ( s.length === content.length ) {
         // No equipment!
         return exercise;
@@ -2142,11 +2155,11 @@ function extractEquipment (exercise, s) {
         if ( o.directory ) {
             if ( Array.isArray(o.directory) ) {
                 o.directory.forEach(function (o) {
-                    var newdir = dir + '/' + o.$.basename;
+                    const newdir = dir + '/' + o.$.basename;
                     results = results.concat(flatten(o, newdir));
                 });
             } else {
-                var newdir = dir + '/' + o.directory.$.basename;
+                const newdir = dir + '/' + o.directory.$.basename;
                 results = results.concat(flatten(o.directory, newdir));
             }
         }
@@ -2166,7 +2179,7 @@ function extractEquipment (exercise, s) {
     }
     if ( content.length > 0 ) {
         try {
-            var parser = new xml2js.Parser({
+            const parser = new xml2js.Parser({
                 explicitArray: false,
                 trim: true
             });
@@ -2174,7 +2187,7 @@ function extractEquipment (exercise, s) {
                 exercise.equipment = flatten(result.equipment, '');
             });
         } catch (e) {
-            var state = CodeGradX.getCurrentState();
+            const state = CodeGradX.getCurrentState();
             state.debug("extractEquipment", e);
         }
     }
@@ -2192,11 +2205,11 @@ CodeGradX.parsexml = function (xml) {
   if ( ! xml ) {
     return when.reject("Cannot parse XML " + xml);
   }
-  var parser = new xml2js.Parser({
+  const parser = new xml2js.Parser({
     explicitArray: false,
     trim: true
   });
-  var xerr, xresult;
+  let xerr, xresult;
   try {
     parser.parseString(xml, function (err, result) {
       xerr = err;
@@ -2222,8 +2235,8 @@ CodeGradX.parsexml = function (xml) {
     */
 
 CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
-  var exercise = this;
-  var state = CodeGradX.getCurrentState();
+  const exercise = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('sendStringAnswer1', answer);
   if ( ! exercise.safecookie ) {
     return when.reject("Non deployed exercise " + exercise.name);
@@ -2246,7 +2259,7 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
       state.debug('sendStringAnswer3', js);
       js = js.fw4ex.jobSubmittedReport;
       exercise.uuid = js.exercise.$.exerciseid;
-      var job = new CodeGradX.Job({
+      const job = new CodeGradX.Job({
         exercise: exercise,
         content: answer,
         responseXML: response.entity,
@@ -2259,8 +2272,8 @@ CodeGradX.Exercise.prototype.sendStringAnswer = function (answer) {
       return when(job);
     });
   }
-  var content = new Buffer(answer, 'utf8');
-  var headers = {
+  const content = new Buffer(answer, 'utf8');
+  const headers = {
       "Content-Type": "application/octet-stream",
       "Content-Disposition": ("inline; filename=" + exercise.inlineFileName),
       "Accept": 'text/xml'
@@ -2288,8 +2301,8 @@ element. This code only runs in a browser providing the FormData class.
 */
 
 CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
-    var exercise = this;
-    var state = CodeGradX.getCurrentState();
+    const exercise = this;
+    const state = CodeGradX.getCurrentState();
     state.debug('sendZipFileAnswer1', FW4EX.currentFileName);
     if ( ! exercise.safecookie ) {
         return when.reject("Non deployed exercise " + exercise.name);
@@ -2302,7 +2315,7 @@ CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
             state.debug('sendZipFileAnswer3', js);
             js = js.fw4ex.jobSubmittedReport;
             exercise.uuid = js.exercise.$.exerciseid;
-            var job = new CodeGradX.Job({
+            const job = new CodeGradX.Job({
                 exercise: exercise,
                 content: FW4EX.currentFileName,
                 responseXML: response.entity,
@@ -2315,13 +2328,13 @@ CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
             return when(job);
         });
     }
-    var basefilename = FW4EX.currentFileName.replace(new RegExp("^.*/"), '');
-    var headers = {
+    const basefilename = FW4EX.currentFileName.replace(new RegExp("^.*/"), '');
+    const headers = {
         "Content-Type": "multipart/form-data",
         "Content-Disposition": ("inline; filename=" + basefilename),
         "Accept": 'text/xml'
     };
-    var fd = new FormData(form);
+    const fd = new FormData(form);
     return state.sendAXServer('a', {
         path: ('/exercise/' + exercise.safecookie + '/job'),
         method: "POST",
@@ -2344,8 +2357,8 @@ CodeGradX.Exercise.prototype.sendFileFromDOM = function (form) {
     */
 
 CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
-  var exercise = this;
-  var state = CodeGradX.getCurrentState();
+  const exercise = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('sendFileAnswer1', filename);
   if ( ! exercise.safecookie ) {
     return when.reject("Non deployed exercise " + exercise.name);
@@ -2359,7 +2372,7 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
         state.debug('sendFileAnswer3', js);
         js = js.fw4ex.jobSubmittedReport;
         exercise.uuid = js.exercise.$.exerciseid;
-        var job = new CodeGradX.Job({
+        const job = new CodeGradX.Job({
           exercise: exercise,
           content: content,
           responseXML: response.entity,
@@ -2374,8 +2387,8 @@ CodeGradX.Exercise.prototype.sendFileAnswer = function (filename) {
     };
   }
   return CodeGradX.readFileContent(filename).then(function (content) {
-    var basefilename = filename.replace(new RegExp("^.*/"), '');
-    var headers = {
+    const basefilename = filename.replace(new RegExp("^.*/"), '');
+    const headers = {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": ("inline; filename=" + basefilename),
         "Accept": 'text/xml'
@@ -2416,8 +2429,8 @@ CodeGradX.readFileContent = function (filename) {
     */
 
 CodeGradX.Exercise.prototype.sendBatch = function (filename) {
-  var exercise = this;
-  var state = CodeGradX.getCurrentState();
+  const exercise = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('sendBatch1', filename);
   if ( ! exercise.safecookie ) {
     return when.reject("Non deployed exercise " + exercise.name);
@@ -2430,7 +2443,7 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
         state.debug('sendBatch3', js);
         js = js.fw4ex.multiJobSubmittedReport;
         exercise.uuid = js.exercise.$.exerciseid;
-        var batch = new CodeGradX.Batch({
+        const batch = new CodeGradX.Batch({
           exercise: exercise,
           //content: content,  // Too heavy
           responseXML: response.entity,
@@ -2445,8 +2458,8 @@ CodeGradX.Exercise.prototype.sendBatch = function (filename) {
       });
   }
   return CodeGradX.readFileContent(filename).then(function (content) {
-    var basefilename = filename.replace(new RegExp("^.*/"), '');
-    var headers = {
+    const basefilename = filename.replace(new RegExp("^.*/"), '');
+    const headers = {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": ("inline; filename=" + basefilename),
         "Accept": 'text/xml'
@@ -2476,8 +2489,8 @@ element. This code only runs in a browser providing the FormData class.
 */
 
 CodeGradX.Exercise.prototype.sendBatchFromDOM = function (form) {
-    var exercise = this;
-    var state = CodeGradX.getCurrentState();
+    const exercise = this;
+    const state = CodeGradX.getCurrentState();
     state.debug('sendBatchFile1');
     if ( ! exercise.safecookie ) {
         return when.reject("Non deployed exercise " + exercise.name);
@@ -2490,7 +2503,7 @@ CodeGradX.Exercise.prototype.sendBatchFromDOM = function (form) {
             state.debug('sendBatchFile3', js);
             js = js.fw4ex.multiJobSubmittedReport;
             exercise.uuid = js.exercise.$.exerciseid;
-            var batch = new CodeGradX.Batch({
+            const batch = new CodeGradX.Batch({
                 exercise: exercise,
                 responseXML: response.entity,
                 response: js,
@@ -2503,13 +2516,13 @@ CodeGradX.Exercise.prototype.sendBatchFromDOM = function (form) {
             return when(batch);
         });
     }
-    var basefilename = FW4EX.currentFileName.replace(new RegExp("^.*/"), '');
-    var headers = {
+    const basefilename = FW4EX.currentFileName.replace(new RegExp("^.*/"), '');
+    const headers = {
         "Content-Type": "multipart/form-data",
         "Content-Disposition": ("inline; filename=" + basefilename),
         "Accept": 'text/xml'
     };
-    var fd = new FormData(form);
+    const fd = new FormData(form);
     return state.sendAXServer('a', {
         path: ('/exercise/' + exercise.safecookie + '/batch'),
         method: "POST",
@@ -2554,8 +2567,8 @@ A failure might be:
 */
 
 CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
-  var exercise = this;
-  var state = CodeGradX.getCurrentState();
+  const exercise = this;
+  const state = CodeGradX.getCurrentState();
   state.debug("getExerciseReport1", exercise, parameters);
   if ( exercise.finishedjobs ) {
       return when(exercise);
@@ -2590,9 +2603,9 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
               exercise.finishedjobs =
                   CodeGradX._str2num(js.pseudojobs.$.finishedjobs);
               function processPseudoJob (jspj) {
-                  var name = jspj.submission.$.name;
-                  var markFactor = CodeGradX.xml2html.default.markFactor;
-                  var job = new CodeGradX.Job({
+                  const name = jspj.submission.$.name;
+                  const markFactor = CodeGradX.xml2html.default.markFactor;
+                  const job = new CodeGradX.Job({
                       exercise:  exercise,
                       XMLpseudojob: jspj,
                       jobid:     jspj.$.jobid,
@@ -2627,8 +2640,8 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
                   exercise.pseudojobs[name] = job;
                   exercise._pseudojobs.push(job);
               }
-              var pseudojobs = js.pseudojobs.pseudojob;
-              if ( _.isArray(pseudojobs) ) {
+              const pseudojobs = js.pseudojobs.pseudojob;
+              if ( Array.isArray(pseudojobs) ) {
                   pseudojobs.forEach(processPseudoJob);
               } else if ( pseudojobs ) {
                   processPseudoJob(pseudojobs);
@@ -2653,16 +2666,16 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
 };
 
 CodeGradX.Exercise.prototype.getBaseURL = function () {
-    var exercise = this;
-    var path = exercise.location + '/' + exercise.exerciseid;
+    const exercise = this;
+    const path = exercise.location + '/' + exercise.exerciseid;
     return path;
 };
 CodeGradX.Exercise.prototype.getExerciseReportURL = function () {
-    var exercise = this;
+    const exercise = this;
     return exercise.getBaseURL() + '.xml';
 };
 CodeGradX.Exercise.prototype.getTgzURL = function () {
-    var exercise = this;
+    const exercise = this;
     return exercise.getBaseURL() + '.tgz';
 };
 
@@ -2710,12 +2723,12 @@ CodeGradX.ExercisesSet = function (json) {
       }
     }
   }
-  if ( _.isArray(json) ) {
+  if ( Array.isArray(json) ) {
     // no title, prologue nor epilogue.
     this.exercises = _.map(json, processItem);
   } else {
     // initialize optional title, prologue, epilogue:
-    _.assign(this, json);
+    Object.assign(this, json);
     this.exercises = _.map(json.exercises, processItem);
   }
 };
@@ -2730,9 +2743,9 @@ CodeGradX.ExercisesSet = function (json) {
 */
 
 CodeGradX.ExercisesSet.getExercisesSet = function (name) {
-    var state = CodeGradX.getCurrentState();
+    const state = CodeGradX.getCurrentState();
     state.debug('UgetExercisesSet1', name);
-    var p3 = state.sendAXServer('x', {
+    const p3 = state.sendAXServer('x', {
         path: ('/exercisesset/path/' + name),
         method: 'GET',
         headers: {
@@ -2741,7 +2754,7 @@ CodeGradX.ExercisesSet.getExercisesSet = function (name) {
     });
     return p3.then(function (response) {
         state.debug('UgetExercisesSet2', response);
-        var exercisesSet = new CodeGradX.ExercisesSet(response.entity);
+        const exercisesSet = new CodeGradX.ExercisesSet(response.entity);
         return when(exercisesSet);
     }).catch(function (reason) {
         state.debug('UgetExercisesSet3', reason);
@@ -2758,7 +2771,7 @@ CodeGradX.ExercisesSet.getExercisesSet = function (name) {
   */
 
 CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
-  var exercises = this;
+  const exercises = this;
   if ( _.isNumber(name) ) {
       return exercises.getExerciseByIndex(name);
   } else {
@@ -2767,21 +2780,21 @@ CodeGradX.ExercisesSet.prototype.getExercise = function (name) {
 };
 
 CodeGradX.ExercisesSet.prototype.getExerciseByName = function (name) {
-  var exercisesSet = this;
+  const exercisesSet = this;
   //console.log(exercisesSet);// DEBUG
   function find (thing) {
     if ( thing instanceof CodeGradX.ExercisesSet ) {
-      var exercises = thing.exercises;
-      for ( var i=0 ; i<exercises.length ; i++ ) {
+      const exercises = thing.exercises;
+      for ( let i=0 ; i<exercises.length ; i++ ) {
         //console.log("explore " + i + '/' + exercises.length);
-        var result = find(exercises[i]);
+        const result = find(exercises[i]);
         if ( result ) {
           return result;
         }
       }
       return false;
     } else if ( thing instanceof CodeGradX.Exercise ) {
-      var exercise = thing;
+      const exercise = thing;
       //console.log("compare with " + exercise.name);
       if ( exercise.name === name ) {
         return exercise;
@@ -2796,12 +2809,12 @@ CodeGradX.ExercisesSet.prototype.getExerciseByName = function (name) {
 };
 
 CodeGradX.ExercisesSet.prototype.getExerciseByIndex = function (index) {
-  var exercises = this;
+  const exercises = this;
   function find (exercises) {
-    if ( _.isArray(exercises) ) {
-      for ( var i=0 ; i<exercises.length ; i++ ) {
+    if ( Array.isArray(exercises) ) {
+      for ( let i=0 ; i<exercises.length ; i++ ) {
         //console.log("explore " + i); // DEBUG
-        var result = find(exercises[i]);
+        const result = find(exercises[i]);
         if ( result ) {
           return result;
         }
@@ -2836,13 +2849,13 @@ CodeGradX.ExercisesSet.prototype.getExerciseByIndex = function (index) {
 
 CodeGradX.Job = function (js) {
     function normalizeUUID (uuid) {
-        var uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
+        const uuidRegexp = /^(.{8})(.{4})(.{4})(.{4})(.{12})$/;
         return uuid.replace(/-/g, '').replace(uuidRegexp, "$1-$2-$3-$4-$5");
     }
     if ( js.uuid && ! js.jobid ) {
         js.jobid = normalizeUUID(js.uuid);
     }
-    var markFactor = CodeGradX.xml2html.default.markFactor;
+    const markFactor = CodeGradX.xml2html.default.markFactor;
     if ( js.totalMark !== markFactor ) {
         js.mark = Math.round(js.mark * markFactor);
         js.totalMark = Math.round(js.totalMark * markFactor);
@@ -2850,7 +2863,7 @@ CodeGradX.Job = function (js) {
     if ( js.jobid && ! js.pathdir ) {
         js.pathdir = '/s' + js.jobid.replace(/-/g, '').replace(/(.)/g, "/$1");
     }
-  _.assign(this, js);
+  Object.assign(this, js);
 };
 
 CodeGradX.Job.js2job = function (js) {
@@ -2867,21 +2880,21 @@ CodeGradX.Job.js2job = function (js) {
 
 CodeGradX.Job.prototype.getReport = function (parameters) {
   parameters = parameters || {};
-  var job = this;
-  var state = CodeGradX.getCurrentState();
+  const job = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('getJobReport1', job);
   if ( job.XMLreport ) {
     return when(job);
   }
-  var path = job.getReportURL();
-  var promise = state.sendRepeatedlyESServer('s', parameters, {
+  const path = job.getReportURL();
+  const promise = state.sendRepeatedlyESServer('s', parameters, {
     path: path,
     method: 'GET',
     headers: {
       "Accept": "text/xml"
     }
   });
-  var promise1 = promise.then(function (response) {
+  const promise1 = promise.then(function (response) {
     //state.log.show();
     //console.log(response);
     state.debug('getJobReport2', job);
@@ -2891,10 +2904,10 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
   }).catch(function (reasons) {
       // sort reasons and extract only waitedTooMuch if present:
       function tooLongWaiting (reasons) {
-          if ( _.isArray(reasons) ) {
-              for ( var i = 0 ; i<reasons.length ; i++ ) {
-                  var r = reasons[i];
-                  var result = tooLongWaiting(r);
+          if ( Array.isArray(reasons) ) {
+              for ( let i = 0 ; i<reasons.length ; i++ ) {
+                  const r = reasons[i];
+                  const result = tooLongWaiting(r);
                   if ( result ) {
                       return result;
                   }
@@ -2906,14 +2919,14 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
           }
           return undefined;
       }
-      var result = tooLongWaiting(reasons);
+      const result = tooLongWaiting(reasons);
       return when.reject(result || reasons);
   });
-  var promise2 = promise.then(function (response) {
+  const promise2 = promise.then(function (response) {
     // Fill archived, started, ended, finished, mark and totalMark
     state.debug('getJobReport3', job);
-    var markingRegExp = new RegExp("^(.|\n)*(<marking (.|\n)*?>)(.|\n)*$");
-    var marking = response.entity.replace(markingRegExp, "$2");
+    const markingRegExp = new RegExp("^(.|\n)*(<marking (.|\n)*?>)(.|\n)*$");
+    let marking = response.entity.replace(markingRegExp, "$2");
     state.debug('getJobReport3 marking', marking);
     //console.log(marking); //DEBUG
     if ( marking.length === response.entity.length ) {
@@ -2936,25 +2949,25 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
       return when(response);
     });
   });
-  var promise3 = promise.then(function (response) {
+  const promise3 = promise.then(function (response) {
     // Fill exerciseid (already in exercise.uuid !)
     state.debug('getJobReport4', job);
-    var exerciseRegExp = new RegExp("^(.|\n)*(<exercise (.|\n)*?>)(.|\n)*$");
-    var exercise = response.entity.replace(exerciseRegExp, "$2");
+    const exerciseRegExp = new RegExp("^(.|\n)*(<exercise (.|\n)*?>)(.|\n)*$");
+    const exercise = response.entity.replace(exerciseRegExp, "$2");
     if ( exercise.length === response.entity.length ) {
         return when.reject(response);
     }
     //console.log(exercise);
     return CodeGradX.parsexml(exercise).then(function (js) {
-      _.assign(job, js.exercise.$);
+      Object.assign(job, js.exercise.$);
       return when(response);
     });
   });
-  var promise4 = promise.then(function (response) {
+  const promise4 = promise.then(function (response) {
     // Fill report
     state.debug('getJobReport5');
-    var contentRegExp = new RegExp("^(.|\n)*(<report>(.|\n)*?</report>)(.|\n)*$");
-    var content = response.entity.replace(contentRegExp, "$2");
+    const contentRegExp = new RegExp("^(.|\n)*(<report>(.|\n)*?</report>)(.|\n)*$");
+    const content = response.entity.replace(contentRegExp, "$2");
     //state.debug('getJobReport5 content',
     //         content.length, response.entity.length);
     if ( content.length === response.entity.length ) {
@@ -2983,8 +2996,8 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
 
 CodeGradX.Job.prototype.getProblemReport = function (parameters) {
     parameters = parameters || {};
-    var job = this;
-    var state = CodeGradX.getCurrentState();
+    const job = this;
+    const state = CodeGradX.getCurrentState();
     state.debug('getJobProblemReport1', job);
     if ( ! job.problem ) {
         return when.reject("No problem report");
@@ -2992,15 +3005,15 @@ CodeGradX.Job.prototype.getProblemReport = function (parameters) {
     if ( job.XMLproblemReport ) {
         return when(job);
     }
-    var path = job.getProblemReportURL();
-    var promise = state.sendRepeatedlyESServer('s', parameters, {
+    const path = job.getProblemReportURL();
+    const promise = state.sendRepeatedlyESServer('s', parameters, {
         path: path,
         method: 'GET',
         headers: {
             "Accept": "text/xml"
         }
     });
-    var promise1 = promise.then(function (response) {
+    const promise1 = promise.then(function (response) {
         //state.log.show();
         //console.log(response);
         state.debug('getJobProblemReport2', job);
@@ -3020,20 +3033,20 @@ CodeGradX.Job.prototype.getProblemReport = function (parameters) {
 */
 
 CodeGradX.Job.prototype.getBaseURL = function () {
-    var job = this;
-    var path = job.pathdir + '/' + job.jobid;
+    const job = this;
+    const path = job.pathdir + '/' + job.jobid;
     return path;
 };
 CodeGradX.Job.prototype.getReportURL = function () {
-    var job = this;
+    const job = this;
     return job.getBaseURL() + '.xml';
 };
 CodeGradX.Job.prototype.getProblemReportURL = function () {
-    var job = this;
+    const job = this;
     return job.getBaseURL() + '_.xml';
 };
 CodeGradX.Job.prototype.getTgzURL = function () {
-    var job = this;
+    const job = this;
     return job.getBaseURL() + '.tgz';
 };
 
@@ -3042,33 +3055,33 @@ CodeGradX.Job.prototype.getTgzURL = function () {
 */
 
 CodeGradX.xml2html = function (s, options) {
-  options = _.assign({}, CodeGradX.xml2html.default, options);
-  var result = '';
-  //var mark, totalMark;
-  var mode = 'default';
-  var questionCounter = 0, sectionLevel = 0;
+  options = Object.assign({}, CodeGradX.xml2html.default, options);
+  let result = '';
+  //const mark, totalMark;
+  let mode = 'default';
+  let questionCounter = 0, sectionLevel = 0;
   // HTML tags to be left as they are:    
-  var htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
+  const htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
   // Tags to be converted into DIV:
-  var divTagsRegExp = new RegExp('^(warning|error|introduction|conclusion|normal|stem|report)$');
+  const divTagsRegExp = new RegExp('^(warning|error|introduction|conclusion|normal|stem|report)$');
   // Tags to be converted into SPAN:
-  var spanTagsRegExp = new RegExp("^(user|machine|lineNumber)$");
+  const spanTagsRegExp = new RegExp("^(user|machine|lineNumber)$");
   // Tags to be ignored:
-  var ignoreTagsRegExp = new RegExp("^(FW4EX|expectations|title|fw4ex)$");
+  const ignoreTagsRegExp = new RegExp("^(FW4EX|expectations|title|fw4ex)$");
   function convertAttributes (attributes) {
-    var s = '';
+    let s = '';
     _.forIn(attributes, function (value, name) {
       s += ' ' + name + '="' + value + '"';
     });
     return s;
   }
-  var parser = sax.parser(true, {
+  const parser = sax.parser(true, {
     //trim: true
   });
   parser.onerror = function (e) {
       throw e;
   };
-  var special = {
+  const special = {
       "'": "&apos;",
       '"': "&quot;",
       '<': "&lt;",
@@ -3077,10 +3090,10 @@ CodeGradX.xml2html = function (s, options) {
   };
   parser.ontext= function (text) {
       if ( ! mode.match(/ignore/) ) {
-          var htmltext = '';
-          var letters = text.split('');
-          for ( var i=0 ; i<letters.length ; i++ ) {
-              var ch = letters[i];
+          let htmltext = '';
+          const letters = text.split('');
+          for ( let i=0 ; i<letters.length ; i++ ) {
+              const ch = letters[i];
               if ( special[ch] ) {
                   htmltext += special[ch];
               } else {
@@ -3091,8 +3104,8 @@ CodeGradX.xml2html = function (s, options) {
       }
   };
   parser.onopentag = function (node) {
-      var tagname = node.name;
-      var attributes = convertAttributes(node.attributes);
+      const tagname = node.name;
+      const attributes = convertAttributes(node.attributes);
       if ( tagname.match(ignoreTagsRegExp) ) {
         mode = 'ignore';
       } else if ( tagname.match(htmlTagsRegExp) ) {
@@ -3102,16 +3115,16 @@ CodeGradX.xml2html = function (s, options) {
       } else if ( tagname.match(divTagsRegExp) ) {
         result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
       } else if ( tagname.match(/^mark$/) ) {
-        var markOrig = CodeGradX._str2num(node.attributes.value);
-        var mark = Math.round(markOrig * options.markFactor);
+        const markOrig = CodeGradX._str2num(node.attributes.value);
+        const mark = Math.round(markOrig * options.markFactor);
         result += '<span' + attributes + ' class="fw4ex_mark">' + 
               mark + '<!-- ' + markOrig;
       } else if ( tagname.match(/^section$/) ) {
         result += '<div' + attributes + ' class="fw4ex_section' +
           (++sectionLevel) + '">';
       } else if ( tagname.match(/^question$/) ) {
-        var qname = node.attributes.name;
-        var title = node.attributes.title || '';
+        const qname = node.attributes.name;
+        const title = node.attributes.title || '';
         result += '<div' + attributes + ' class="fw4ex_question">';
         result += '<div class="fw4ex_question_title" data_counter="' +
            (++questionCounter) + '">' + qname + ": " +
@@ -3187,7 +3200,7 @@ CodeGradX.xml2html.default = {
     */
 
 CodeGradX.Batch = function (js) {
-  _.assign(this, js);
+  Object.assign(this, js);
 };
 
 /** Get the current state of the Batch report that is, always fetch
@@ -3200,16 +3213,16 @@ CodeGradX.Batch = function (js) {
   */
 
 CodeGradX.Batch.prototype.getReport = function (parameters) {
-  var batch = this;
-  var state = CodeGradX.getCurrentState();
+  const batch = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('getBatchReport1', batch);
-  parameters = _.assign({
+  parameters = Object.assign({
       // So progress() may look at the current version of the batch report:
       batch: batch
     },
     CodeGradX.Batch.prototype.getReport.default,
     parameters);
-  var path = batch.getReportURL();
+  const path = batch.getReportURL();
   function processResponse (response) {
       //console.log(response);
       state.debug('getBatchReport2', response, batch);
@@ -3224,8 +3237,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
           //console.log(js);
           function processJob (jsjob) {
               //console.log(jsjob);
-              var job;
-              job = state.cache.jobs[jsjob.$.jobid];
+              let job = state.cache.jobs[jsjob.$.jobid];
               if ( ! job ) {
                   job = new CodeGradX.Job({
                       exercise:  batch.exercise,
@@ -3250,7 +3262,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
               return job;
           }
           if ( js.jobStudentReport ) {
-              if ( _.isArray(js.jobStudentReport) ) {
+              if ( Array.isArray(js.jobStudentReport) ) {
                   js.jobStudentReport.forEach(processJob);
               } else {
                   processJob(js.jobStudentReport);
@@ -3292,15 +3304,15 @@ CodeGradX.Batch.prototype.getReport.default = {
   */
 
 CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
-  var batch = this;
-  var state = CodeGradX.getCurrentState();
+  const batch = this;
+  const state = CodeGradX.getCurrentState();
   state.debug('getBatchFinalReport1', batch);
   if ( batch.finishedjobs &&
        batch.finishedjobs === batch.totaljobs ) {
       // Only return a complete report
       return when(batch);
   }
-  parameters = _.assign({
+  parameters = Object.assign({
       // So progress() may look at the current version of the batch report:
       batch: batch
     },
@@ -3317,7 +3329,7 @@ CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
   function fetchAgainReport () {
     state.debug('getBatchFinalReport2', batch);
     if ( batch.finishedjobs < batch.totaljobs ) {
-      var dt = parameters.step * 1000; // seconds
+      const dt = parameters.step * 1000; // seconds
       return when(batch).delay(dt).then(tryFetching);
     } else {
       return when(batch);
@@ -3327,12 +3339,12 @@ CodeGradX.Batch.prototype.getFinalReport = function (parameters) {
 };
 
 CodeGradX.Batch.prototype.getReportURL = function () {
-    var batch = this;
+    const batch = this;
     if ( ! batch.pathdir ) {
         batch.pathdir = '/b' +
             batch.batchid.replace(/-/g, '').replace(/(.)/g, "/$1");
     }
-    var path = batch.pathdir + '/' + batch.batchid + '.xml';
+    const path = batch.pathdir + '/' + batch.batchid + '.xml';
     return path;
 };
 

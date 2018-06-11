@@ -103,6 +103,7 @@ function _str2Date (str) {
       expect(campaigns.free).toBeDefined();
       expect(campaigns.free.name).toBe('free');
       campaign2 = campaigns['insta2-2016oct'];
+      //console.log(campaign2);// DEBUG
       expect(campaign2).toBeDefined();
       expect(campaign2.name).toBe('insta2-2016oct');
       // the `free` campaign is active:

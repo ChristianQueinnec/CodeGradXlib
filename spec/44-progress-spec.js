@@ -35,7 +35,7 @@ describe('CodeGradX', function () {
     expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
     state.currentUser.getCampaign('free').then(function (campaign) {
       expect(campaign instanceof CodeGradX.Campaign).toBeTruthy();
-        //console.log(campaign);
+        //console.log(campaign);//DEBUG
         campaign0 = campaign;
         campaign.getExercisesSet().then(function (es) {
           expect(es instanceof CodeGradX.ExercisesSet).toBeTruthy();
@@ -55,7 +55,7 @@ describe('CodeGradX', function () {
       expect(state.currentUser instanceof CodeGradX.User).toBeTruthy();
       state.currentUser.getProgress(campaign0).then(function (user) {
           expect(user.results.length).toBeGreaterThan(0);
-          //console.log(user.results);//DEBUG
+          console.log(user.results);//DEBUG
           expect(user.results[0].name).toBe('com.paracamplus.li205.function.1');
           expect(user.results[0].nickname).toBe('min');
           expect(user.results[0].mark).toBe(1);

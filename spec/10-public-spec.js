@@ -119,7 +119,7 @@ describe('CodeGradX', function () {
         done();
       }, faildone);
     }, faildone);
-  });
+  }, 10*1000);
 
   it("again with implicit checkServers", function (done) {
     var state = new CodeGradX.State();

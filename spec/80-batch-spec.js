@@ -176,40 +176,31 @@ describe('CodeGradX', function () {
     var state = CodeGradX.getCurrentState();
     var faildone = make_faildone(done);
     expect(exercise2).toBeDefined();
-    var counter = 0;
-    var parameters = {
-        step: 2,
-        retry: 80,
-        progress: function (parameters) {
-          counter++;
-          //state.log.show();
-        }
-    };
-    var job1;
     exercise2.sendBatch(batchTGZfile)
-     .delay(CodeGradX.Batch.prototype.getReport.default.step*1000)
+     .delay(CodeGradX.Batch.prototype.getReport.default.step*9*1000)
      .then(function (batch) {
-      //console.log(batch);
-      batch.getReport(parameters).then(function (batch2) {
-        //console.log(batch2);
-        expect(batch2).toBe(batch);
-        expect(counter).toBeGreaterThan(0);
-        if ( batch.jobs.one ) {
-            // Hope that this batch report is not the final one!
-            job1 = batch.jobs.one;
-        }
-        batch2.getFinalReport(parameters).then(function (batch3) {
-          expect(batch3).toBe(batch2);
-          //expect(counter).toBeGreaterThan(1);
-          expect(batch.finishedjobs).toBeGreaterThan(0);
-          expect(batch.totaljobs).toBe(batch.finishedjobs);
-          // Check jobsCache:
-          expect(batch.jobs.one === job1).toBeTruthy();
-          //state.log.show();
-          done();
-        }, faildone);
-      }, faildone);
-    }, faildone);
+       //console.log(batch);
+       return batch.getReport()
+            .then(function (batch2) {
+                //console.log(batch2.jobs);
+                expect(batch2).toBe(batch);
+                // Hope that at least one report is achieved
+                expect(Object.keys(batch.jobs).length).toBeGreaterThan(0);
+                let jobname = Object.keys(batch.jobs)[0];
+                //console.log(jobname);
+                let job1 = batch.jobs[jobname];
+                return batch2.getFinalReport()
+                    .then(function (batch3) {
+                        expect(batch3).toBe(batch2);
+                        expect(batch.finishedjobs).toBeGreaterThan(0);
+                        expect(batch.totaljobs).toBe(batch.finishedjobs);
+                        // Check jobsCache:
+                        expect(batch.jobs[jobname] === job1).toBeTruthy();
+                        //state.log.show();
+                        done();
+                    });
+            });
+     }, faildone);
   }, 500*1000); // 500 seconds
 
     // it("show log", function (done) {

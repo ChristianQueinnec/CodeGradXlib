@@ -1,18 +1,16 @@
 {
   "name": "codegradxlib",
-  "version": "2.0.11",
+  "version": "2.0.12",
   "description": "Javascript Library to interact with the CodeGradX infrastructure. Runs on Node.js or within browsers",
   "keywords": [
     "CodeGradX",
     "Infrastructure for mechanically grading programs",
-    "Paracamplus",
-    "browserify-able"
+    "Paracamplus"
   ],
   "main": "codegradxlib.js",
   "scripts": {
-    "lint": "jshint codegradxlib.js spec/*.js",
-    "test": "jasmine",
-    "doc": "node_modules/.bin/jsdoc -c conf.json codegradxlib.js"
+    "lint": "eslint codegradxlib.js",
+    "test": "jasmine"
   },
   "repository": {
     "type": "git",
@@ -28,10 +26,9 @@
     "xml2js": "^0.4.19"
   },
   "devDependencies": {
+    "eslint": "^4.19.1",
     "gulp": "^4.0.0",
-    "jasmine": "^2.3.2",
-    "jshint": "^2.8",
-    "nsp": "^3.2.1"
+    "jasmine": "^2.3.2"
   },
   "files": [
     "package.json",
@@ -51,7 +48,7 @@
   "author": {
     "name": "Christian Queinnec",
     "email": "Christian.Queinnec@paracamplus.com",
-    "url": "http://christian.queinnec.org/"
+    "url": "https://christian.queinnec.org/"
   },
   "licenses": [
     {
@@ -62,6 +59,5 @@
   "bugs": {
     "url": "https://github.com/ChristianQueinnec/CodeGradXlib/issues"
   },
-  "homepage": "https://github.com/ChristianQueinnec/CodeGradXlib#readme",
-  "tonicExampleFilename": "tonicExample.js"
+  "homepage": "https://github.com/ChristianQueinnec/CodeGradXlib#readme"
 }
