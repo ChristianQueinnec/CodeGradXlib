@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-06-08 17:31:09 queinnec"
+// Time-stamp: "2018-06-12 19:48:19 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -86,6 +86,8 @@ const xml2js = require('xml2js');
 const sax = require('sax');
 const he = require('he');
 const util = require('util');
+
+const scale = 100; // Leave two decimals
 
 // Define that additional MIME type:
 registry.register('application/octet-stream', {
@@ -2616,12 +2618,13 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
                       // partial marks TOBEDONE
                   });
                   if ( jspj.marking ) {
-                      job.expectedMark = Math.round(markFactor *
-                          CodeGradX._str2num(jspj.submission.$.expectedMark));
-                      job.mark = Math.round(markFactor *
-                          CodeGradX._str2num(jspj.marking.$.mark));
-                      job.totalMark = Math.round(markFactor *
-                          CodeGradX._str2num(jspj.marking.$.totalMark));
+                      job.expectedMark = Math.round(scale * markFactor *
+                          CodeGradX._str2num(jspj.submission.$.expectedMark))/
+                          scale;
+                      job.mark = Math.round(scale * markFactor *
+                          CodeGradX._str2num(jspj.marking.$.mark))/scale;
+                      job.totalMark = Math.round(scale * markFactor *
+                          CodeGradX._str2num(jspj.marking.$.totalMark))/scale;
                       job.archived =
                           CodeGradX._str2Date(jspj.marking.$.archived);
                       job.started =
@@ -2857,8 +2860,8 @@ CodeGradX.Job = function (js) {
     }
     const markFactor = CodeGradX.xml2html.default.markFactor;
     if ( js.totalMark !== markFactor ) {
-        js.mark = Math.round(js.mark * markFactor);
-        js.totalMark = Math.round(js.totalMark * markFactor);
+        js.mark = Math.round(scale * js.mark * markFactor)/scale;
+        js.totalMark = Math.round(scale * js.totalMark * markFactor)/scale;
     }
     if ( js.jobid && ! js.pathdir ) {
         js.pathdir = '/s' + js.jobid.replace(/-/g, '').replace(/(.)/g, "/$1");
@@ -2937,10 +2940,10 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     return CodeGradX.parsexml(marking).then(function (js) {
       job.mark      = CodeGradX._str2num(js.marking.$.mark);
       job.mark      *= CodeGradX.xml2html.default.markFactor;
-      job.mark = Math.round(job.mark);
+      job.mark = Math.round(scale * job.mark)/scale;
       job.totalMark = CodeGradX._str2num(js.marking.$.totalMark);
       job.totalMark *= CodeGradX.xml2html.default.markFactor;
-      job.totalMark = Math.round(job.totalMark);
+      job.totalMark = Math.round(scale * job.totalMark)/scale;
       job.archived  = CodeGradX._str2Date(js.marking.$.archived);
       job.started   = CodeGradX._str2Date(js.marking.$.started);
       job.ended     = CodeGradX._str2Date(js.marking.$.ended);
@@ -3116,9 +3119,9 @@ CodeGradX.xml2html = function (s, options) {
         result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
       } else if ( tagname.match(/^mark$/) ) {
         const markOrig = CodeGradX._str2num(node.attributes.value);
-        const mark = Math.round(markOrig * options.markFactor);
+        const mark = Math.round(scale*(markOrig * options.markFactor))/scale;
         result += '<span' + attributes + ' class="fw4ex_mark">' + 
-              mark + '<!-- ' + markOrig;
+              mark + '<!-- ';
       } else if ( tagname.match(/^section$/) ) {
         result += '<div' + attributes + ' class="fw4ex_section' +
           (++sectionLevel) + '">';

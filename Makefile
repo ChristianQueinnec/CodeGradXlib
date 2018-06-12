@@ -19,7 +19,7 @@ nsp+snyk :
 tests : lint test.with.real.servers test.with.vmauthor
 
 test.with.real.servers :
-	jasmine spec/[0-7]*.js 2>&1 | tee /tmp/spec.log
+	jasmine spec/[0-8]*.js 2>&1 | tee /tmp/spec.log
 
 test.with.vmauthor : spec/org.example.fw4ex.grading.check.tgz spec/oefgc.tgz
 	@echo " tests require a running vmauthor..."
