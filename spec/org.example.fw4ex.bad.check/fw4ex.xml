@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<fw4ex version='1.0'
+       xml:lang='fr'
+       lang='fr' >
+  <exercise>
+
+    <identification
+        name='org.example.fw4ex.bad.check'
+        nickname='badcheck'
+        date='2017-01-03T08:45:00' >
+      <summary public='true'> Bad exercise </summary>
+      <tags>
+        <tag name='js'/>
+      </tags>
+      <authorship>
+        <author>
+          <firstname>Christian</firstname>
+          <lastname>Queinnec</lastname>
+          <email>Christian.Queinnec@codegradx.org</email>
+        </author>
+      </authorship>
+    </identification>
+
+    <conditions cost='0.01' costunit='euro'>
+      <description>
+This exercise produces an invalid student XML report.
+      </description>
+    </conditions>
+
+    <content>
+      <question name='one' totalMark='1'>
+        <!-- this section is more complex if more than one file is expected -->
+        <expectations>
+          <file basename='bad.sh'/>
+        </expectations>
+        <stem>
+
+<p>
+
+This exercise produces an invalid student XML report.
+
+</p>
+
+        </stem>
+      </question>
+    </content>
+
+    <autochecking>
+      <!-- maximal mark is 1 -->
+      <submission
+          name='null'
+          expectedMark='0' >
+        <content directory='pseudos/null'/>
+      </submission>
+
+      <submission
+          name='perfect'
+          expectedMark='1' >
+        <content directory='pseudos/perfect'/>
+      </submission>
+
+    </autochecking>
+
+    <grading>
+      <machine nickname='default' version='1'/>
+      <limit predefined='cpu time' value='5' unit='second'/>
+      <question name='one'>
+        <script language='bash'><![CDATA[
+
+source $FW4EX_LIB_DIR/basicLib.sh
+source $FW4EX_LIB_DIR/moreLib.sh
+
+echo '</div>'
+
+]]>
+        </script>
+      </question>
+    </grading>
+
+  </exercise>
+</fw4ex>

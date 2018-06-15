@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-06-12 19:48:19 queinnec"
+// Time-stamp: "2018-06-15 17:48:00 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -87,8 +87,6 @@ const sax = require('sax');
 const he = require('he');
 const util = require('util');
 
-const scale = 100; // Leave two decimals
-
 // Define that additional MIME type:
 registry.register('application/octet-stream', {
     read: function(str) {
@@ -126,6 +124,20 @@ CodeGradX._str2num = function (str) {
     str = str % 1 === 0 ? parseInt(str, 10) : parseFloat(str);
   }
   return str;
+};
+
+CodeGradX._str2num2decimals = function (str) {
+    const scale = 100; // Leave two decimals
+    if ( _.isNumber(str) ) {
+        return (Math.round(scale * str))/scale;
+    } else if ( ! isNaN(str) ) {
+        if ( str % 1 === 0 ) {
+            return parseInt(str, 10);
+        } else {
+            let x = parseFloat(str);
+            return (Math.round(scale * x))/scale;
+        }
+    }
 };
 
 CodeGradX._str2Date = function (str) {
@@ -2534,8 +2546,8 @@ CodeGradX.Exercise.prototype.sendBatchFromDOM = function (form) {
 };
 
 /** After submitting a new Exercise, get Exercise autocheck reports
-    that is, the jobs corresponding to the pseudo-jobs contained in
-    the Exercise TGZ file.
+    that is, the job reports corresponding to the pseudo-jobs
+    contained in the Exercise TGZ file.
 
   @param {Object} parameters - @see CodeGradX.sendRepeatedlyESServer
   @returns {Promise<Exercise>} yielding an Exercise
@@ -2544,12 +2556,15 @@ CodeGradX.Exercise.prototype.sendBatchFromDOM = function (form) {
   Exercise object:
 
   @property {XMLstring} XMLauthorReport - raw XML report
+  @property {string} globalReport - global report
   @property {number} totaljobs - the total number of pseudo-jobs
   @property {number} finishedjobs - the number of marked pseudo-jobs
   @property {Hashtable<Job>} pseudojobs - Hashtable of pseudo-jobs
 
   For each pseudo-job, are recorded all the fields of a regular Job
   plus some additional fields such as `duration`.
+
+  The globalReport is the report independent of the pseudojob reports.
 
   If the exercise is successfully autochecked, it may be used by
   `sendStringAnswer()`, `sendFileAnswer()` or `sendBatch()` methods
@@ -2596,7 +2611,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
               exercise._pseudojobs = [];
               if ( js.report ) {
                   exercise.globalReport = js.report;
-                  if ( exercise._pseudojobs.length === 0 ) {
+                  if ( ! js.pseudojobs || js.pseudojobs.length === 0 ) {
                       return when(exercise);
                   }
               }
@@ -2618,13 +2633,15 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
                       // partial marks TOBEDONE
                   });
                   if ( jspj.marking ) {
-                      job.expectedMark = Math.round(scale * markFactor *
-                          CodeGradX._str2num(jspj.submission.$.expectedMark))/
-                          scale;
-                      job.mark = Math.round(scale * markFactor *
-                          CodeGradX._str2num(jspj.marking.$.mark))/scale;
-                      job.totalMark = Math.round(scale * markFactor *
-                          CodeGradX._str2num(jspj.marking.$.totalMark))/scale;
+                      job.expectedMark = markFactor *
+                          CodeGradX._str2num2decimals(
+                              jspj.submission.$.expectedMark);
+                      job.mark = markFactor *
+                          CodeGradX._str2num2decimals(
+                              jspj.marking.$.mark);
+                      job.totalMark = markFactor *
+                          CodeGradX._str2num2decimals(
+                              jspj.marking.$.totalMark);
                       job.archived =
                           CodeGradX._str2Date(jspj.marking.$.archived);
                       job.started =
@@ -2860,8 +2877,8 @@ CodeGradX.Job = function (js) {
     }
     const markFactor = CodeGradX.xml2html.default.markFactor;
     if ( js.totalMark !== markFactor ) {
-        js.mark = Math.round(scale * js.mark * markFactor)/scale;
-        js.totalMark = Math.round(scale * js.totalMark * markFactor)/scale;
+        js.mark = CodeGradX._str2num2decimals(js.mark);
+        js.totalMark = CodeGradX._str2num2decimals(js.totalMark);
     }
     if ( js.jobid && ! js.pathdir ) {
         js.pathdir = '/s' + js.jobid.replace(/-/g, '').replace(/(.)/g, "/$1");
@@ -2937,13 +2954,12 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     }
     marking = marking.replace(/>/, "/>");
     //console.log(marking);
+    const markFactor = CodeGradX.xml2html.default.markFactor;
     return CodeGradX.parsexml(marking).then(function (js) {
-      job.mark      = CodeGradX._str2num(js.marking.$.mark);
-      job.mark      *= CodeGradX.xml2html.default.markFactor;
-      job.mark = Math.round(scale * job.mark)/scale;
-      job.totalMark = CodeGradX._str2num(js.marking.$.totalMark);
-      job.totalMark *= CodeGradX.xml2html.default.markFactor;
-      job.totalMark = Math.round(scale * job.totalMark)/scale;
+      job.mark = markFactor * CodeGradX._str2num2decimals(
+          js.marking.$.mark);
+      job.totalMark = markFactor * CodeGradX._str2num2decimals(
+          js.marking.$.totalMark);
       job.archived  = CodeGradX._str2Date(js.marking.$.archived);
       job.started   = CodeGradX._str2Date(js.marking.$.started);
       job.ended     = CodeGradX._str2Date(js.marking.$.ended);
@@ -3119,7 +3135,8 @@ CodeGradX.xml2html = function (s, options) {
         result += '<div class="fw4ex_' + tagname + '"' + attributes + '>';
       } else if ( tagname.match(/^mark$/) ) {
         const markOrig = CodeGradX._str2num(node.attributes.value);
-        const mark = Math.round(scale*(markOrig * options.markFactor))/scale;
+        const mark =  options.markFactor * 
+              CodeGradX._str2num2decimals(markOrig);
         result += '<span' + attributes + ' class="fw4ex_mark">' + 
               mark + '<!-- ';
       } else if ( tagname.match(/^section$/) ) {
@@ -3238,6 +3255,7 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
           batch.finishedjobs = CodeGradX._str2num(js.$.finishedjobs);
           batch.jobs = {};
           //console.log(js);
+          const markFactor = CodeGradX.xml2html.default.markFactor;
           function processJob (jsjob) {
               //console.log(jsjob);
               let job = state.cache.jobs[jsjob.$.jobid];
@@ -3249,8 +3267,10 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
                       pathdir:   jsjob.$.location,
                       label:     jsjob.$.label,
                       problem:   false,
-                      mark:      CodeGradX._str2num(jsjob.marking.$.mark),
-                      totalMark: CodeGradX._str2num(jsjob.marking.$.totalMark),
+                      mark:      markFactor * CodeGradX._str2num2decimals(
+                          jsjob.marking.$.mark),
+                      totalMark: markFactor * CodeGradX._str2num2decimals(
+                          jsjob.marking.$.totalMark),
                       started:   CodeGradX._str2Date(jsjob.marking.$.started),
                       finished:  CodeGradX._str2Date(jsjob.marking.$.finished)
                   });
