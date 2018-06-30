@@ -62,7 +62,8 @@ publish : lint nsp+snyk bower.json clean
 CodeGradXlib.tgz :
 	-rm -rf tmp
 	mkdir -p tmp
-	cd tmp/ && git clone https://github.com/ChristianQueinnec/CodeGradXlib.git
+	cd tmp/ && \
+	  git clone https://github.com/ChristianQueinnec/CodeGradXlib.git
 	rm -rf tmp/CodeGradXlib/.git
 	cp -p package.json tmp/CodeGradXlib/ 
 	tar czf CodeGradXlib.tgz -C tmp CodeGradXlib

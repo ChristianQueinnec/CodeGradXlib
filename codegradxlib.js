@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-06-15 17:48:00 queinnec"
+// Time-stamp: "2018-06-30 19:51:29 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -3138,7 +3138,7 @@ CodeGradX.xml2html = function (s, options) {
         const mark =  options.markFactor * 
               CodeGradX._str2num2decimals(markOrig);
         result += '<span' + attributes + ' class="fw4ex_mark">' + 
-              mark + '<!-- ';
+              mark + '<!-- ' + markOrig;
       } else if ( tagname.match(/^section$/) ) {
         result += '<div' + attributes + ' class="fw4ex_section' +
           (++sectionLevel) + '">';
