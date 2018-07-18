@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-06-30 19:51:29 queinnec"
+// Time-stamp: "2018-07-18 12:25:17 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -371,14 +371,17 @@ CodeGradX.State = function (initializer) {
     return state;
 };
 
-/** Get the current state (if defined).
+/** Get the current state or create it if missing.
+    The initializer has type State -> State
+    This function will be replaced when the state is created.
 
-  @returns {State}
+    @param {function} initializer - post-initialization of the state object
+    @returns {State}
 
 */
 
-CodeGradX.getCurrentState = function () {
-  throw new Error("noState");
+CodeGradX.getCurrentState = function (initializer) {
+    return new CodeGradX.State(initializer);
 };
 
 /** Get current user (if defined). This is particularly useful when
@@ -2629,7 +2632,7 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
                       pathdir:   jspj.$.location,
                       duration:  CodeGradX._str2num(jspj.$.duration),
                       problem:   false,
-                      label: name  
+                      label:     name
                       // partial marks TOBEDONE
                   });
                   if ( jspj.marking ) {

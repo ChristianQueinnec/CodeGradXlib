@@ -20,7 +20,7 @@ machine that runs locally the whole CodeGradX infrastructure). This
 low lever library may be used by other web applications.
 
 More information (partially in French) on the [CodeGradX
-](https://paracamplus.com/spip.php?rubrique2) infrastructure.
+](https://codegradx.org) infrastructure.
 
 ## Installation
 
@@ -84,7 +84,7 @@ worthless to change the default setting.
 
 Then you must authenticate with respect to the CodeGradX
 infrastructure with a login and a password. To get this login and
-password, you must [register](http://p.codegradx.org/).
+password, you must [register](https://p.codegradx.org/).
 The authentication process returns a User object.
 
 The User object lists the Campaigns the User may access. A Campaign is
@@ -96,7 +96,7 @@ campaign and from that tree, one may choose a particular exercise.
 
 To an Exercise is associated a description containing a stem (an XML
 document ruled by a [RelaxNG
-grammar](http://paracamplus.com/CodeGradX/Resources/fw4exRngDoc.pdf))
+grammar](https://codegradx.org/CodeGradX/Resources/fw4exRngDoc.pdf))
 and, somewhere hidden in the constellation of CodeGradX servers, some
 grading scripts. A User may send a string or a file (a tar gzipped
 file if more than one file is expected) against an Exercise. Other
@@ -109,7 +109,7 @@ When an answer is sent towards an Exercise, a Job is returned from
 which a grading report may be obtained. The grading report is stored
 as a property of the Job. The grading report is an XML document ruled
 by a [RelaxNG
-grammar](http://paracamplus.com/CodeGradX/Resources/fw4exRngDoc.pdf)
+grammar](https://codegradx.org/CodeGradX/Resources/fw4exRngDoc.pdf)
 so this report is skinnable. This XML is a side-set of HTML, a naive
 converter (named `CodeGradX.xml2html`) is included in the library.
 
@@ -125,13 +125,15 @@ Users may gather students' answers in a big tar gzipped file and submit
 all these answers against one Exercise in a Batch. A Batch object is
 returned from which Jobs can be individually obtained.
 
-Many details can be found (in English) in the [documentation](http://paracamplus.com/CodeGradX/Resources/overview.pdf)
-that contains the [RelaxNG grammar](http://paracamplus.com/CodeGradX/Resources/fw4exRngDoc.pdf).
+Many details can be found (in English) in the [documentation
+](https://codegradx.org/CodeGradX/Resources/overview.pdf)
+that contains the [RelaxNG grammar
+](https://codegradx.org/CodeGradX/Resources/fw4exRngDoc.pdf).
 
 ## Documentation
 
 Chapter 1 of the [big
-documentation](http://paracamplus.com/CodeGradX/Resources/overview.pdf)
+documentation](https://codegradx.org/CodeGradX/Resources/overview.pdf)
 is useful to have an overview of the CodeGradX constellation.
 
 State, User, Exercise, Job etc. are classes defined in the source
