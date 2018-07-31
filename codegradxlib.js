@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-07-18 12:25:17 queinnec"
+// Time-stamp: "2018-07-31 20:58:55 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -141,14 +141,23 @@ CodeGradX._str2num2decimals = function (str) {
 };
 
 CodeGradX._str2Date = function (str) {
-  const ms = Date.parse(str);
-  if ( ! isNaN(ms) ) {
-    const d = new Date(ms);
-    //console.log("STR:" + str + " => " + ms + " ==> " + d);
-    return d;
-  } else {
-    throw new Error("Cannot parse Date" + str);
-  }
+    let ms = Date.parse(str);
+    if ( ! isNaN(ms) ) {
+        const d = new Date(ms);
+        //console.log("STR1:" + str + " => " + ms + " ==> " + d);
+        return d;
+    }
+    // Safari cannot Date.parse('2001-01-01 00:00:00+00')
+    // but can Date.parse('2001-01-01T00:00:00')
+    const rmtz = /^\s*(.+)([+]\d+)?\s*$/;
+    str = str.replace(rmtz, "$1").replace(/ /, 'T');
+    ms = Date.parse(str);
+    if ( ! isNaN(ms) ) {
+        const d = new Date(ms);
+        //console.log("STR2:" + str + " => " + ms + " ==> " + d);
+        return d;
+    }
+    throw new Error("Cannot parse Date " + str);
 };
 
 // **************** Log ********************************
@@ -1999,7 +2008,7 @@ CodeGradX.Exercise.prototype.getDescription = function () {
         const contentRegExp = new RegExp("^(.|\n)*(<\s*content\s*>(.|\n)*</content\s*>)(.|\n)*$");
         const content = response.entity.replace(contentRegExp, "$2");
         exercise.XMLcontent = content;
-        exercise.stem = CodeGradX.xml2html(content);
+        exercise.stem = CodeGradX.xml2html(content, { exercise });
         // extract equipment:
         state.debug("getDescription5b", exercise);
         extractEquipment(exercise, response.entity);
@@ -3083,11 +3092,13 @@ CodeGradX.xml2html = function (s, options) {
   let mode = 'default';
   let questionCounter = 0, sectionLevel = 0;
   // HTML tags to be left as they are:    
-  const htmlTagsRegExp = new RegExp('^(p|pre|img|a|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
+  const htmlTagsRegExp = new RegExp('^(p|pre|code|ul|ol|li|em|it|i|sub|sup|strong|b)$');
   // Tags to be converted into DIV:
   const divTagsRegExp = new RegExp('^(warning|error|introduction|conclusion|normal|stem|report)$');
   // Tags to be converted into SPAN:
   const spanTagsRegExp = new RegExp("^(user|machine|lineNumber)$");
+  // Tags with special hack:
+  const specialTagRegExp = new RegExp("^(img|a)$");
   // Tags to be ignored:
   const ignoreTagsRegExp = new RegExp("^(FW4EX|expectations|title|fw4ex)$");
   function convertAttributes (attributes) {
@@ -3125,6 +3136,28 @@ CodeGradX.xml2html = function (s, options) {
           result += htmltext;
       }
   };
+  function absolutize (node) {
+      if ( options.exercise ) {
+          const pathRegExp = new RegExp('^/path/');
+          if ( node.attributes.src &&
+               node.attributes.src.match(pathRegExp) ) {
+              node.attributes.src = options.exercise.server +
+                  '/exercisecontent/' +
+                  options.exercise.safecookie +
+                  node.attributes.src;
+          }
+          if ( node.attributes.href &&
+               node.attributes.href.match(pathRegExp) ) {
+              node.attributes.href = options.exercise.server +
+                  '/exercisecontent/' +
+                  options.exercise.safecookie +
+                  node.attributes.href;
+          }
+      }
+      const tagname = node.name;
+      const attributes = convertAttributes(node.attributes);
+      return '<' + tagname + attributes + ' />';
+  }
   parser.onopentag = function (node) {
       const tagname = node.name;
       const attributes = convertAttributes(node.attributes);
@@ -3132,6 +3165,8 @@ CodeGradX.xml2html = function (s, options) {
         mode = 'ignore';
       } else if ( tagname.match(htmlTagsRegExp) ) {
         result += '<' + tagname + attributes + '>';
+      } else if ( tagname.match(specialTagRegExp) ) {
+        result += absolutize(node);
       } else if ( tagname.match(spanTagsRegExp) ) {
         result += '<span class="fw4ex_' + tagname + '"' + attributes + '>';
       } else if ( tagname.match(divTagsRegExp) ) {
@@ -3161,6 +3196,8 @@ CodeGradX.xml2html = function (s, options) {
         mode = 'default';
       } else if ( tagname.match(htmlTagsRegExp) ) {
         result += '</' + tagname + '>';
+      } else if ( tagname.match(specialTagRegExp) ) {
+        result = result;
       } else if ( tagname.match(spanTagsRegExp) ) {
         result += '</span>';
       } else if ( tagname.match(divTagsRegExp) ) {
