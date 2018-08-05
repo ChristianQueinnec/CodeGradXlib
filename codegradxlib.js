@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-07-31 20:58:55 queinnec"
+// Time-stamp: "2018-08-05 06:57:49 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -3138,20 +3138,26 @@ CodeGradX.xml2html = function (s, options) {
   };
   function absolutize (node) {
       if ( options.exercise ) {
-          const pathRegExp = new RegExp('^/path/');
-          if ( node.attributes.src &&
-               node.attributes.src.match(pathRegExp) ) {
-              node.attributes.src = options.exercise.server +
-                  '/exercisecontent/' +
-                  options.exercise.safecookie +
-                  node.attributes.src;
+          const pathRegExp = new RegExp('^(./)?(path/.*)$');
+          if ( node.attributes.src ) {
+              let matches = node.attributes.src.match(pathRegExp);
+              if ( matches ) {
+                  node.attributes.src = options.exercise.server +
+                      '/exercisecontent/' +
+                      options.exercise.safecookie +
+                      '/' +
+                      matches[2];
+              }
           }
-          if ( node.attributes.href &&
-               node.attributes.href.match(pathRegExp) ) {
-              node.attributes.href = options.exercise.server +
-                  '/exercisecontent/' +
-                  options.exercise.safecookie +
-                  node.attributes.href;
+          if ( node.attributes.href ) {
+              let matches = node.attributes.href.match(pathRegExp);
+              if ( matches ) {
+                  node.attributes.href = options.exercise.server +
+                      '/exercisecontent/' +
+                      options.exercise.safecookie +
+                      '/' +
+                      matches[2];
+              }
           }
       }
       const tagname = node.name;

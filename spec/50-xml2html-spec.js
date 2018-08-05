@@ -83,19 +83,25 @@ describe('CodeGradX', function () {
   });
 
     // handling img tags
-    it("should convert img", function (done) {
+    it("should convert img1", function (done) {
         var xml = "<p><img   src='/a/b' /></p>";
         var html = CodeGradX.xml2html(xml);
         expect(html).toMatch(new RegExp('<p><img src="/a/b" /></p>'));
         done();
     });
-    it("should convert img", function (done) {
-        var xml = "<p><img   src='/path/a/b' /></p>";
+    it("should convert img2", function (done) {
+        var xml = "<p><img   src='./path/a/b' /></p>";
         var html = CodeGradX.xml2html(xml);
-        expect(html).toMatch(new RegExp('<p><img src="/path/a/b" /></p>'));
+        expect(html).toMatch(new RegExp('<p><img src="./path/a/b" /></p>'));
         done();
     });
-    it("should not convert that img within a stem", function (done) {
+    it("should convert img3", function (done) {
+        var xml = "<p><img   src='path/a/b' /></p>";
+        var html = CodeGradX.xml2html(xml);
+        expect(html).toMatch(new RegExp('<p><img src="path/a/b" /></p>'));
+        done();
+    });
+    it("should not convert that img1 within a stem", function (done) {
         var xml = "<p><img   src='/a/b' /></p>";
         var html = CodeGradX.xml2html(xml, {
             exercise: {
@@ -105,8 +111,18 @@ describe('CodeGradX', function () {
         expect(html).toMatch(new RegExp('<p><img src="/a/b" /></p>'));
         done();
     });
-    it("should convert img within a stem", function (done) {
-        var xml = "<p><img   src='/path/a/b' /></p>";
+    it("should convert img4 within a stem", function (done) {
+        var xml = "<p><img   src='./path/a/b' /></p>";
+        var html = CodeGradX.xml2html(xml, {
+            exercise: {
+                server: 'https://my.server',
+                safecookie: 'UUUUUUUUUUUUUUUUUUUUUU'
+            }});
+        expect(html).toMatch(new RegExp('<p><img src="https://my.server/exercisecontent/UUUUUUUUUUUUUUUUUUUUUU/path/a/b" /></p>'));
+        done();
+    });
+    it("should convert img5 within a stem", function (done) {
+        var xml = "<p><img   src='path/a/b' /></p>";
         var html = CodeGradX.xml2html(xml, {
             exercise: {
                 server: 'https://my.server',
@@ -116,19 +132,25 @@ describe('CodeGradX', function () {
         done();
     });
     //handling anchors
-    it("should convert a", function (done) {
+    it("should convert a1", function (done) {
         var xml = "<p><a   src='/a/b' /></p>";
         var html = CodeGradX.xml2html(xml);
         expect(html).toMatch(new RegExp('<p><a src="/a/b" /></p>'));
         done();
     });
-    it("should convert a", function (done) {
-        var xml = "<p><a   src='/path/a/b' /></p>";
+    it("should convert a2", function (done) {
+        var xml = "<p><a   src='./path/a/b' /></p>";
         var html = CodeGradX.xml2html(xml);
-        expect(html).toMatch(new RegExp('<p><a src="/path/a/b" /></p>'));
+        expect(html).toMatch(new RegExp('<p><a src="./path/a/b" /></p>'));
         done();
     });
-    it("should not convert that a within a stem", function (done) {
+    it("should convert a3", function (done) {
+        var xml = "<p><a   src='path/a/b' /></p>";
+        var html = CodeGradX.xml2html(xml);
+        expect(html).toMatch(new RegExp('<p><a src="path/a/b" /></p>'));
+        done();
+    });
+    it("should not convert that a4 within a stem", function (done) {
         var xml = "<p><a   src='/a/b' /></p>";
         var html = CodeGradX.xml2html(xml, {
             exercise: {
@@ -138,8 +160,18 @@ describe('CodeGradX', function () {
         expect(html).toMatch(new RegExp('<p><a src="/a/b" /></p>'));
         done();
     });
-    it("should convert a within a stem", function (done) {
-        var xml = "<p><a   src='/path/a/b' /></p>";
+    it("should convert a5 within a stem", function (done) {
+        var xml = "<p><a   src='./path/a/b' /></p>";
+        var html = CodeGradX.xml2html(xml, {
+            exercise: {
+                server: 'https://my.server',
+                safecookie: 'UUUUUUUUUUUUUUUUUUUUUU'
+            }});
+        expect(html).toMatch(new RegExp('<p><a src="https://my.server/exercisecontent/UUUUUUUUUUUUUUUUUUUUUU/path/a/b" /></p>'));
+        done();
+    });
+    it("should convert a6 within a stem", function (done) {
+        var xml = "<p><a   src='path/a/b' /></p>";
         var html = CodeGradX.xml2html(xml, {
             exercise: {
                 server: 'https://my.server',
