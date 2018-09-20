@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-08-05 06:57:49 queinnec"
+// Time-stamp: "2018-09-20 09:39:15 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -501,9 +501,10 @@ CodeGradX.State.prototype.checkServer = function (kind, index) {
       if ( ! request.headers ) {
           request.headers = {};
       }
-      if ( kind !== 's' ) {
-          request.headers['X-FW4EX-Cookie'] = state.currentCookie;
-      }
+      // To send this header imposes a pre-flight:
+      //if ( kind !== 's' ) {
+      //    request.headers['X-FW4EX-Cookie'] = state.currentCookie;
+      //}
       if ( isNode() ) {
           request.headers.Cookie = state.currentCookie;
       } else {
@@ -2633,7 +2634,6 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
                   CodeGradX._str2num(js.pseudojobs.$.finishedjobs);
               function processPseudoJob (jspj) {
                   const name = jspj.submission.$.name;
-                  const markFactor = CodeGradX.xml2html.default.markFactor;
                   const job = new CodeGradX.Job({
                       exercise:  exercise,
                       XMLpseudojob: jspj,
@@ -2645,15 +2645,12 @@ CodeGradX.Exercise.prototype.getExerciseReport = function (parameters) {
                       // partial marks TOBEDONE
                   });
                   if ( jspj.marking ) {
-                      job.expectedMark = markFactor *
-                          CodeGradX._str2num2decimals(
-                              jspj.submission.$.expectedMark);
-                      job.mark = markFactor *
-                          CodeGradX._str2num2decimals(
-                              jspj.marking.$.mark);
-                      job.totalMark = markFactor *
-                          CodeGradX._str2num2decimals(
-                              jspj.marking.$.totalMark);
+                      job.expectedMark = CodeGradX._str2num2decimals(
+                          jspj.submission.$.expectedMark);
+                      job.mark = CodeGradX._str2num2decimals(
+                          jspj.marking.$.mark);
+                      job.totalMark = CodeGradX._str2num2decimals(
+                          jspj.marking.$.totalMark);
                       job.archived =
                           CodeGradX._str2Date(jspj.marking.$.archived);
                       job.started =
@@ -2887,11 +2884,8 @@ CodeGradX.Job = function (js) {
     if ( js.uuid && ! js.jobid ) {
         js.jobid = normalizeUUID(js.uuid);
     }
-    const markFactor = CodeGradX.xml2html.default.markFactor;
-    if ( js.totalMark !== markFactor ) {
-        js.mark = CodeGradX._str2num2decimals(js.mark);
-        js.totalMark = CodeGradX._str2num2decimals(js.totalMark);
-    }
+    js.mark = CodeGradX._str2num2decimals(js.mark);
+    js.totalMark = CodeGradX._str2num2decimals(js.totalMark);
     if ( js.jobid && ! js.pathdir ) {
         js.pathdir = '/s' + js.jobid.replace(/-/g, '').replace(/(.)/g, "/$1");
     }
@@ -2966,12 +2960,9 @@ CodeGradX.Job.prototype.getReport = function (parameters) {
     }
     marking = marking.replace(/>/, "/>");
     //console.log(marking);
-    const markFactor = CodeGradX.xml2html.default.markFactor;
     return CodeGradX.parsexml(marking).then(function (js) {
-      job.mark = markFactor * CodeGradX._str2num2decimals(
-          js.marking.$.mark);
-      job.totalMark = markFactor * CodeGradX._str2num2decimals(
-          js.marking.$.totalMark);
+      job.mark = CodeGradX._str2num2decimals(js.marking.$.mark);
+      job.totalMark = CodeGradX._str2num2decimals(js.marking.$.totalMark);
       job.archived  = CodeGradX._str2Date(js.marking.$.archived);
       job.started   = CodeGradX._str2Date(js.marking.$.started);
       job.ended     = CodeGradX._str2Date(js.marking.$.ended);
@@ -3301,7 +3292,6 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
           batch.finishedjobs = CodeGradX._str2num(js.$.finishedjobs);
           batch.jobs = {};
           //console.log(js);
-          const markFactor = CodeGradX.xml2html.default.markFactor;
           function processJob (jsjob) {
               //console.log(jsjob);
               let job = state.cache.jobs[jsjob.$.jobid];
@@ -3313,9 +3303,9 @@ CodeGradX.Batch.prototype.getReport = function (parameters) {
                       pathdir:   jsjob.$.location,
                       label:     jsjob.$.label,
                       problem:   false,
-                      mark:      markFactor * CodeGradX._str2num2decimals(
+                      mark:      CodeGradX._str2num2decimals(
                           jsjob.marking.$.mark),
-                      totalMark: markFactor * CodeGradX._str2num2decimals(
+                      totalMark: CodeGradX._str2num2decimals(
                           jsjob.marking.$.totalMark),
                       started:   CodeGradX._str2Date(jsjob.marking.$.started),
                       finished:  CodeGradX._str2Date(jsjob.marking.$.finished)
