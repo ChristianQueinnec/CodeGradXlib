@@ -50,12 +50,12 @@ describe('CodeGradX', function () {
                   return job2.getReport().then(function (job) {
                       state.debug("***ExercisePseudoJob perfect got");
                       expect(job).toBe(job2);
-                      expect(job.mark).toBe(10000);
+                      expect(job.mark).toBe(100);
                       var job3 = exercise.pseudojobs.half;
                       return job3.getReport().then(function (job) {
                           state.debug("***ExercisePseudoJob half got");
                           expect(job).toBe(job3);
-                          expect(job.mark).toBe(4500);
+                          expect(job.mark).toBe(45);
                           CodeGradX.getCurrentState().log
                               .show(null, '/tmp/79.txt');
                           done();

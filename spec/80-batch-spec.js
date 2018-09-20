@@ -93,7 +93,7 @@ describe('CodeGradX', function () {
     exercise1.sendStringAnswer(code1).then(function (job) {
       expect(job).toBeDefined();
       return job.getReport().then(function (job) {
-        expect(job.mark).toBe(60);
+        expect(job.mark).toBe(0.6);
         done();
       });
     }).catch(faildone);
@@ -132,7 +132,7 @@ describe('CodeGradX', function () {
     exercise1.sendFileAnswer(file1).then(function (job) {
       expect(job).toBeDefined();
       job.getReport().then(function (job) {
-        expect(job.mark).toBe(100);
+        expect(job.mark).toBe(1);
         done();
       }, faildone);
     }, faildone);
@@ -158,11 +158,11 @@ describe('CodeGradX', function () {
                   var job2 = exercise.pseudojobs.perfect;
                   return job2.getReport().then(function (job) {
                       expect(job).toBe(job2);
-                      expect(job.mark).toBe(10000);
+                      expect(job.mark).toBe(100);
                       var job3 = exercise.pseudojobs.half;
                       return job3.getReport().then(function (job) {
                           expect(job).toBe(job3);
-                          expect(job.mark).toBe(4500);
+                          expect(job.mark).toBe(45);
                           done();
                       });
                   });
