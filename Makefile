@@ -79,7 +79,7 @@ install :
 propagate :
 	npm install -g codegradxlib@`jq -r .version < package.json`
 	cd ../CodeGradXagent    ; m update
-	cd ../CodeGradXvmauthor ; m upate
+	cd ../CodeGradXvmauthor ; m update
 	cd ../CodeGradXenroll   ; m update
 	cd ../CodeGradXmarker   ; m update
 	cd ../CodeGradXmarker   ; npm install -S yasmini
