@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-11-21 08:14:19 queinnec"
+// Time-stamp: "2018-12-07 09:05:07 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -63,8 +63,9 @@ system, require the accompanying module CodeGradXlib4node.
 
 const CodeGradX = {};
 
-  /** Export the `CodeGradX` object */
+/** Export the `CodeGradX` object */
 module.exports = CodeGradX;
+//export default CodeGradX;
 
 //const _    = require('lodash');
 const _ = (function () {
@@ -406,8 +407,9 @@ CodeGradX.getCurrentUser = function (force) {
     }
     state.debug('getCurrentUser1');
     let params = {};
-    if ( isFW4EXcampaignDefined() ) {
-        params.campaign = FW4EX.currentCampaignName;
+    const currentCampaignName = isCurrentCampaignDefined();
+    if ( currentCampaignName ) {
+        params.campaign = currentCampaignName;
     }
     return state.sendAXServer('x', {
         path: '/whoami',
@@ -442,6 +444,7 @@ CodeGradX.State.prototype.debug = function () {
 CodeGradX.State.prototype.gc = function () {
     const state = this;
     state.cache.jobs = {};
+    // FUTURE remove also .exercises ....................
 };
 
 /** Update the description of a server in order to determine if that
@@ -952,6 +955,30 @@ function (login, password) {
   });
 };
 
+/** Disconnect the user.
+
+    @returns {Promise<>} yields undefined
+
+*/
+
+CodeGradX.State.prototype.userDisconnect = function () {
+    var state = this;
+    state.debug('userDisconnect1');
+    return state.sendAXServer('x', {
+        path: '/fromp/disconnect',
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    }).then(function (response) {
+        //console.log(response);
+        state.debug('userDisconnect2', response);
+        state.currentUser = undefined;
+        return when(undefined);
+    });
+};
+
 // **************** User *******************************
 
 /** Represents a User. An User is found by its login and password, the login
@@ -1137,19 +1164,15 @@ CodeGradX.User.prototype.getCampaign = function (name) {
     FUTURE: remove that dependency against FW4EX!!!!!!!!!!!!
 */
 
-function isFW4EXcampaignDefined () {
-    try {
-        return FW4EX.currentCampaignName;
-    } catch (e) {
-        FW4EX = {};
-        return false;
-    }
+function isCurrentCampaignDefined () {
+    return CodeGradX.User.prototype.getCurrentCampaign.default.currentCampaign;
 }
 
 CodeGradX.User.prototype.getCurrentCampaign = function () {
     const user = this;
-    if ( isFW4EXcampaignDefined() ) {
-        return user.getCampaign(FW4EX.currentCampaignName)
+    const currentCampaignName = isCurrentCampaignDefined();
+    if ( currentCampaignName ) {
+        return user.getCampaign(currentCampaignName)
             .then(function (campaign) {
                 FW4EX.currentCampaign = campaign;
                 return when(campaign);
@@ -1169,6 +1192,9 @@ CodeGradX.User.prototype.getCurrentCampaign = function () {
                 }
             });
     }
+};
+CodeGradX.User.prototype.getCurrentCampaign.default = {
+    currentCampaign: undefined
 };
 
 /** Fetch all the jobs submitted by the user (independently of the
@@ -1311,6 +1337,15 @@ CodeGradX.User.prototype.submitNewExerciseFromDOM = function (form) {
   }).then(processResponse);
 };
 
+/** Disconnect the user.
+
+    @returns {Promise<User>} yields {User}
+
+*/
+
+CodeGradX.User.prototype.disconnect = function () {
+    return CodeGradX.getCurrentState().userDisconnect();
+};
 
 // **************** Campaign *********************************
 
