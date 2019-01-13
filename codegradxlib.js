@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2018-12-07 09:05:07 queinnec"
+// Time-stamp: "2019-01-13 16:49:24 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -1180,6 +1180,14 @@ CodeGradX.User.prototype.getCurrentCampaign = function () {
     } else {
         return user.getCampaigns(true)
             .then(function (campaigns) {
+                function hash2array (o) {
+                    let result = [];
+                    Object.keys(o).forEach((key) => {
+                        result.push(o[key]);
+                    });
+                    return result;
+                }
+                campaigns = hash2array(campaigns);
                 if ( campaigns.length === 1 ) {
                     FW4EX.currentCampaignName = campaigns[0].name;
                     FW4EX.currentCampaign = campaigns[0];
