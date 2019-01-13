@@ -47,7 +47,7 @@ spec/oefgc.tgz : Makefile spec/oefgc/fw4ex.xml
 # Caution: npm takes the whole directory that is . and not the sole
 # content of CodeGradXlib.tgz 
 
-publish : lint nsp+snyk bower.json clean
+publish : lint bower.json clean
 	git status .
 	-git commit -m "NPM publication `date`" .
 	git push
