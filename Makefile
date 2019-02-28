@@ -82,6 +82,8 @@ propagate :
 	cd ../CodeGradXvmauthor ; m update
 	cd ../CodeGradXenroll   ; m update
 	cd ../CodeGradXmarker   ; m update
+	cd ../CodeGradXlib4node ; m update
+	cd ../CodeGradXinquiry  ; m update
 	cd ../CodeGradXmarker   ; npm install -S yasmini
 	cd ../../Servers/np/Paracamplus-*/;    m refresh.codegradx
 	cd ../../Servers/w.js/Paracamplus-*/;  m refresh.codegradx
