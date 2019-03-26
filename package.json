@@ -1,6 +1,6 @@
 {
   "name": "codegradxlib",
-  "version": "2.0.22",
+  "version": "2.0.23",
   "description": "Javascript Library to interact with the CodeGradX infrastructure. Runs on Node.js or within browsers",
   "keywords": [
     "CodeGradX",
@@ -17,6 +17,7 @@
     "url": "https://github.com/ChristianQueinnec/CodeGradXlib.git"
   },
   "dependencies": {
+    "extend": "^3.0.2",
     "he": "^1.2.0",
     "lodash": "^4.17.11",
     "minimatch": "^3.0.4",
