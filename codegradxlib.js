@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2019-01-13 16:49:24 queinnec"
+// Time-stamp: "2019-03-26 18:25:20 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -161,6 +161,47 @@ CodeGradX._str2Date = function (str) {
         return d;
     }
     throw new Error("Cannot parse Date " + str);
+};
+
+// On some browsers the ISO string shows the long name of the time zone:
+CodeGradX.Date2str = function (date) {
+    if ( date ) {
+        if ( date instanceof Date ) {
+            date = date.toISOString();
+        }
+        date = date.replace(/[.].*Z?$/, '')
+            .replace('T', ' ');
+        return date + 'Z';
+    }
+    return date;
+};
+
+/** 
+    Compute duration in seconds between two dates (whether Date or String).
+ */
+
+CodeGradX.computeDuration = function (end, start) {
+    try {
+        if ( end instanceof Date ) {
+            end = end.getTime();
+        } else if ( typeof(end) === 'string' ||
+                    end instanceof String ) {
+            end = Date.parse(end);
+        } else {
+            throw new Error("Unknown type of Date");
+        }
+        if ( start instanceof Date ) {
+            start = start.getTime();
+        } else if ( typeof(start) === 'string' ||
+                    start instanceof String ) {
+            start = Date.parse(start);
+        } else {
+            throw new Error("Unknown type of Date");
+        }
+        return (end - start)/1000;
+    } catch (e) {
+        return undefined;
+    }
 };
 
 // **************** Log ********************************
