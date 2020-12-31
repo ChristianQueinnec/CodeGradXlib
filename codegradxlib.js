@@ -1,5 +1,5 @@
 // CodeGradXlib
-// Time-stamp: "2019-03-26 18:25:20 queinnec"
+// Time-stamp: "2020-12-31 17:08:19 queinnec"
 
 /** Javascript Library to interact with the CodeGradX infrastructure.
 
@@ -323,60 +323,60 @@ CodeGradX.State = function (initializer) {
             // Description of an A server:
             0: {
                 // a full hostname supersedes the default FQDN:
-                host: 'a5.codegradx.org',
+                host: 'a6.codegradx.org',
                 enabled: false
             },
             1: {
-                host: 'a4.codegradx.org',
+                host: 'a10.codegradx.org',
                 enabled: false
             },
             2: {
-                host: 'a6.codegradx.org',
+                host: 'a9.codegradx.org',
                 enabled: false
             }
         },
         e: {
             suffix: '/alive',
             0: {
-                host: 'e5.codegradx.org',
+                host: 'e6.codegradx.org',
                 enabled: false
             },
             1: {
-                host: 'e4.codegradx.org',
+                host: 'e10.codegradx.org',
                 enabled: false
             },
             2: {
-                host: 'e6.codegradx.org',
+                host: 'e9.codegradx.org',
                 enabled: false
             }
         },
         x: {
             suffix: '/dbalive',
             0: {
-                host: 'x4.codegradx.org',
+                host: 'x6.codegradx.org',
                 enabled: false
             },
             1: {
-                host: 'x5.codegradx.org',
+                host: 'x10.codegradx.org',
                 enabled: false
             },
             2: {
-                host: 'x6.codegradx.org',
+                host: 'x9.codegradx.org',
                 enabled: false
             }
         },
         s: {
             suffix: '/index.txt',
             0: {
-                host: 's4.codegradx.org',
+                host: 's6.codegradx.org',
                 enabled: false
             },
             1: {
-                host: 's5.codegradx.org',
+                host: 's10.codegradx.org',
                 enabled: false
             },
             2: {
-                host: 's6.codegradx.org',
+                host: 's9.codegradx.org',
                 enabled: false
             },
             3: {
